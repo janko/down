@@ -1,7 +1,6 @@
 require "open-uri"
 require "tempfile"
 require "uri"
-require "timeout"
 
 module Down
   class Error < StandardError; end
