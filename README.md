@@ -15,13 +15,13 @@ enough to just use `open-uri`. However, if you're accepting URLs from your
 users (e.g. through `remote_<avatar>_url` in CarrierWave), then downloading is
 suddenly not as simple as it appears to be.
 
-### `StringIO`
+### StringIO
 
 Firstly, you may think that `open-uri` always downloads a file to disk, but
 that's not true. If the downloaded file has 10 KB or less, `open-uri` actually
 returns a `StringIO`. In my application I needed that the file is always
-downloaded to disk. This is a wrong design decision, so Down patches this
-behaviour and always returns a `Tempfile`.
+downloaded to disk. This was obviously a wrong design decision from the MRI
+team, so Down patches this behaviour and always returns a `Tempfile`.
 
 ### Metadata
 
