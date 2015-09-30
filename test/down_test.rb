@@ -20,14 +20,6 @@ class DownTest < Minitest::Test
     assert_equal "aaaaa", tempfile.read
   end
 
-  def test_follows_redirects
-    stub_request(:get, "http://example.com/temp.jpg").to_return(status: 301, headers: {'Location' => 'http://example.com/image.jpg'})
-    stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
-    tempfile = Down.download("http://example.com/temp.jpg")
-
-    assert_equal "aaaaa", tempfile.read
-  end
-
   def test_encodes_the_url
     stub_request(:get, "http://example.com/some%20image.jpg").to_return(body: "a" * 5)
     tempfile = Down.download("http://example.com/some image.jpg")
@@ -105,19 +97,9 @@ class DownTest < Minitest::Test
     assert_raises(Down::NotFound) { Down.download("http://example.com") }
   end
 
-  def test_raises_not_found_on_redirect_loops
-    stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example.com'})
+  def test_doesnt_allow_redirects
+    stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
     assert_raises(Down::NotFound) { Down.download("http://example.com") }
-  end
-
-  def test_raises_not_found_on_invalid_redirects
-    stub_request(:get, "https://example.com").to_return(status: 301, headers: {'Location' => 'http://example.com'})
-    assert_raises(Down::NotFound) { Down.download("https://example.com") }
-  end
-
-  def test_propagates_other_runtime_errors
-    stub_request(:get, "https://example.com").to_return(body: "a" * 5)
-    assert_raises(RuntimeError) { Down.download("https://example.com", progress: proc { raise RuntimeError }) }
   end
 
   def test_raises_on_invalid_url

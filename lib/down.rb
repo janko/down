@@ -22,6 +22,7 @@ module Down
         options[:progress].call(current_size) if options[:progress]
       },
       open_timeout: options[:timeout],
+      redirect: false,
     )
 
     # open-uri will return a StringIO instead of a Tempfile if the filesize
@@ -36,7 +37,6 @@ module Down
     downloaded_file
 
   rescue => error
-    raise if error.instance_of?(RuntimeError) && error.message !~ /redirection/
     raise if error.is_a?(Down::Error)
     raise Down::NotFound, error.message
   end
