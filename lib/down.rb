@@ -21,7 +21,7 @@ module Down
         raise Down::TooLarge if options[:max_size] && current_size > options[:max_size]
         options[:progress].call(current_size) if options[:progress]
       },
-      open_timeout: options[:timeout],
+      read_timeout: options[:timeout],
       redirect: false,
     )
 
