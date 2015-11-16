@@ -42,7 +42,7 @@ module Down
   end
 
   def copy_to_tempfile(basename, io)
-    tempfile = Tempfile.new(basename, binmode: true)
+    tempfile = Tempfile.new("down", binmode: true)
     IO.copy_stream(io, tempfile.path)
     io.rewind
     tempfile

@@ -2,7 +2,7 @@ require "test_helper"
 require "stringio"
 require "timeout"
 
-class DownTest < Minitest::Test
+class DownloadTest < Minitest::Test
   def test_downloads_url_to_disk
     stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024)
     tempfile = Down.download("http://example.com/image.jpg")
@@ -113,7 +113,9 @@ class DownTest < Minitest::Test
   def test_doesnt_allow_shell_execution
     assert_raises(Down::Error) { Down.download("| ls") }
   end
+end
 
+class CopyToTempfileTest < Minitest::Test
   def test_copying_to_tempfile_returns_a_tempfile
     tempfile = Down.copy_to_tempfile("foo", StringIO.new("foo"))
 
@@ -128,15 +130,15 @@ class DownTest < Minitest::Test
     assert_equal "foo", tempfile.read
   end
 
-  def test_copying_to_tempfile_uses_the_basename
-    tempfile = Down.copy_to_tempfile("foo", StringIO.new("foo"))
-
-    assert_match "foo", tempfile.path
-  end
-
   def test_copying_to_tempfile_opens_in_binmode
     tempfile = Down.copy_to_tempfile("foo", StringIO.new("foo"))
 
     assert tempfile.binmode?
+  end
+
+  def test_basename_being_a_nested_path
+    tempfile = Down.copy_to_tempfile("foo/bar/baz", StringIO.new("foo"))
+
+    assert File.exist?(tempfile.path)
   end
 end
