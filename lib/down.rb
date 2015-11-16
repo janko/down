@@ -25,13 +25,14 @@ module Down
       redirect: false,
     )
 
-    # open-uri will return a StringIO instead of a Tempfile if the filesize
-    # is less than 10 KB, so if it happens we convert it back to Tempfile.
-    if downloaded_file.is_a?(StringIO)
-      stringio = downloaded_file
-      downloaded_file = copy_to_tempfile("open-uri", stringio)
-      OpenURI::Meta.init downloaded_file, stringio
-    end
+    # open-uri will return a StringIO instead of a Tempfile if the filesize is
+    # less than 10 KB, so if it happens we convert it back to Tempfile. We want
+    # to do this with a Tempfile as well, because open-uri doesn't preserve the
+    # file extension, so we want to run it against #copy_to_tempfile which
+    # does.
+    open_uri_file = downloaded_file
+    downloaded_file = copy_to_tempfile(URI(url).path, open_uri_file)
+    OpenURI::Meta.init downloaded_file, open_uri_file
 
     downloaded_file.extend DownloadedFile
     downloaded_file
@@ -42,7 +43,7 @@ module Down
   end
 
   def copy_to_tempfile(basename, io)
-    tempfile = Tempfile.new("down", binmode: true)
+    tempfile = Tempfile.new(["down", File.extname(basename)], binmode: true)
     IO.copy_stream(io, tempfile.path)
     io.rewind
     tempfile

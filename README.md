@@ -23,6 +23,11 @@ returns a `StringIO`. In my application I needed that the file is always
 downloaded to disk. This was obviously a wrong design decision from the MRI
 team, so Down patches this behaviour and always returns a `Tempfile`.
 
+### File extension
+
+When using `open-uri` directly, the extension of the remote file is not
+preserved. Down patches that behaviour and preserves the file extension.
+
 ### Metadata
 
 `open-uri` adds some metadata to the returned file, like `#content_type`. Down

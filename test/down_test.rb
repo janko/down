@@ -113,6 +113,20 @@ class DownloadTest < Minitest::Test
   def test_doesnt_allow_shell_execution
     assert_raises(Down::Error) { Down.download("| ls") }
   end
+
+  def test_preserving_extension
+    # Tempfile
+    stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024)
+    tempfile = Down.download("http://example.com/image.jpg")
+    assert_equal ".jpg", File.extname(tempfile.path)
+    assert File.exist?(tempfile.path)
+
+    # StringIO
+    stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
+    tempfile = Down.download("http://example.com/image.jpg")
+    assert_equal ".jpg", File.extname(tempfile.path)
+    assert File.exist?(tempfile.path)
+  end
 end
 
 class CopyToTempfileTest < Minitest::Test
@@ -140,5 +154,11 @@ class CopyToTempfileTest < Minitest::Test
     tempfile = Down.copy_to_tempfile("foo/bar/baz", StringIO.new("foo"))
 
     assert File.exist?(tempfile.path)
+  end
+
+  def test_preserving_extension
+    tempfile = Down.copy_to_tempfile("foo.jpg", StringIO.new("foo"))
+
+    assert_equal ".jpg", File.extname(tempfile.path)
   end
 end
