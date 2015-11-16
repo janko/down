@@ -91,6 +91,17 @@ You can specify the time after the request will time out:
 Down.download "http://example.com/image.jpg", timeout: 5
 ```
 
+### Copying to tempfile
+
+Down has another "hidden" utility method, `#copy_to_tempfile`, which creates
+a Tempfile out of the given file. The `#download` method uses it internally,
+but it's also publicly available for direct use:
+
+```rb
+tempfile = Down.copy_to_tempfile "path/to/file.jpg"
+tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116-77262-jgcx65.jpg"
+```
+
 ## Supported Ruby versions
 
 * MRI 1.9.3
