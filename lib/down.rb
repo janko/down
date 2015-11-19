@@ -33,6 +33,7 @@ module Down
     open_uri_file = downloaded_file
     downloaded_file = copy_to_tempfile(URI(url).path, open_uri_file)
     OpenURI::Meta.init downloaded_file, open_uri_file
+    open_uri_file.delete if open_uri_file.respond_to?(:delete)
 
     downloaded_file.extend DownloadedFile
     downloaded_file

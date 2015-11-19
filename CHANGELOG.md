@@ -1,3 +1,7 @@
+## 1.0.4 (2015-11-19)
+
+* Delete the old open-uri file after using it (janko-m)
+
 ## 1.0.3 (2015-11-16)
 
 * Fix `#download` and `#copy_to_tempfile` not preserving the file extension (janko-m)
