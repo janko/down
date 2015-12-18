@@ -1,6 +1,7 @@
 require "open-uri"
 require "tempfile"
 require "uri"
+require "fileutils"
 
 module Down
   class Error < StandardError; end
@@ -33,7 +34,6 @@ module Down
     open_uri_file = downloaded_file
     downloaded_file = copy_to_tempfile(URI(url).path, open_uri_file)
     OpenURI::Meta.init downloaded_file, open_uri_file
-    open_uri_file.delete if open_uri_file.respond_to?(:delete)
 
     downloaded_file.extend DownloadedFile
     downloaded_file
@@ -45,8 +45,13 @@ module Down
 
   def copy_to_tempfile(basename, io)
     tempfile = Tempfile.new(["down", File.extname(basename)], binmode: true)
-    IO.copy_stream(io, tempfile.path)
-    io.rewind
+    if io.is_a?(OpenURI::Meta) && io.is_a?(Tempfile)
+      FileUtils.mv io.path, tempfile.path
+    else
+      IO.copy_stream(io, tempfile.path)
+      io.rewind
+    end
+    tempfile.open
     tempfile
   end
 

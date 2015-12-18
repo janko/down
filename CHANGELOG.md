@@ -1,3 +1,7 @@
+## HEAD
+
+* Move the open-uri file to the new location instead of copying it (janko-m)
+
 ## 1.0.4 (2015-11-19)
 
 * Delete the old open-uri file after using it (janko-m)
