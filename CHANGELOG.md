@@ -1,4 +1,4 @@
-## HEAD
+## 1.0.5 (2015-12-18)
 
 * Move the open-uri file to the new location instead of copying it (janko-m)
 
