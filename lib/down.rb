@@ -13,18 +13,22 @@ module Down
   def download(url, options = {})
     url = URI.encode(URI.decode(url))
 
-    downloaded_file = URI(url).open(
+    max_size = options.delete(:max_size)
+    progress = options.delete(:progress)
+    timeout  = options.delete(:timeout)
+
+    downloaded_file = URI(url).open({
       "User-Agent" => "Down/1.0.0",
       content_length_proc: proc { |size|
-        raise Down::TooLarge if size && options[:max_size] && size > options[:max_size]
+        raise Down::TooLarge if size && max_size && size > max_size
       },
       progress_proc: proc { |current_size|
-        raise Down::TooLarge if options[:max_size] && current_size > options[:max_size]
-        options[:progress].call(current_size) if options[:progress]
+        raise Down::TooLarge if max_size && current_size > max_size
+        progress.call(current_size) if progress
       },
-      read_timeout: options[:timeout],
+      read_timeout: timeout,
       redirect: false,
-    )
+    }.merge(options))
 
     # open-uri will return a StringIO instead of a Tempfile if the filesize is
     # less than 10 KB, so if it happens we convert it back to Tempfile. We want

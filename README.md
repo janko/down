@@ -8,6 +8,14 @@ Down is a wrapper around `open-uri` for safe downloading of remote files.
 gem 'down'
 ```
 
+## Usage
+
+```rb
+require "down"
+tempfile = Down.download("http://example.com/nature.jpg")
+tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/20150925-55456-z7vxqz.jpg>
+```
+
 ## Features
 
 If you're downloading files from URLs that come from you, then it's probably
@@ -37,7 +45,7 @@ adds `#original_filename` as well, which is extracted from the URL.
 require "down"
 tempfile = Down.download("http://example.com/nature.jpg")
 
-tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/20150925-55456-z7vxqz>
+tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/20150925-55456-z7vxqz.jpg>
 tempfile.content_type #=> "image/jpeg"
 tempfile.original_filename #=> "nature.jpg"
 ```
@@ -89,6 +97,15 @@ You can specify the time after the request will time out:
 
 ```rb
 Down.download "http://example.com/image.jpg", timeout: 5
+```
+
+### Additional options
+
+Any additional options will be forwarded to open-uri, so you can for example
+add basic authentication:
+
+```rb
+Down.download "http://example.com/image.jpg", http_basic_authentication: ['john', 'secret']
 ```
 
 ### Copying to tempfile

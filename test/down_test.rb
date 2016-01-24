@@ -127,6 +127,14 @@ class DownloadTest < Minitest::Test
     assert_equal ".jpg", File.extname(tempfile.path)
     assert File.exist?(tempfile.path)
   end
+
+  def test_forwarding_options_to_open_uri
+    stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
+    stub_request(:get, "http://example2.com").to_return(body: "redirected")
+    tempfile = Down.download("http://example.com", redirect: true)
+
+    assert_equal "redirected", tempfile.read
+  end
 end
 
 class CopyToTempfileTest < Minitest::Test
