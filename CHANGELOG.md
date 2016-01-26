@@ -1,4 +1,4 @@
-## 1.1.0 (2015-01-26)
+## 1.1.0 (2016-01-26)
 
 * Forward all additional options to open-uri (janko-m)
 
