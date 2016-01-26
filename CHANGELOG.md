@@ -1,3 +1,7 @@
+## 1.1.0 (2015-01-26)
+
+* Forward all additional options to open-uri (janko-m)
+
 ## 1.0.5 (2015-12-18)
 
 * Move the open-uri file to the new location instead of copying it (janko-m)
