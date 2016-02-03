@@ -1,3 +1,12 @@
+## 2.0.0 (2016-02-03)
+
+* Fix an issue where valid URLs were transformed into invalid URLs (janko-m)
+
+  - All input URLs now have to be properly encoded, which should already be the
+    case in most situations.
+
+* Include the error class when download fails
+
 ## 1.1.0 (2016-01-26)
 
 * Forward all additional options to open-uri (janko-m)
