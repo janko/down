@@ -44,7 +44,7 @@ module Down
 
   rescue => error
     raise if error.is_a?(Down::Error)
-    raise Down::NotFound, error.message
+    raise Down::NotFound, "#{error.class}: #{error.message}"
   end
 
   def copy_to_tempfile(basename, io)
