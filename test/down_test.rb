@@ -20,20 +20,6 @@ class DownloadTest < Minitest::Test
     assert_equal "aaaaa", tempfile.read
   end
 
-  def test_encodes_the_url
-    stub_request(:get, "http://example.com/some%20image.jpg").to_return(body: "a" * 5)
-    tempfile = Down.download("http://example.com/some image.jpg")
-
-    assert File.exist?(tempfile.path)
-  end
-
-  def test_accepts_already_encoded_url
-    stub_request(:get, "http://example.com/some%20image.jpg").to_return(body: "a" * 5)
-    tempfile = Down.download("http://example.com/some%20image.jpg")
-
-    assert File.exist?(tempfile.path)
-  end
-
   def test_accepts_max_size
     # "Content-Length" header
     stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Length' => 5})

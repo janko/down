@@ -78,8 +78,7 @@ Down.download "http://example.com/image.jpg",
 
 ### Download errors
 
-Firstly, Down encodes unencoded URLs, `open-uri` will for example trip if the
-URL has a space. There are a lot of ways that a download can fail:
+There are a lot of ways in which a download can fail:
 
 * URL is really invalid (`URI::InvalidURIError`)
 * URL is a little bit invalid, e.g. "http:/example.com" (`Errno::ECONNREFUSED`)
@@ -88,8 +87,8 @@ URL has a space. There are a lot of ways that a download can fail:
 * Request went into a redirect loop (`RuntimeError`)
 * Request timeout out (`Timeout::Error`)
 
-Down unifies all of these errors, and simply throws `Down::NotFound` error
-(because this is what actually happened from the outside perspective).
+Down unifies all of these errors into one `Down::NotFound` error (because this
+is what actually happened from the outside perspective).
 
 ### Timeout
 
