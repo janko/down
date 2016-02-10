@@ -52,7 +52,7 @@ module Down
     if io.is_a?(OpenURI::Meta) && io.is_a?(Tempfile)
       FileUtils.mv io.path, tempfile.path
     else
-      IO.copy_stream(io, tempfile.path)
+      IO.copy_stream(io, tempfile)
       io.rewind
     end
     tempfile.open
