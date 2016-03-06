@@ -88,7 +88,17 @@ There are a lot of ways in which a download can fail:
 * Request timeout out (`Timeout::Error`)
 
 Down unifies all of these errors into one `Down::NotFound` error (because this
-is what actually happened from the outside perspective).
+is what actually happened from the outside perspective). If you want to get the
+actual error raised by open-uri, in Ruby 2.1 or later you can use
+`Exception#cause`:
+
+```rb
+begin
+  Down.download("http://example.com")
+rescue Down::Error => error
+  error.cause #=> #<RuntimeError: HTTP redirection loop: http://example.com>
+end
+```
 
 ### Timeout
 

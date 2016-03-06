@@ -20,10 +20,14 @@ module Down
     downloaded_file = uri.open({
       "User-Agent" => "Down/1.0.0",
       content_length_proc: proc { |size|
-        raise Down::TooLarge if size && max_size && size > max_size
+        if size && max_size && size > max_size
+          raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
+        end
       },
       progress_proc: proc { |current_size|
-        raise Down::TooLarge if max_size && current_size > max_size
+        if max_size && current_size > max_size
+          raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
+        end
         progress.call(current_size) if progress
       },
       read_timeout: timeout,
@@ -44,7 +48,7 @@ module Down
 
   rescue => error
     raise if error.is_a?(Down::Error)
-    raise Down::NotFound, "#{error.class}: #{error.message}"
+    raise Down::NotFound, "file not found"
   end
 
   def copy_to_tempfile(basename, io)
