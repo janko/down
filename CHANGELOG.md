@@ -1,3 +1,7 @@
+## 2.0.1 (2016-03-06)
+
+* Add error message when file was to large, and use a simple error message for other generic download failures (janko-m)
+
 ## 2.0.0 (2016-02-03)
 
 * Fix an issue where valid URLs were transformed into invalid URLs (janko-m)
@@ -5,7 +9,7 @@
   - All input URLs now have to be properly encoded, which should already be the
     case in most situations.
 
-* Include the error class when download fails
+* Include the error class when download fails (janko-m)
 
 ## 1.1.0 (2016-01-26)
 
