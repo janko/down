@@ -124,7 +124,8 @@ a Tempfile out of the given file. The `#download` method uses it internally,
 but it's also publicly available for direct use:
 
 ```rb
-tempfile = Down.copy_to_tempfile "path/to/file.jpg"
+io # IO object that you want to copy to tempfile
+tempfile = Down.copy_to_tempfile "basename.jpg", io
 tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116-77262-jgcx65.jpg"
 ```
 
