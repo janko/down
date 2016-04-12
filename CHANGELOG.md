@@ -1,3 +1,15 @@
+## 2.1.0 (2016-04-12)
+
+* Make `:progress_proc` and `:content_length_proc` work with `:max_size` (janko-m)
+
+* Deprecate `:progress` in favor of open-uri's `:progress_proc` (janko-m)
+
+* Deprecate `:timeout` in favor of open-uri's `:open_timeout` and `:read_timeout` (janko-m)
+
+* Add `Down.stream` for streaming remote files in chunks (janko-m)
+
+* Replace deprecated `URI.encode` with `CGI.unescape` in downloaded file's `#original_filename` (janko-m)
+
 ## 2.0.1 (2016-03-06)
 
 * Add error message when file was to large, and use a simple error message for other generic download failures (janko-m)
