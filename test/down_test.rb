@@ -32,6 +32,15 @@ describe Down do
       assert File.exist?(tempfile.path)
     end
 
+    it "accepts :progress_proc and :content_length_proc" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Length' => 5})
+      Down.download "http://example.com/image.jpg",
+        content_length_proc: ->(n) { @content_length = n },
+        progress_proc:       ->(n) { @progress = n }
+      assert_equal 5, @content_length
+      assert_equal 5, @progress
+    end
+
     it "makes downloaded files have original_filename and content_type" do
       stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024, headers: {'Content-Type' => 'image/jpeg'})
       tempfile = Down.download("http://example.com/image.jpg")
