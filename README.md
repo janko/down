@@ -67,16 +67,6 @@ terminates the download very early, as soon as it gets the `Content-Length`
 header. And if the `Content-Length` header is missing, Down will terminate the
 download as soon as it receives a chunk which surpasses the maximum size.
 
-### Progress
-
-You can also tie into the progress of downloading, if you maybe want to display
-a progress bar:
-
-```rb
-Down.download "http://example.com/image.jpg",
-  progress: ->(size) { ... } # called on each chunk
-```
-
 ### Download errors
 
 There are a lot of ways in which a download can fail:

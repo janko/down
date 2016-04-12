@@ -32,13 +32,6 @@ describe Down do
       assert File.exist?(tempfile.path)
     end
 
-    it "accepts progress" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
-      size = nil
-      Down.download("http://example.com/image.jpg", progress: proc { |s| size = s })
-      assert_equal 5, size
-    end
-
     it "makes downloaded files have original_filename and content_type" do
       stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024, headers: {'Content-Type' => 'image/jpeg'})
       tempfile = Down.download("http://example.com/image.jpg")
