@@ -2,6 +2,7 @@ require "open-uri"
 require "tempfile"
 require "uri"
 require "fileutils"
+require "cgi/util"
 
 module Down
   class Error < StandardError; end
@@ -66,7 +67,7 @@ module Down
   module DownloadedFile
     def original_filename
       path = base_uri.path
-      path = URI.decode(path)
+      path = CGI.unescape(path)
       File.basename(path) unless path.empty? || path == "/"
     end
   end
