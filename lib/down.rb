@@ -13,6 +13,8 @@ module Down
   def download(url, options = {})
     uri = URI.parse(url)
 
+    warn "Passing :timeout option to `Down.download` is deprecated and will be removed in Down 3. You should use open-uri's :open_timeout and/or :read_timeout." if options.key?(:timeout)
+
     max_size = options.delete(:max_size)
     progress = options.delete(:progress)
     timeout  = options.delete(:timeout)

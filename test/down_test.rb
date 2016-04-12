@@ -1,6 +1,5 @@
 require "test_helper"
 require "stringio"
-require "timeout"
 
 describe Down do
   describe "#download" do

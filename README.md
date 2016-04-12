@@ -1,6 +1,7 @@
 # Down
 
-Down is a wrapper around `open-uri` for safe downloading of remote files.
+Down is a wrapper around [open-uri] standard library for safe downloading of
+remote files.
 
 ## Installation
 
@@ -100,21 +101,15 @@ rescue Down::Error => error
 end
 ```
 
-### Timeout
-
-You can specify the time after the request will time out:
-
-```rb
-Down.download "http://example.com/image.jpg", timeout: 5
-```
-
 ### Additional options
 
-Any additional options will be forwarded to open-uri, so you can for example
-add basic authentication:
+Any additional options will be forwarded to [open-uri], so you can for example
+add basic authentication or a timeout:
 
 ```rb
-Down.download "http://example.com/image.jpg", http_basic_authentication: ['john', 'secret']
+Down.download "http://example.com/image.jpg",
+  http_basic_authentication: ['john', 'secret'],
+  read_timeout: 5
 ```
 
 ### Streaming
@@ -165,3 +160,5 @@ $ bin/test-versions
 ## License
 
 [MIT](LICENSE.txt)
+
+[open-uri]: http://ruby-doc.org/stdlib-2.3.0/libdoc/open-uri/rdoc/OpenURI.html
