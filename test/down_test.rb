@@ -2,157 +2,145 @@ require "test_helper"
 require "stringio"
 require "timeout"
 
-class DownloadTest < Minitest::Test
-  def test_downloads_url_to_disk
-    stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024)
-    tempfile = Down.download("http://example.com/image.jpg")
+describe Down do
+  describe "#download" do
+    it "downloads url to disk" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024)
+      tempfile = Down.download("http://example.com/image.jpg")
+      assert_instance_of Tempfile, tempfile
+      assert File.exist?(tempfile.path)
+    end
 
-    assert_instance_of Tempfile, tempfile
-    assert File.exist?(tempfile.path)
+    it "converts small StringIOs to tempfiles" do
+      stub_request(:get, "http://example.com/small.jpg").to_return(body: "a" * 5)
+      tempfile = Down.download("http://example.com/small.jpg")
+      assert_instance_of Tempfile, tempfile
+      assert File.exist?(tempfile.path)
+      assert_equal "aaaaa", tempfile.read
+    end
+
+    it "accepts max size" do
+      # "Content-Length" header
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Length' => 5})
+      assert_raises(Down::TooLarge) { Down.download("http://example.com/image.jpg", max_size: 4) }
+
+      # no "Content-Length" header
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
+      assert_raises(Down::TooLarge) { Down.download("http://example.com/image.jpg", max_size: 4) }
+
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Length' => 5})
+      tempfile = Down.download("http://example.com/image.jpg", max_size: 6)
+      assert File.exist?(tempfile.path)
+    end
+
+    it "accepts progress" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
+      size = nil
+      Down.download("http://example.com/image.jpg", progress: proc { |s| size = s })
+      assert_equal 5, size
+    end
+
+    it "makes downloaded files have original_filename and content_type" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024, headers: {'Content-Type' => 'image/jpeg'})
+      tempfile = Down.download("http://example.com/image.jpg")
+      assert_equal "image.jpg", tempfile.original_filename
+      assert_equal "image/jpeg", tempfile.content_type
+
+      stub_request(:get, "http://example.com/small.jpg").to_return(body: "a" * 5, headers: {'Content-Type' => 'image/jpeg'})
+      tempfile = Down.download("http://example.com/small.jpg")
+      assert_equal "small.jpg", tempfile.original_filename
+      assert_equal "image/jpeg", tempfile.content_type
+    end
+
+    it "decodes the original filename" do
+      stub_request(:get, "http://example.com/image%20space.jpg").to_return(body: "a" * 20 * 1024, headers: {'Content-Type' => 'image/jpeg'})
+      tempfile = Down.download("http://example.com/image%20space.jpg")
+      assert_equal "image space.jpg", tempfile.original_filename
+    end
+
+    it "makes original fileame return nil when path is missing" do
+      stub_request(:get, "http://example.com").to_return(body: "a" * 5)
+      tempfile = Down.download("http://example.com")
+      assert_equal nil, tempfile.original_filename
+
+      stub_request(:get, "http://example.com/").to_return(body: "a" * 5)
+      tempfile = Down.download("http://example.com/")
+      assert_equal nil, tempfile.original_filename
+    end
+
+    it "raises NotFound on HTTP errors" do
+      stub_request(:get, "http://example.com").to_return(status: 404)
+      assert_raises(Down::NotFound) { Down.download("http://example.com") }
+
+      stub_request(:get, "http://example.com").to_return(status: 500)
+      assert_raises(Down::NotFound) { Down.download("http://example.com") }
+    end
+
+    it "doesn't allow redirects by default" do
+      stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
+      assert_raises(Down::NotFound) { Down.download("http://example.com") }
+    end
+
+    it "raises on invalid URL" do
+      assert_raises(Down::Error) { Down.download("http:\\example.com/image.jpg") }
+    end
+
+    it "raises on invalid scheme" do
+      assert_raises(Down::Error) { Down.download("foo://example.com/image.jpg") }
+    end
+
+    it "doesn't allow shell execution" do
+      assert_raises(Down::Error) { Down.download("| ls") }
+    end
+
+    it "preserves extension" do
+      # Tempfile
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024)
+      tempfile = Down.download("http://example.com/image.jpg")
+      assert_equal ".jpg", File.extname(tempfile.path)
+      assert File.exist?(tempfile.path)
+
+      # StringIO
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
+      tempfile = Down.download("http://example.com/image.jpg")
+      assert_equal ".jpg", File.extname(tempfile.path)
+      assert File.exist?(tempfile.path)
+    end
+
+    it "forwards options to open-uri" do
+      stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
+      stub_request(:get, "http://example2.com").to_return(body: "redirected")
+      tempfile = Down.download("http://example.com", redirect: true)
+      assert_equal "redirected", tempfile.read
+    end
   end
 
-  def test_converts_small_stringios_to_tempfiles
-    stub_request(:get, "http://example.com/small.jpg").to_return(body: "a" * 5)
-    tempfile = Down.download("http://example.com/small.jpg")
+  describe "#copy_to_tempfile" do
+    it "returns a tempfile" do
+      tempfile = Down.copy_to_tempfile("foo", StringIO.new("foo"))
+      assert_instance_of Tempfile, tempfile
+    end
 
-    assert_instance_of Tempfile, tempfile
-    assert File.exist?(tempfile.path)
-    assert_equal "aaaaa", tempfile.read
-  end
+    it "rewinds IOs" do
+      io = StringIO.new("foo")
+      tempfile = Down.copy_to_tempfile("foo", io)
+      assert_equal "foo", io.read
+      assert_equal "foo", tempfile.read
+    end
 
-  def test_accepts_max_size
-    # "Content-Length" header
-    stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Length' => 5})
-    assert_raises(Down::TooLarge) { Down.download("http://example.com/image.jpg", max_size: 4) }
+    it "opens in binmode" do
+      tempfile = Down.copy_to_tempfile("foo", StringIO.new("foo"))
+      assert tempfile.binmode?
+    end
 
-    # no "Content-Length" header
-    stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
-    assert_raises(Down::TooLarge) { Down.download("http://example.com/image.jpg", max_size: 4) }
+    it "accepts basenames to be nested paths" do
+      tempfile = Down.copy_to_tempfile("foo/bar/baz", StringIO.new("foo"))
+      assert File.exist?(tempfile.path)
+    end
 
-    stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Length' => 5})
-    tempfile = Down.download("http://example.com/image.jpg", max_size: 6)
-    assert File.exist?(tempfile.path)
-  end
-
-  def test_accepts_progresss
-    stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
-    size = nil
-    Down.download("http://example.com/image.jpg", progress: proc { |s| size = s })
-
-    assert_equal 5, size
-  end
-
-  def test_downloaded_files_have_original_filename_and_content_type
-    stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024, headers: {'Content-Type' => 'image/jpeg'})
-    tempfile = Down.download("http://example.com/image.jpg")
-
-    assert_equal "image.jpg", tempfile.original_filename
-    assert_equal "image/jpeg", tempfile.content_type
-
-    stub_request(:get, "http://example.com/small.jpg").to_return(body: "a" * 5, headers: {'Content-Type' => 'image/jpeg'})
-    tempfile = Down.download("http://example.com/small.jpg")
-
-    assert_equal "small.jpg", tempfile.original_filename
-    assert_equal "image/jpeg", tempfile.content_type
-  end
-
-  def test_original_filename_is_uri_decoded
-    stub_request(:get, "http://example.com/image%20space.jpg").to_return(body: "a" * 20 * 1024, headers: {'Content-Type' => 'image/jpeg'})
-    tempfile = Down.download("http://example.com/image%20space.jpg")
-
-    assert_equal "image space.jpg", tempfile.original_filename
-  end
-
-  def test_original_filename_is_nil_when_path_is_missing
-    stub_request(:get, "http://example.com").to_return(body: "a" * 5)
-    tempfile = Down.download("http://example.com")
-
-    assert_equal nil, tempfile.original_filename
-
-    stub_request(:get, "http://example.com/").to_return(body: "a" * 5)
-    tempfile = Down.download("http://example.com/")
-
-    assert_equal nil, tempfile.original_filename
-  end
-
-  def test_raises_not_found_on_http_errors
-    stub_request(:get, "http://example.com").to_return(status: 404)
-    assert_raises(Down::NotFound) { Down.download("http://example.com") }
-
-    stub_request(:get, "http://example.com").to_return(status: 500)
-    assert_raises(Down::NotFound) { Down.download("http://example.com") }
-  end
-
-  def test_doesnt_allow_redirects
-    stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
-    assert_raises(Down::NotFound) { Down.download("http://example.com") }
-  end
-
-  def test_raises_on_invalid_url
-    assert_raises(Down::Error) { Down.download("http:\\example.com/image.jpg") }
-  end
-
-  def test_raises_on_invalid_scheme
-    assert_raises(Down::Error) { Down.download("foo://example.com/image.jpg") }
-  end
-
-  def test_doesnt_allow_shell_execution
-    assert_raises(Down::Error) { Down.download("| ls") }
-  end
-
-  def test_preserving_extension
-    # Tempfile
-    stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024)
-    tempfile = Down.download("http://example.com/image.jpg")
-    assert_equal ".jpg", File.extname(tempfile.path)
-    assert File.exist?(tempfile.path)
-
-    # StringIO
-    stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
-    tempfile = Down.download("http://example.com/image.jpg")
-    assert_equal ".jpg", File.extname(tempfile.path)
-    assert File.exist?(tempfile.path)
-  end
-
-  def test_forwarding_options_to_open_uri
-    stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
-    stub_request(:get, "http://example2.com").to_return(body: "redirected")
-    tempfile = Down.download("http://example.com", redirect: true)
-
-    assert_equal "redirected", tempfile.read
-  end
-end
-
-class CopyToTempfileTest < Minitest::Test
-  def test_copying_to_tempfile_returns_a_tempfile
-    tempfile = Down.copy_to_tempfile("foo", StringIO.new("foo"))
-
-    assert_instance_of Tempfile, tempfile
-  end
-
-  def test_copying_to_tempfile_rewinds_ios
-    io = StringIO.new("foo")
-    tempfile = Down.copy_to_tempfile("foo", io)
-
-    assert_equal "foo", io.read
-    assert_equal "foo", tempfile.read
-  end
-
-  def test_copying_to_tempfile_opens_in_binmode
-    tempfile = Down.copy_to_tempfile("foo", StringIO.new("foo"))
-
-    assert tempfile.binmode?
-  end
-
-  def test_basename_being_a_nested_path
-    tempfile = Down.copy_to_tempfile("foo/bar/baz", StringIO.new("foo"))
-
-    assert File.exist?(tempfile.path)
-  end
-
-  def test_preserving_extension
-    tempfile = Down.copy_to_tempfile("foo.jpg", StringIO.new("foo"))
-
-    assert_equal ".jpg", File.extname(tempfile.path)
+    it "preserves extension" do
+      tempfile = Down.copy_to_tempfile("foo.jpg", StringIO.new("foo"))
+      assert_equal ".jpg", File.extname(tempfile.path)
+    end
   end
 end
