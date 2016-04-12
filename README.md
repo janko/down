@@ -117,6 +117,18 @@ add basic authentication:
 Down.download "http://example.com/image.jpg", http_basic_authentication: ['john', 'secret']
 ```
 
+### Streaming
+
+Down has the ability to stream remote files, yielding chunks when they're
+received:
+
+```rb
+Down.stream("http://example.com/image.jpg") { |chunk, content_length| ... }
+```
+
+The `content_length` argument is set from the `Content-Length` response header
+if it's present.
+
 ### Copying to tempfile
 
 Down has another "hidden" utility method, `#copy_to_tempfile`, which creates

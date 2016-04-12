@@ -1,6 +1,5 @@
 require "open-uri"
 require "tempfile"
-require "uri"
 require "fileutils"
 require "cgi/util"
 
@@ -50,6 +49,35 @@ module Down
   rescue => error
     raise if error.is_a?(Down::Error)
     raise Down::NotFound, "file not found"
+  end
+
+  def stream(url, options = {})
+    uri = URI.parse(url)
+    http = Net::HTTP.new(uri.host, uri.port)
+
+    # taken from open-uri implementation
+    if uri.is_a?(URI::HTTPS)
+      require "net/https"
+      http.use_ssl = true
+      http.verify_mode = options[:ssl_verify_mode] || OpenSSL::SSL::VERIFY_PEER
+      store = OpenSSL::X509::Store.new
+      if options[:ssl_ca_cert]
+        Array(options[:ssl_ca_cert]).each do |cert|
+          File.directory?(cert) ? store.add_path(cert) : store.add_file(cert)
+        end
+      else
+        store.set_default_paths
+      end
+      http.cert_store = store
+    end
+
+    http.start do
+      req = Net::HTTP::Get.new(uri.to_s)
+      http.request(req) do |response|
+        content_length = response["Content-Length"].to_i if response["Content-Length"]
+        response.read_body { |chunk| yield chunk, content_length }
+      end
+    end
   end
 
   def copy_to_tempfile(basename, io)

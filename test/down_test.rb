@@ -115,6 +115,30 @@ describe Down do
     end
   end
 
+  describe "#stream" do
+    it "calls the block with downloaded chunks" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Length' => '5'})
+      chunks = Down.enum_for(:stream, "http://example.com/image.jpg").to_a
+      refute_empty chunks
+      assert_equal "aaaaa", chunks.map(&:first).join
+      assert_equal 5, chunks.first.last
+    end
+
+    it "yields nil for content length if header is not present" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
+      chunks = Down.enum_for(:stream, "http://example.com/image.jpg").to_a
+      assert_equal nil, chunks.first.last
+    end
+
+    it "handles HTTPS links" do
+      stub_request(:get, "https://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Length' => '5'})
+      chunks = Down.enum_for(:stream, "https://example.com/image.jpg").to_a
+      refute_empty chunks
+      assert_equal "aaaaa", chunks.map(&:first).join
+      assert_equal 5, chunks.first.last
+    end
+  end
+
   describe "#copy_to_tempfile" do
     it "returns a tempfile" do
       tempfile = Down.copy_to_tempfile("foo", StringIO.new("foo"))
