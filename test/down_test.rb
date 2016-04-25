@@ -54,9 +54,9 @@ describe Down do
     end
 
     it "decodes the original filename" do
-      stub_request(:get, "http://example.com/image%20space.jpg").to_return(body: "a" * 20 * 1024, headers: {'Content-Type' => 'image/jpeg'})
-      tempfile = Down.download("http://example.com/image%20space.jpg")
-      assert_equal "image space.jpg", tempfile.original_filename
+      stub_request(:get, "http://example.com/image%20space%2Fslash.jpg").to_return(body: "a" * 20 * 1024)
+      tempfile = Down.download("http://example.com/image%20space%2Fslash.jpg")
+      assert_equal "image space/slash.jpg", tempfile.original_filename
     end
 
     it "makes original fileame return nil when path is missing" do

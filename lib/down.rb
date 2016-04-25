@@ -100,8 +100,10 @@ module Down
   module DownloadedFile
     def original_filename
       path = base_uri.path
-      path = CGI.unescape(path)
-      File.basename(path) unless path.empty? || path == "/"
+      unless path.empty? || path == "/"
+        filename = path.split("/").last
+        CGI.unescape(filename)
+      end
     end
   end
 end
