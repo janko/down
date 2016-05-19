@@ -67,6 +67,16 @@ terminates the download very early, as soon as it gets the `Content-Length`
 header. And if the `Content-Length` header is missing, Down will terminate the
 download as soon as it receives a chunk which surpasses the maximum size.
 
+### Redirects
+
+Redirects are disabled by default, because although open-uri detects redirect
+loops, it doesn't have an option to limit the maximum number of redirects. You
+can turn on open-uri redirects:
+
+```rb
+Down.download("http://example.com/image.jpg", redirect: true)
+```
+
 ### Download errors
 
 There are a lot of ways in which a download can fail:
