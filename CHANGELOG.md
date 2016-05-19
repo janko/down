@@ -1,3 +1,11 @@
+## 2.2.0 (2016-05-19)
+
+* Add ability to follow redirects, and allow maximum of 2 redirects by default (janko-m)
+
+* Fix a potential Windows issue when extracting `#original_filename` (janko-m)
+
+* Fix `#original_filename` being incomplete if filename contains a slash (janko-m)
+
 ## 2.1.0 (2016-04-12)
 
 * Make `:progress_proc` and `:content_length_proc` work with `:max_size` (janko-m)
