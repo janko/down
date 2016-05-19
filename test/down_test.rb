@@ -77,9 +77,20 @@ describe Down do
       assert_raises(Down::NotFound) { Down.download("http://example.com") }
     end
 
-    it "doesn't allow redirects by default" do
-      stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
+    it "follows redirects" do
+      stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example1.com'})
+      stub_request(:get, "http://example1.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
+
+      stub_request(:get, "http://example2.com").to_return(body: "a" * 5)
+      tempfile = Down.download("http://example.com")
+      assert_equal "aaaaa", tempfile.read
+
+      stub_request(:get, "http://example2.com").to_return(status: 301, headers: {'Location' => 'http://example3.com'})
       assert_raises(Down::NotFound) { Down.download("http://example.com") }
+
+      stub_request(:get, "http://example3.com").to_return(body: "a" * 5)
+      tempfile = Down.download("http://example.com", max_redirects: 3)
+      assert_equal "aaaaa", tempfile.read
     end
 
     it "raises on invalid URL" do

@@ -69,12 +69,14 @@ download as soon as it receives a chunk which surpasses the maximum size.
 
 ### Redirects
 
-Redirects are disabled by default, because although open-uri detects redirect
-loops, it doesn't have an option to limit the maximum number of redirects. You
-can turn on open-uri redirects:
+By default open-uri's redirects are turned off, since open-uri doesn't have a
+way to limit maximum number of redirects. Instead Down itself implements
+following redirects, by default allowing maximum of 2 redirects.
 
 ```rb
-Down.download("http://example.com/image.jpg", redirect: true)
+Down.download("http://example.com/image.jpg")                   # 2 redirects allowed
+Down.download("http://example.com/image.jpg", max_redirects: 5) # 5 redirects allowed
+Down.download("http://example.com/image.jpg", max_redirects: 0) # 0 redirects allowed
 ```
 
 ### Download errors
@@ -85,7 +87,6 @@ There are a lot of ways in which a download can fail:
 * URL is a little bit invalid, e.g. "http:/example.com" (`Errno::ECONNREFUSED`)
 * Domain wasn't not found (`SocketError`)
 * Domain was found, but status is 4xx or 5xx (`OpenURI::HTTPError`)
-* Request went into a redirect loop (`RuntimeError`)
 * Request timeout out (`Timeout::Error`)
 
 Down unifies all of these errors into one `Down::NotFound` error (because this

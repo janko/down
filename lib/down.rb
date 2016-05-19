@@ -11,33 +11,44 @@ module Down
   module_function
 
   def download(url, options = {})
-    uri = URI.parse(url)
-
     warn "Passing :timeout option to `Down.download` is deprecated and will be removed in Down 3. You should use open-uri's :open_timeout and/or :read_timeout." if options.key?(:timeout)
     warn "Passing :progress option to `Down.download` is deprecated and will be removed in Down 3. You should use open-uri's :progress_proc." if options.key?(:progress)
 
     max_size            = options.delete(:max_size)
+    max_redirects       = options.delete(:max_redirects) || 2
     progress_proc       = options.delete(:progress_proc) || options.delete(:progress)
     content_length_proc = options.delete(:content_length_proc)
     timeout             = options.delete(:timeout)
 
-    downloaded_file = uri.open({
-      "User-Agent" => "Down/1.0.0",
-      content_length_proc: proc { |size|
-        if size && max_size && size > max_size
-          raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
-        end
-        content_length_proc.call(size) if content_length_proc
-      },
-      progress_proc: proc { |current_size|
-        if max_size && current_size > max_size
-          raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
-        end
-        progress_proc.call(current_size) if progress_proc
-      },
-      read_timeout: timeout,
-      redirect: false,
-    }.merge(options))
+    requests_left = max_redirects + 1
+
+    begin
+      uri = URI.parse(url)
+      downloaded_file = uri.open({
+        "User-Agent" => "Down/1.0.0",
+        content_length_proc: proc { |size|
+          if size && max_size && size > max_size
+            raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
+          end
+          content_length_proc.call(size) if content_length_proc
+        },
+        progress_proc: proc { |current_size|
+          if max_size && current_size > max_size
+            raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
+          end
+          progress_proc.call(current_size) if progress_proc
+        },
+        read_timeout: timeout,
+        redirect: false,
+      }.merge(options))
+    rescue OpenURI::HTTPRedirect => error
+      url = error.uri.to_s
+      retry if (requests_left -= 1) > 0
+      raise Down::NotFound, "too many redirects"
+    rescue => error
+      raise if error.is_a?(Down::Error)
+      raise Down::NotFound, "file not found"
+    end
 
     # open-uri will return a StringIO instead of a Tempfile if the filesize is
     # less than 10 KB, so if it happens we convert it back to Tempfile. We want
@@ -50,10 +61,6 @@ module Down
 
     downloaded_file.extend DownloadedFile
     downloaded_file
-
-  rescue => error
-    raise if error.is_a?(Down::Error)
-    raise Down::NotFound, "file not found"
   end
 
   def stream(url, options = {})
