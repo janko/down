@@ -20,7 +20,7 @@ module Down
     content_length_proc = options.delete(:content_length_proc)
     timeout             = options.delete(:timeout)
 
-    requests_left = max_redirects + 1
+    tries = max_redirects + 1
 
     begin
       uri = URI.parse(url)
@@ -41,9 +41,9 @@ module Down
         read_timeout: timeout,
         redirect: false,
       }.merge(options))
-    rescue OpenURI::HTTPRedirect => error
-      url = error.uri.to_s
-      retry if (requests_left -= 1) > 0
+    rescue OpenURI::HTTPRedirect => redirect
+      url = redirect.uri.to_s
+      retry if (tries -= 1) > 0
       raise Down::NotFound, "too many redirects"
     rescue => error
       raise if error.is_a?(Down::Error)
