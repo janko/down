@@ -96,6 +96,7 @@ module Down
     tempfile = Tempfile.new(["down", File.extname(basename)], binmode: true)
     if io.is_a?(OpenURI::Meta) && io.is_a?(Tempfile)
       io.close
+      tempfile.close
       FileUtils.mv io.path, tempfile.path
     else
       IO.copy_stream(io, tempfile)

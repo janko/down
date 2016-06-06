@@ -1,6 +1,8 @@
 ## HEAD
 
-* Close the file before moving in `copy_to_tempfile` (janko-m)
+* Make Down work on Windows (martinsefcik)
+
+* Close an internal file descriptor that was left open (martinsefcik)
 
 ## 2.2.0 (2016-05-19)
 
