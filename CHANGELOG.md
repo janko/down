@@ -1,3 +1,7 @@
+## HEAD
+
+* Close the file before moving in `copy_to_tempfile` (janko-m)
+
 ## 2.2.0 (2016-05-19)
 
 * Add ability to follow redirects, and allow maximum of 2 redirects by default (janko-m)
