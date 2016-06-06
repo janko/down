@@ -1,4 +1,4 @@
-## HEAD
+## 2.2.1 (2016-06-06)
 
 * Make Down work on Windows (martinsefcik)
 
