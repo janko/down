@@ -2,6 +2,8 @@
 
 * Add `Down.open` for IO-like streaming, and deprecate `Down.stream` (janko-m)
 
+* Allow URLs with basic authentication (`http://user:password@example.com`) (janko-m)
+
 ## 2.2.1 (2016-06-06)
 
 * Make Down work on Windows (martinsefcik)

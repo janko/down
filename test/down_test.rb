@@ -69,14 +69,6 @@ describe Down do
       assert_equal nil, tempfile.original_filename
     end
 
-    it "raises NotFound on HTTP errors" do
-      stub_request(:get, "http://example.com").to_return(status: 404)
-      assert_raises(Down::NotFound) { Down.download("http://example.com") }
-
-      stub_request(:get, "http://example.com").to_return(status: 500)
-      assert_raises(Down::NotFound) { Down.download("http://example.com") }
-    end
-
     it "follows redirects" do
       stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example1.com'})
       stub_request(:get, "http://example1.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
@@ -93,18 +85,6 @@ describe Down do
       assert_equal "aaaaa", tempfile.read
     end
 
-    it "raises on invalid URL" do
-      assert_raises(Down::Error) { Down.download("http:\\example.com/image.jpg") }
-    end
-
-    it "raises on invalid scheme" do
-      assert_raises(Down::Error) { Down.download("foo://example.com/image.jpg") }
-    end
-
-    it "doesn't allow shell execution" do
-      assert_raises(Down::Error) { Down.download("| ls") }
-    end
-
     it "preserves extension" do
       # Tempfile
       stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024)
@@ -119,11 +99,37 @@ describe Down do
       assert File.exist?(tempfile.path)
     end
 
+    it "automatically applies basic authentication" do
+      stub_request(:get, "http://user:password@example.com/image.jpg").to_return(body: "a" * 5)
+      tempfile = Down.download("http://user:password@example.com/image.jpg")
+      assert_equal "aaaaa", tempfile.read
+    end
+
     it "forwards options to open-uri" do
       stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
       stub_request(:get, "http://example2.com").to_return(body: "redirected")
       tempfile = Down.download("http://example.com", redirect: true)
       assert_equal "redirected", tempfile.read
+    end
+
+    it "raises NotFound on HTTP errors" do
+      stub_request(:get, "http://example.com").to_return(status: 404)
+      assert_raises(Down::NotFound) { Down.download("http://example.com") }
+
+      stub_request(:get, "http://example.com").to_return(status: 500)
+      assert_raises(Down::NotFound) { Down.download("http://example.com") }
+    end
+
+    it "raises on invalid URL" do
+      assert_raises(Down::Error) { Down.download("http:\\example.com/image.jpg") }
+    end
+
+    it "raises on invalid scheme" do
+      assert_raises(Down::Error) { Down.download("foo://example.com/image.jpg") }
+    end
+
+    it "doesn't allow shell execution" do
+      assert_raises(Down::Error) { Down.download("| ls") }
     end
   end
 

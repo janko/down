@@ -24,7 +24,8 @@ module Down
 
     begin
       uri = URI.parse(url)
-      downloaded_file = uri.open({
+
+      open_uri_options = {
         "User-Agent" => "Down/1.0.0",
         content_length_proc: proc { |size|
           if size && max_size && size > max_size
@@ -40,7 +41,17 @@ module Down
         },
         read_timeout: timeout,
         redirect: false,
-      }.merge(options))
+      }
+
+      if uri.user || uri.password
+        open_uri_options[:http_basic_authentication] = [uri.user, uri.password]
+        uri.user = nil
+        uri.password = nil
+      end
+
+      open_uri_options.update(options)
+
+      downloaded_file = uri.open(open_uri_options)
     rescue OpenURI::HTTPRedirect => redirect
       url = redirect.uri.to_s
       retry if (tries -= 1) > 0
