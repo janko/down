@@ -1,4 +1,4 @@
-## HEAD
+## 2.3.0 (2016-06-22)
 
 * Add `Down.open` for IO-like streaming, and deprecate `Down.stream` (janko-m)
 
