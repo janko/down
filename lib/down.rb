@@ -1,3 +1,5 @@
+require "down/version"
+
 require "open-uri"
 require "tempfile"
 require "fileutils"
@@ -26,7 +28,7 @@ module Down
       uri = URI.parse(url)
 
       open_uri_options = {
-        "User-Agent" => "Down/1.0.0",
+        "User-Agent" => "Down/#{VERSION}",
         content_length_proc: proc { |size|
           if size && max_size && size > max_size
             raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
