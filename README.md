@@ -17,7 +17,7 @@ tempfile = Down.download("http://example.com/nature.jpg")
 tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/20150925-55456-z7vxqz.jpg>
 ```
 
-## Features
+## Downloading
 
 If you're downloading files from URLs that come from you, then it's probably
 enough to just use `open-uri`. However, if you're accepting URLs from your
@@ -113,18 +113,6 @@ Down.download "http://example.com/image.jpg",
   read_timeout: 5
 ```
 
-### Streaming
-
-Down has the ability to stream remote files, yielding chunks when they're
-received:
-
-```rb
-Down.stream("http://example.com/image.jpg") { |chunk, content_length| ... }
-```
-
-The `content_length` argument is set from the `Content-Length` response header
-if it's present.
-
 ### Copying to tempfile
 
 Down has another "hidden" utility method, `#copy_to_tempfile`, which creates
@@ -135,6 +123,37 @@ but it's also publicly available for direct use:
 io # IO object that you want to copy to tempfile
 tempfile = Down.copy_to_tempfile "basename.jpg", io
 tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116-77262-jgcx65.jpg"
+```
+
+## Streaming
+
+Down has the ability to stream the remote file as it is being downloaded. The
+`Down.open` method returns an IO object which represents the remote file on the
+given URL. When you read from it, Down internally downloads chunks of the
+remote file, but only how much is needed.
+
+```rb
+remote_file = Down.open("http://example.com/image.jpg")
+remote_file.size # read from the "Content-Length" header
+
+remote_file.read(1024) # downloads and returns first 1 KB
+remote_file.read(1024) # downloads and returns next 1 KB
+remote_file.read       # downloads and returns the rest of the file
+
+remote_file.eof? #=> true
+remote_file.rewind
+remote_file.eof? #=> false
+
+remote_file.close # closes the HTTP connection and deletes the internal Tempfile
+```
+
+You can also yield chunks directly as they're downloaded:
+
+```rb
+remote_file = Down.open("http://example.com/image.jpg")
+remote_file.each_chunk do |chunk|
+  # ...
+end
 ```
 
 ## Supported Ruby versions

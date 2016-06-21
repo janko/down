@@ -151,6 +151,107 @@ describe Down do
     end
   end
 
+  describe "#open" do
+    before do
+      mocked_http = Class.new(Net::HTTP) do
+        def request(*)
+          super do |response|
+            response.instance_eval do
+              def read_body
+                yield "ab"
+                yield "c"
+              end
+            end
+            yield response if block_given?
+          end
+        end
+      end
+
+      @original_net_http = Net.send(:remove_const, :HTTP)
+      Net.send(:const_set, :HTTP, mocked_http)
+    end
+
+    after do
+      Net.send(:remove_const, :HTTP)
+      Net.send(:const_set, :HTTP, @original_net_http)
+    end
+
+    it "gets the size from Content-Length" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
+      io = Down.open("http://example.com/image.jpg")
+      assert_equal 3, io.size
+      assert_equal 0, io.tempfile.size
+    end
+
+    it "can read the whole content" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
+      io = Down.open("http://example.com/image.jpg")
+      assert_equal false, io.eof?
+      assert_equal "abc", io.read
+      assert_equal true, io.eof?
+    end
+
+    it "can read parts of content" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
+      io = Down.open("http://example.com/image.jpg")
+      assert_equal "a", io.read(1)
+      assert_equal false, io.eof?
+      assert_equal "bc", io.read
+      assert_equal true, io.eof?
+      assert_equal "", io.read
+    end
+
+    it "downloads the next chunk only when needed" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
+      io = Down.open("http://example.com/image.jpg")
+      assert_equal 0, io.tempfile.size
+      io.read(1)
+      assert_equal 2, io.tempfile.size
+      io.read(1)
+      assert_equal 2, io.tempfile.size
+      io.read(1)
+      assert_equal 3, io.tempfile.size
+    end
+
+    it "can rewind the IO" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
+      io = Down.open("http://example.com/image.jpg")
+      assert_equal "ab", io.read(2)
+      io.rewind
+      assert_equal "ab", io.read(2)
+      assert_equal 2, io.tempfile.size
+    end
+
+    it "can yield chunks" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
+      io = Down.open("http://example.com/image.jpg")
+      assert_equal ["ab", "c"], io.each_chunk.to_a
+    end
+
+    it "works as expected without Content-Length" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc")
+      io = Down.open("http://example.com/image.jpg")
+      assert_equal nil, io.size
+      assert_equal false, io.eof?
+      assert_equal "abc", io.read
+      assert_equal true, io.eof?
+    end
+
+    it "closes the connection on close" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
+      io = Down.open("http://example.com/image.jpg")
+      Net::HTTP.any_instance.expects(:do_finish)
+      io.close
+    end
+
+    it "deletes the underlying tempfile on close" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
+      io = Down.open("http://example.com/image.jpg")
+      io.close
+      assert_equal nil, io.tempfile.path
+    end
+  end
+
   describe "#copy_to_tempfile" do
     it "returns a tempfile" do
       tempfile = Down.copy_to_tempfile("foo", StringIO.new("foo"))

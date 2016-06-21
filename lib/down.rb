@@ -64,6 +64,12 @@ module Down
   end
 
   def stream(url, options = {})
+    warn "Down.stream is deprecated and will be removed in Down 3. Use Down.open instead."
+    io = open(url, options)
+    io.each_chunk { |chunk| yield chunk, io.size }
+  end
+
+  def open(url, options = {})
     uri = URI.parse(url)
     http = Net::HTTP.new(uri.host, uri.port)
 
@@ -83,13 +89,20 @@ module Down
       http.cert_store = store
     end
 
-    http.start do
-      req = Net::HTTP::Get.new(uri.to_s)
-      http.request(req) do |response|
-        content_length = response["Content-Length"].to_i if response["Content-Length"]
-        response.read_body { |chunk| yield chunk, content_length }
+    request = Fiber.new do
+      http.start do
+        http.request_get(url) do |response|
+          Fiber.yield response
+        end
       end
     end
+
+    response = request.resume
+    content_length = Integer(response["Content-Length"]) if response["Content-Length"]
+    chunks = response.to_enum(:read_body)
+    close_connection = -> { request.resume }
+
+    ChunkedIO.new(size: content_length, chunks: chunks, on_close: close_connection)
   end
 
   def copy_to_tempfile(basename, io)
@@ -104,6 +117,65 @@ module Down
     end
     tempfile.open
     tempfile
+  end
+
+  class ChunkedIO
+    attr_reader :tempfile
+
+    def initialize(options)
+      @size     = options.fetch(:size)
+      @chunks   = options.fetch(:chunks)
+      @on_close = options.fetch(:on_close, nil)
+      @tempfile = Tempfile.new("down", binmode: true)
+      @eof      = false
+    end
+
+    def size
+      @size
+    end
+
+    def read(length = nil, outbuf = nil)
+      loop do
+        break if length && (@tempfile.pos + length <= @tempfile.size)
+        next_chunk or break
+      end
+      @tempfile.read(length, outbuf)
+    end
+
+    def each_chunk(&block)
+      @chunks.each(&block)
+    end
+
+    def eof?
+      @eof
+    end
+
+    def rewind
+      @tempfile.rewind
+    end
+
+    def close
+      @on_close.call if @on_close
+      @tempfile.close!
+    end
+
+    private
+
+    def next_chunk
+      chunk = @chunks.next
+      write(chunk)
+      chunk
+    rescue StopIteration
+      @eof = true
+      nil
+    end
+
+    def write(chunk)
+      current_pos = @tempfile.pos
+      @tempfile.pos = @tempfile.size
+      @tempfile.write(chunk)
+      @tempfile.pos = current_pos
+    end
   end
 
   module DownloadedFile

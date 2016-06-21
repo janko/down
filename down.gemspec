@@ -4,8 +4,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Janko Marohnić"]
   spec.email         = ["janko.marohnic@gmail.com"]
 
-  spec.summary       = "Robust file download from URL using open-uri."
-  spec.description   = "Robust file download from URL using open-uri."
+  spec.summary       = "Robust streaming downloads using net/http."
   spec.homepage      = "https://github.com/janko-m/down"
   spec.license       = "MIT"
 
@@ -15,4 +14,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake"
   spec.add_development_dependency "minitest", "~> 5.8"
   spec.add_development_dependency "webmock"
+  spec.add_development_dependency "mocha"
 end
