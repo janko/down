@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.homepage      = "https://github.com/janko-m/down"
   spec.license       = "MIT"
 
-  spec.files         = ["README.md", "LICENSE.txt", "down.gemspec", "lib/down.rb"]
+  spec.files         = Dir["README.md", "LICENSE.txt", "*.gemspec", "lib/**/*.rb"]
   spec.require_paths = ["lib"]
 
   spec.add_development_dependency "rake"
