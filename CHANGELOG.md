@@ -1,8 +1,29 @@
-## 2.3.0 (2016-06-22)
+## 2.3.3 (2016-06-23)
+
+* Improve `Down::ChunkedIO` (and thus `Down.open`):
+
+  - `#each_chunk` and `#read` now automatically call `:on_close` when all
+    chunks were downloaded
+
+  - `#eof?` had incorrect behaviour, where it would return true if
+    everything was downloaded, instead only when it's also at the end of
+    the file
+
+  - `#close` can now be called multiple times, as the `:on_close` will always
+    be called only once
+
+  - end of download is now detected immediately when the last chunk was
+    downloaded (as opposed to after trying to read the next one)
+
+## 2.3.2 (2016-06-22)
 
 * Add `Down.open` for IO-like streaming, and deprecate `Down.stream` (janko-m)
 
 * Allow URLs with basic authentication (`http://user:password@example.com`) (janko-m)
+
+## ~~2.3.1 (2016-06-22)~~ (yanked)
+
+## ~~2.3.0 (2016-06-22)~~ (yanked)
 
 ## 2.2.1 (2016-06-06)
 
