@@ -138,9 +138,8 @@ module Down
     def initialize(options)
       @size     = options.fetch(:size)
       @chunks   = options.fetch(:chunks)
-      @on_close = options.fetch(:on_close, nil)
+      @on_close = options.fetch(:on_close, ->{})
       @tempfile = Tempfile.new("down", binmode: true)
-      @eof      = false
     end
 
     def size
@@ -148,19 +147,17 @@ module Down
     end
 
     def read(length = nil, outbuf = nil)
-      loop do
-        break if length && (@tempfile.pos + length <= @tempfile.size)
-        next_chunk or break
-      end
+      download_chunk until enough_downloaded?(length) || download_finished?
       @tempfile.read(length, outbuf)
     end
 
-    def each_chunk(&block)
-      @chunks.each(&block)
+    def each_chunk
+      return enum_for(__method__) if !block_given?
+      yield download_chunk until download_finished?
     end
 
     def eof?
-      @eof
+      @tempfile.eof? && download_finished?
     end
 
     def rewind
@@ -168,19 +165,36 @@ module Down
     end
 
     def close
-      @on_close.call if @on_close
+      terminate_download
       @tempfile.close!
     end
 
     private
 
-    def next_chunk
+    def download_chunk
       chunk = @chunks.next
       write(chunk)
+      begin
+        @chunks.peek
+      rescue StopIteration
+        terminate_download
+      end
       chunk
-    rescue StopIteration
-      @eof = true
-      nil
+    end
+
+    def enough_downloaded?(length)
+      length && (@tempfile.pos + length <= @tempfile.size)
+    end
+
+    def download_finished?
+      !@on_close
+    end
+
+    def terminate_download
+      if @on_close
+        @on_close.call
+        @on_close = nil
+      end
     end
 
     def write(chunk)

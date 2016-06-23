@@ -127,10 +127,10 @@ tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116
 
 ## Streaming
 
-Down has the ability to stream the remote file as it is being downloaded. The
-`Down.open` method returns an IO object which represents the remote file on the
-given URL. When you read from it, Down internally downloads chunks of the
-remote file, but only how much is needed.
+Down has the ability to access contents of the remote file *as it is being
+downloaded*. The `Down.open` method returns an IO object which represents the
+remote file on the given URL. When you read from it, Down internally downloads
+chunks of the remote file, but only how much is needed.
 
 ```rb
 remote_file = Down.open("http://example.com/image.jpg")
@@ -154,7 +154,39 @@ remote_file = Down.open("http://example.com/image.jpg")
 remote_file.each_chunk do |chunk|
   # ...
 end
+remote_file.close
 ```
+
+### `Down::ChunkedIO`
+
+The `Down.open` method uses `Down::ChunkedIO` internally. However,
+`Down::ChunkedIO` is designed to be generic, it can wrap any kind of streaming.
+
+```rb
+Down::ChunkedIO.new(...)
+```
+
+* `:size` – size of the file, if it's known
+* `:chunks` – an `Enumerator` which returns chunks
+* `:on_close` – called when streaming finishes
+
+Here is an example of wrapping streaming MongoDB files:
+
+```rb
+mongo = Mongo::Client.new(...)
+bucket = mongo.database.fs
+
+content_length = bucket.find(_id: id).first["length"]
+stream = bucket.open_download_stream(id)
+
+io = Down::ChunkedIO.new(
+  size: content_length,
+  chunks: stream.enum_for(:each),
+  on_close: -> { stream.close },
+)
+```
+
+### Down
 
 ## Supported Ruby versions
 

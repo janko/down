@@ -158,103 +158,27 @@ describe Down do
   end
 
   describe "#open" do
-    before do
-      mocked_http = Class.new(Net::HTTP) do
-        def request(*)
-          super do |response|
-            response.instance_eval do
-              def read_body
-                yield "ab"
-                yield "c"
-              end
-            end
-            yield response if block_given?
-          end
-        end
-      end
-
-      @original_net_http = Net.send(:remove_const, :HTTP)
-      Net.send(:const_set, :HTTP, mocked_http)
+    it "assigns chunks from response body" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc")
+      io = Down.open("http://example.com/image.jpg")
+      assert_equal "abc", io.read
     end
 
-    after do
-      Net.send(:remove_const, :HTTP)
-      Net.send(:const_set, :HTTP, @original_net_http)
-    end
-
-    it "gets the size from Content-Length" do
+    it "extracts size from Content-Length" do
       stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
       io = Down.open("http://example.com/image.jpg")
       assert_equal 3, io.size
-      assert_equal 0, io.tempfile.size
-    end
 
-    it "can read the whole content" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
-      io = Down.open("http://example.com/image.jpg")
-      assert_equal false, io.eof?
-      assert_equal "abc", io.read
-      assert_equal true, io.eof?
-    end
-
-    it "can read parts of content" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
-      io = Down.open("http://example.com/image.jpg")
-      assert_equal "a", io.read(1)
-      assert_equal false, io.eof?
-      assert_equal "bc", io.read
-      assert_equal true, io.eof?
-      assert_equal "", io.read
-    end
-
-    it "downloads the next chunk only when needed" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
-      io = Down.open("http://example.com/image.jpg")
-      assert_equal 0, io.tempfile.size
-      io.read(1)
-      assert_equal 2, io.tempfile.size
-      io.read(1)
-      assert_equal 2, io.tempfile.size
-      io.read(1)
-      assert_equal 3, io.tempfile.size
-    end
-
-    it "can rewind the IO" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
-      io = Down.open("http://example.com/image.jpg")
-      assert_equal "ab", io.read(2)
-      io.rewind
-      assert_equal "ab", io.read(2)
-      assert_equal 2, io.tempfile.size
-    end
-
-    it "can yield chunks" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
-      io = Down.open("http://example.com/image.jpg")
-      assert_equal ["ab", "c"], io.each_chunk.to_a
-    end
-
-    it "works as expected without Content-Length" do
       stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc")
       io = Down.open("http://example.com/image.jpg")
       assert_equal nil, io.size
-      assert_equal false, io.eof?
-      assert_equal "abc", io.read
-      assert_equal true, io.eof?
     end
 
-    it "closes the connection on close" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
+    it "closes connection on #close" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc")
       io = Down.open("http://example.com/image.jpg")
       Net::HTTP.any_instance.expects(:do_finish)
       io.close
-    end
-
-    it "deletes the underlying tempfile on close" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
-      io = Down.open("http://example.com/image.jpg")
-      io.close
-      assert_equal nil, io.tempfile.path
     end
   end
 
@@ -285,5 +209,159 @@ describe Down do
       tempfile = Down.copy_to_tempfile("foo.jpg", StringIO.new("foo"))
       assert_equal ".jpg", File.extname(tempfile.path)
     end
+  end
+end
+
+describe Down::ChunkedIO do
+  def chunked_io(options = {})
+    defaults = {chunks: ["ab", "c"].each, size: 3, on_close: ->{}}
+    Down::ChunkedIO.new(defaults.merge(options))
+  end
+
+  describe "#size" do
+    it "returns the given size" do
+      io = chunked_io(size: 3)
+      assert_equal 3, io.size
+    end
+  end
+
+  describe "#read" do
+    it "returns contents of the file without arguments" do
+      io = chunked_io(chunks: ["abc"].each)
+      assert_equal "abc", io.read
+    end
+
+    it "accepts length" do
+      io = chunked_io(chunks: ["abc"].each)
+      assert_equal "a",  io.read(1)
+      assert_equal "bc", io.read(2)
+    end
+
+    it "accepts buffer" do
+      io = chunked_io(chunks: ["abc"].each)
+      buffer = ""
+      io.read(2, buffer)
+      assert_equal "ab", buffer
+      io.read(1, buffer)
+      assert_equal "c", buffer
+    end
+
+    it "downloads only how much it needs" do
+      io = chunked_io(chunks: ["ab", "c"].each)
+      assert_equal 0, io.tempfile.size
+      io.read(1)
+      assert_equal 2, io.tempfile.size
+      io.read(1)
+      assert_equal 2, io.tempfile.size
+      io.read(1)
+      assert_equal 3, io.tempfile.size
+    end
+
+    it "calls :on_close callback after everything is read" do
+      io = chunked_io(on_close: (on_close = ->{}))
+      on_close.expects(:call)
+      io.read
+    end
+
+    it "calls :on_close only once" do
+      io = chunked_io(on_close: (on_close = ->{}))
+      on_close.expects(:call).once
+      io.read
+      io.rewind
+      io.read
+    end
+  end
+
+  describe "#each_chunk" do
+    it "yields chunks" do
+      io = chunked_io(chunks: ["a", "b", "c"].each)
+      io.each_chunk { |chunk| (@chunks ||= []) << chunk }
+      assert_equal ["a", "b", "c"], @chunks
+    end
+
+    it "returns an enumerator without arguments" do
+      io = chunked_io(chunks: ["a", "b", "c"].each)
+      assert_equal ["a", "b", "c"], io.each_chunk.to_a
+    end
+
+    it "calls :on_close callback after yielding chunks" do
+      io = chunked_io(chunks: ["abc"].each, on_close: (on_close = ->{}))
+      on_close.expects(:call)
+      io.each_chunk {}
+    end
+
+    it "calls :on_close only once" do
+      io = chunked_io(chunks: ["abc"].each, on_close: (on_close = ->{}))
+      on_close.expects(:call).once
+      io.each_chunk {}
+      io.each_chunk {}
+    end
+  end
+
+  describe "#eof?" do
+    it "returns true when the whole file is read" do
+      io = chunked_io
+      assert_equal false, io.eof?
+      io.read
+      assert_equal true, io.eof?
+    end
+
+    it "returns false when on end of tempfile, but not on end of download" do
+      io = chunked_io(chunks: ["ab", "c"].each)
+      io.read(2)
+      assert_equal true,  io.tempfile.eof?
+      assert_equal false, io.eof?
+      io.read(1)
+      assert_equal true, io.eof?
+    end
+
+    it "returns true when on end of file and on last chunk" do
+      io = chunked_io
+      assert_equal false, io.eof?
+      io.read(io.size)
+      assert_equal true, io.eof?
+    end
+  end
+
+  describe "#rewind" do
+    it "rewinds the file" do
+      io = chunked_io(chunks: ["abc"].each)
+      assert_equal "abc", io.read
+      io.rewind
+      assert_equal "abc", io.read
+    end
+  end
+
+  describe "#close" do
+    it "deletes the underlying tempfile" do
+      io = chunked_io
+      path = io.tempfile.path
+      io.close
+      refute File.exists?(path)
+    end
+
+    it "calls :on_close" do
+      io = chunked_io(on_close: (on_close = ->{}))
+      on_close.expects(:call)
+      io.close
+    end
+
+    it "doesn't error when called after #each_chunk" do
+      io = chunked_io
+      io.each_chunk {}
+      io.close
+    end
+  end
+
+  it "works without :size" do
+    io = chunked_io(size: nil, chunks: ["a", "b", "c"].each)
+    assert_equal nil, io.size
+    io.read(1)
+    assert_equal false, io.eof?
+    io.read(1)
+    assert_equal false, io.eof?
+    io.rewind
+    io.read
+    assert_equal true, io.eof?
   end
 end
