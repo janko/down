@@ -85,9 +85,9 @@ There are a lot of ways in which a download can fail:
 
 * URL is really invalid (`URI::InvalidURIError`)
 * URL is a little bit invalid, e.g. "http:/example.com" (`Errno::ECONNREFUSED`)
-* Domain wasn't not found (`SocketError`)
+* Domain was not found (`SocketError`)
 * Domain was found, but status is 4xx or 5xx (`OpenURI::HTTPError`)
-* Request timeout out (`Timeout::Error`)
+* Request timeout (`Timeout::Error`)
 
 Down unifies all of these errors into one `Down::NotFound` error (because this
 is what actually happened from the outside perspective). If you want to get the
