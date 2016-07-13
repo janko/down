@@ -1,6 +1,7 @@
 require "down/version"
 
 require "open-uri"
+require "net/http"
 require "tempfile"
 require "fileutils"
 require "cgi/util"
