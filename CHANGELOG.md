@@ -1,3 +1,7 @@
+## 2.3.4 (2016-07-14)
+
+* Require `net/http`
+
 ## 2.3.3 (2016-06-23)
 
 * Improve `Down::ChunkedIO` (and thus `Down.open`):
