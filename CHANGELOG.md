@@ -1,3 +1,8 @@
+## 2.3.5 (2016-07-18)
+
+* Prevent reading the whole response body when the IO returned by `Down.open`
+  is closed.
+
 ## 2.3.4 (2016-07-14)
 
 * Require `net/http`
