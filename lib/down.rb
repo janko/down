@@ -107,6 +107,7 @@ module Down
       http.start do
         http.request_get(url) do |response|
           Fiber.yield response
+          response.instance_variable_set("@read", true)
         end
       end
     end
