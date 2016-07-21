@@ -127,7 +127,7 @@ tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116
 
 ## Streaming
 
-Down has the ability to access contents of the remote file *as it is being
+Down has the ability to access content of the remote file *as it is being
 downloaded*. The `Down.open` method returns an IO object which represents the
 remote file on the given URL. When you read from it, Down internally downloads
 chunks of the remote file, but only how much is needed.
@@ -185,8 +185,6 @@ io = Down::ChunkedIO.new(
   on_close: -> { stream.close },
 )
 ```
-
-### Down
 
 ## Supported Ruby versions
 
