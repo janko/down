@@ -81,6 +81,7 @@ module Down
     warn "Down.stream is deprecated and will be removed in Down 3. Use Down.open instead."
     io = open(url, options)
     io.each_chunk { |chunk| yield chunk, io.size }
+    io.close
   end
 
   def open(url, options = {})
