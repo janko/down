@@ -114,11 +114,12 @@ module Down
     end
 
     response = request.resume
-    content_length = Integer(response["Content-Length"]) if response["Content-Length"]
-    chunks = response.to_enum(:read_body)
-    close_connection = -> { request.resume }
 
-    ChunkedIO.new(size: content_length, chunks: chunks, on_close: close_connection)
+    ChunkedIO.new(
+      chunks: response.enum_for(:read_body),
+      size: response["Content-Length"] && response["Content-Length"].to_i,
+      on_close: -> { request.resume },
+    )
   end
 
   def copy_to_tempfile(basename, io)
