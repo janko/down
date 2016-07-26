@@ -1,3 +1,11 @@
+## 2.3.6 (2016-07-26)
+
+* Read #original_filename from the "Content-Disposition" header.
+
+* Extract `Down::ChunkedIO` into a file, so that it can be required separately.
+
+* In `Down.stream` close the IO after reading from it.
+
 ## 2.3.5 (2016-07-18)
 
 * Prevent reading the whole response body when the IO returned by `Down.open`
