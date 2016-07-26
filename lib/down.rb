@@ -139,11 +139,19 @@ module Down
 
   module DownloadedFile
     def original_filename
+      filename_from_content_disposition || filename_from_uri
+    end
+
+    private
+
+    def filename_from_content_disposition
+      meta["content-disposition"].to_s[/filename="([^"]+)"/, 1]
+    end
+
+    def filename_from_uri
       path = base_uri.path
-      unless path.empty? || path == "/"
-        filename = path.split("/").last
-        CGI.unescape(filename)
-      end
+      filename = path.split("/").last
+      CGI.unescape(filename) if filename
     end
   end
 end

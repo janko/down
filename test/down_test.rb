@@ -59,7 +59,7 @@ describe Down do
       assert_equal "image space/slash.jpg", tempfile.original_filename
     end
 
-    it "makes original fileame return nil when path is missing" do
+    it "makes original filename return nil when path is missing" do
       stub_request(:get, "http://example.com").to_return(body: "a" * 5)
       tempfile = Down.download("http://example.com")
       assert_equal nil, tempfile.original_filename
@@ -67,6 +67,14 @@ describe Down do
       stub_request(:get, "http://example.com/").to_return(body: "a" * 5)
       tempfile = Down.download("http://example.com/")
       assert_equal nil, tempfile.original_filename
+    end
+
+    it "fetches original filename from Content-Diposition if it's available" do
+      stub_request(:get, "http://example.com/image.jpg")
+        .to_return(body: "a" * 5, headers: {'Content-Disposition' => 'filename="myfilename.foo"'})
+
+      tempfile = Down.download("http://example.com/image.jpg")
+      assert_equal "myfilename.foo", tempfile.original_filename
     end
 
     it "follows redirects" do
