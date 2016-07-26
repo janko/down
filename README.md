@@ -173,6 +173,8 @@ Down::ChunkedIO.new(...)
 Here is an example of wrapping streaming MongoDB files:
 
 ```rb
+require "down/chunked_io"
+
 mongo = Mongo::Client.new(...)
 bucket = mongo.database.fs
 
