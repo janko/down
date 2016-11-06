@@ -8,6 +8,5 @@ rvm:
   - "2.1"
   - "2.2"
   - "jruby-9.0.4.0"
-  - "rbx-2.5.8"
 
 cache: bundler
