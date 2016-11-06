@@ -1,3 +1,7 @@
+## 2.3.7 (2016-11-06)
+
+* In `Down.open` send requests using the URI *path* instead of the full URI.
+
 ## 2.3.6 (2016-07-26)
 
 * Read #original_filename from the "Content-Disposition" header.
