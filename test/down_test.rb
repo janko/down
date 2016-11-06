@@ -10,6 +10,11 @@ describe Down do
       assert File.exist?(tempfile.path)
     end
 
+    it "works with query parameters" do
+      stub_request(:get, "http://example.com/image.jpg?foo=bar")
+      Down.download("http://example.com/image.jpg?foo=bar")
+    end
+
     it "converts small StringIOs to tempfiles" do
       stub_request(:get, "http://example.com/small.jpg").to_return(body: "a" * 5)
       tempfile = Down.download("http://example.com/small.jpg")
@@ -171,6 +176,11 @@ describe Down do
       stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc")
       io = Down.open("http://example.com/image.jpg")
       assert_equal "abc", io.read
+    end
+
+    it "works with query parameters" do
+      stub_request(:get, "http://example.com/image.jpg?foo=bar")
+      Down.open("http://example.com/image.jpg?foo=bar")
     end
 
     it "extracts size from Content-Length" do
