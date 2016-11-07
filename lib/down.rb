@@ -116,11 +116,30 @@ module Down
 
     response = request.resume
 
-    ChunkedIO.new(
-      chunks: response.enum_for(:read_body),
-      size: response["Content-Length"] && response["Content-Length"].to_i,
-      on_close: -> { request.resume },
-    )
+    if response.chunked?
+      # Net::HTTP's implementation of reading "Transfer-Encoding: chunked"
+      # raises a Fiber error, so we work around it by downloading the whole
+      # response body without Enumerators (which internally use Fibers).
+      warn "Response from #{url} returned as \"Transfer-Encoding: chunked\", which Down cannot partially download, so the whole response body will be downloaded instead."
+
+      tempfile = Tempfile.new("down", binmode: true)
+      response.read_body { |chunk| tempfile << chunk }
+      tempfile.rewind
+
+      request.resume # close HTTP connection
+
+      ChunkedIO.new(
+        chunks: Enumerator.new { |y| y << tempfile.read(16*1024) until tempfile.eof? },
+        size: tempfile.size,
+        on_close: -> { tempfile.close! },
+      )
+    else
+      ChunkedIO.new(
+        chunks: response.enum_for(:read_body),
+        size: response["Content-Length"] && response["Content-Length"].to_i,
+        on_close: -> { request.resume }, # close HTTP connnection
+      )
+    end
   end
 
   def copy_to_tempfile(basename, io)
