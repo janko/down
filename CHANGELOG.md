@@ -1,3 +1,8 @@
+## 2.3.8 (2016-11-07)
+
+* Work around `Transfer-Encoding: chunked` responses by downloading whole
+  response body.
+
 ## 2.3.7 (2016-11-06)
 
 * In `Down.open` send requests using the URI *path* instead of the full URI.
