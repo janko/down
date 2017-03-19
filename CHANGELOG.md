@@ -1,3 +1,12 @@
+## 2.4.0 (2017-03-19)
+
+* Allow `Down.open` to accept request headers as options with String keys,
+  just like `Down.download` does.
+
+* Decode URI-decoded filenames from the `Content-Disposition` header
+
+* Parse filenames without quotes from the `Content-Disposition` header
+
 ## 2.3.8 (2016-11-07)
 
 * Work around `Transfer-Encoding: chunked` responses by downloading whole
