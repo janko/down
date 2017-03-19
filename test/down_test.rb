@@ -76,10 +76,10 @@ describe Down do
 
     it "fetches original filename from Content-Disposition if it's available" do
       stub_request(:get, "http://example.com/image.jpg")
-        .to_return(body: "a" * 5, headers: {'Content-Disposition' => 'filename="myfilename.foo"'})
+        .to_return(body: "a" * 5, headers: {'Content-Disposition' => 'filename="my filename.foo"'})
 
       tempfile = Down.download("http://example.com/image.jpg")
-      assert_equal "myfilename.foo", tempfile.original_filename
+      assert_equal "my filename.foo", tempfile.original_filename
     end
 
     it "fetches original filename from Content-Disposition without quotes if it's available" do

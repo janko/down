@@ -164,7 +164,9 @@ module Down
     private
 
     def filename_from_content_disposition
-      meta["content-disposition"].to_s[/filename="?([^ "]+)"?/, 1]
+      content_disposition = meta["content-disposition"].to_s
+      filename = content_disposition[/filename="([^"]+)"/, 1] || content_disposition[/filename=(.+)/, 1]
+      filename && filename.strip
     end
 
     def filename_from_uri
