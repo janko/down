@@ -166,7 +166,7 @@ module Down
     def filename_from_content_disposition
       content_disposition = meta["content-disposition"].to_s
       filename = content_disposition[/filename="([^"]+)"/, 1] || content_disposition[/filename=(.+)/, 1]
-      filename && filename.strip
+      filename && CGI.unescape(filename.strip)
     end
 
     def filename_from_uri

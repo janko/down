@@ -82,6 +82,14 @@ describe Down do
       assert_equal "my filename.foo", tempfile.original_filename
     end
 
+    it "decodes URI-encoded filenames from Content-Disposition" do
+      stub_request(:get, "http://example.com/image.jpg")
+        .to_return(body: "a" * 5, headers: {'Content-Disposition' => "filename=\"#{CGI.escape("été.jpg")}\""})
+
+      tempfile = Down.download("http://example.com/image.jpg")
+      assert_equal "été.jpg", tempfile.original_filename
+    end
+
     it "fetches original filename from Content-Disposition without quotes if it's available" do
       stub_request(:get, "http://example.com/image.jpg")
         .to_return(body: "a" * 5, headers: {'Content-Disposition' => 'attachment; filename=myfilename.foo '})
