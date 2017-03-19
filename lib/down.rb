@@ -105,9 +105,11 @@ module Down
       http.cert_store = store
     end
 
+    request_headers = options.select { |key, value| key.is_a?(String) }
+
     request = Fiber.new do
       http.start do
-        http.request_get(uri.request_uri) do |response|
+        http.request_get(uri.request_uri, request_headers) do |response|
           Fiber.yield response
           response.instance_variable_set("@read", true)
         end

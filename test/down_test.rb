@@ -222,6 +222,14 @@ describe Down do
       Net::HTTP.any_instance.expects(:do_finish)
       io.close
     end
+
+    it "accepts request headers" do
+      stub_request(:get, "http://example.com/image.jpg")
+        .with(headers: {"Header" => "value"})
+        .to_return(body: "abc")
+
+      Down.open("http://example.com/image.jpg", {"Header" => "value"})
+    end
   end
 
   describe "#copy_to_tempfile" do

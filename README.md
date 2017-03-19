@@ -157,6 +157,14 @@ end
 remote_file.close
 ```
 
+It accepts the `:ssl_verify_mode` and `:ssl_ca_cert` options with the same
+semantics as in `open-uri`, and any options with String keys will be
+interpreted as request headers.
+
+```rb
+Down.open("http://example.com/image.jpg", {"Authorization" => "..."})
+```
+
 ### `Down::ChunkedIO`
 
 The `Down.open` method uses `Down::ChunkedIO` internally. However,
