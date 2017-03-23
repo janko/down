@@ -1,3 +1,8 @@
+## 2.4.1 (2017-03-23)
+
+* Correctly detect empty filename from `Content-Disposition` header, and
+  in this case continue extracting filename from URL.
+
 ## 2.4.0 (2017-03-19)
 
 * Allow `Down.open` to accept request headers as options with String keys,
