@@ -92,11 +92,11 @@ describe Down do
 
       stub_request(:get, "http://example.com").to_return(body: "a" * 5)
       tempfile = Down.download("http://example.com")
-      assert_equal nil, tempfile.original_filename
+      assert_nil tempfile.original_filename
 
       stub_request(:get, "http://example.com/").to_return(body: "a" * 5)
       tempfile = Down.download("http://example.com/")
-      assert_equal nil, tempfile.original_filename
+      assert_nil tempfile.original_filename
     end
 
     it "follows redirects" do
@@ -176,7 +176,7 @@ describe Down do
     it "yields nil for content length if header is not present" do
       stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
       chunks = Down.enum_for(:stream, "http://example.com/image.jpg").to_a
-      assert_equal nil, chunks.first.last
+      assert_nil chunks.first.last
     end
 
     it "handles HTTPS links" do
@@ -207,7 +207,7 @@ describe Down do
 
       stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc")
       io = Down.open("http://example.com/image.jpg")
-      assert_equal nil, io.size
+      assert_nil io.size
     end
 
     it "works around chunked Transfer-Encoding response" do
@@ -406,7 +406,7 @@ describe Down::ChunkedIO do
 
   it "works without :size" do
     io = chunked_io(size: nil, chunks: ["a", "b", "c"].each)
-    assert_equal nil, io.size
+    assert_nil io.size
     io.read(1)
     assert_equal false, io.eof?
     io.read(1)
