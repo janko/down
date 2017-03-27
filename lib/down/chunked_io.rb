@@ -9,6 +9,8 @@ module Down
       @chunks   = options.fetch(:chunks)
       @on_close = options.fetch(:on_close, ->{})
       @tempfile = Tempfile.new("down", binmode: true)
+
+      peek_chunk
     end
 
     def size
@@ -43,12 +45,14 @@ module Down
     def download_chunk
       chunk = @chunks.next
       write(chunk)
-      begin
-        @chunks.peek
-      rescue StopIteration
-        terminate_download
-      end
+      peek_chunk
       chunk
+    end
+
+    def peek_chunk
+      @chunks.peek
+    rescue StopIteration
+      terminate_download
     end
 
     def enough_downloaded?(length)

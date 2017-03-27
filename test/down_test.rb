@@ -308,6 +308,11 @@ describe Down::ChunkedIO do
       assert_equal 3, io.tempfile.size
     end
 
+    it "handles case when there are no chunks" do
+      io = chunked_io(chunks: [].each)
+      assert_equal "", io.read
+    end
+
     it "calls :on_close callback after everything is read" do
       io = chunked_io(on_close: (on_close = ->{}))
       on_close.expects(:call)
@@ -370,6 +375,11 @@ describe Down::ChunkedIO do
       io = chunked_io
       assert_equal false, io.eof?
       io.read(io.size)
+      assert_equal true, io.eof?
+    end
+
+    it "returns true when there are no chunks" do
+      io = chunked_io(chunks: [].each)
       assert_equal true, io.eof?
     end
   end
