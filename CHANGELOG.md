@@ -1,3 +1,7 @@
+## 2.4.3 (2017-04-06)
+
+* Show the input URL in the `Down::Error` message.
+
 ## 2.4.2 (2017-03-28)
 
 * Don't raise `StopIteration` in `Down::ChunkedIO` when `:chunks` is an empty
