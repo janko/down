@@ -113,18 +113,6 @@ Down.download "http://example.com/image.jpg",
   read_timeout: 5
 ```
 
-### Copying to tempfile
-
-Down has another "hidden" utility method, `#copy_to_tempfile`, which creates
-a Tempfile out of the given file. The `#download` method uses it internally,
-but it's also publicly available for direct use:
-
-```rb
-io # IO object that you want to copy to tempfile
-tempfile = Down.copy_to_tempfile "basename.jpg", io
-tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116-77262-jgcx65.jpg"
-```
-
 ## Streaming
 
 Down has the ability to access content of the remote file *as it is being
@@ -194,6 +182,28 @@ io = Down::ChunkedIO.new(
   chunks: stream.enum_for(:each),
   on_close: -> { stream.close },
 )
+```
+
+### Proxy
+
+Both `Down.download` and `Down.open` support a `:proxy` option, where you can
+specify a URL to an HTTP proxy which should be used when downloading.
+
+```rb
+Down.download("http://example.com/image.jpg", proxy: "http://proxy.org")
+Down.open("http://example.com/image.jpg", proxy: "http://user:password@proxy.org")
+```
+
+### Copying to tempfile
+
+Down has another "hidden" utility method, `#copy_to_tempfile`, which creates
+a Tempfile out of the given file. The `#download` method uses it internally,
+but it's also publicly available for direct use:
+
+```rb
+io # IO object that you want to copy to tempfile
+tempfile = Down.copy_to_tempfile "basename.jpg", io
+tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116-77262-jgcx65.jpg"
 ```
 
 ## Supported Ruby versions

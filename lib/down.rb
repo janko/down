@@ -24,6 +24,20 @@ module Down
     content_length_proc = options.delete(:content_length_proc)
     timeout             = options.delete(:timeout)
 
+    if options[:proxy]
+      proxy    = URI.parse(options[:proxy])
+      user     = proxy.user
+      password = proxy.password
+
+      if user || password
+        proxy.user     = nil
+        proxy.password = nil
+
+        options[:proxy_http_basic_authentication] = [proxy.to_s, user, password]
+        options.delete(:proxy)
+      end
+    end
+
     tries = max_redirects + 1
 
     begin
@@ -87,7 +101,15 @@ module Down
 
   def open(url, options = {})
     uri = URI.parse(url)
-    http = Net::HTTP.new(uri.host, uri.port)
+
+    http_class = Net::HTTP
+
+    if options[:proxy]
+      proxy = URI.parse(options[:proxy])
+      http_class = Net::HTTP::Proxy(proxy.hostname, proxy.port, proxy.user, proxy.password)
+    end
+
+    http = http_class.new(uri.host, uri.port)
 
     # taken from open-uri implementation
     if uri.is_a?(URI::HTTPS)

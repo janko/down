@@ -1,3 +1,7 @@
+## HEAD
+
+* Add `:proxy` option to `Down.download` and `Down.open`.
+
 ## 2.4.3 (2017-04-06)
 
 * Show the input URL in the `Down::Error` message.

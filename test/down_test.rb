@@ -136,6 +136,13 @@ describe Down do
       assert_equal "aaaaa", tempfile.read
     end
 
+    it "accepts a proxy" do
+      stub_request(:get, "http://example.com/image.jpg")
+
+      Down.download("http://example.com/image.jpg", proxy: "http://proxy.org")
+      Down.download("http://example.com/image.jpg", proxy: "http://user:password@proxy.org")
+    end
+
     it "forwards options to open-uri" do
       stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
       stub_request(:get, "http://example2.com").to_return(body: "redirected")
@@ -230,6 +237,13 @@ describe Down do
         .to_return(body: "abc")
 
       Down.open("http://example.com/image.jpg", {"Header" => "value"})
+    end
+
+    it "accepts a proxy" do
+      stub_request(:get, "http://example.com/image.jpg")
+
+      Down.open("http://example.com/image.jpg", proxy: "http://proxy.org")
+      Down.open("http://example.com/image.jpg", proxy: "http://user:password@proxy.org")
     end
   end
 
