@@ -140,6 +140,8 @@ module Down
 
     response = request.resume
 
+    raise Down::NotFound, "request to #{url} returned status #{response.code} and body:\n#{response.body}" if response.code.to_i.between?(400, 599)
+
     if response.chunked?
       # Net::HTTP's implementation of reading "Transfer-Encoding: chunked"
       # raises a Fiber error, so we work around it by downloading the whole

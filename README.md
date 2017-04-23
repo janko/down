@@ -153,6 +153,9 @@ remote_file.data[:status]  #=> 200
 remote_file.data[:headers] #=> { ... }
 ```
 
+Note that `Down::NotFound` error will automatically be raised if response
+status was 4xx or 5xx.
+
 `Down.open` accepts `:ssl_verify_mode` and `:ssl_ca_cert` options with the same
 semantics as in `open-uri`, and any options with String keys will be
 interpreted as request headers.

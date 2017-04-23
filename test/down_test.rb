@@ -258,6 +258,16 @@ describe Down do
       assert_equal 200, io.data[:status]
       assert_equal Hash["My-Header" => "Value"], io.data[:headers]
     end
+
+    it "raises an error on 4xx and 5xx response" do
+      stub_request(:get, "http://example.com/image.jpg").to_return(status: 404, body: "File not found")
+      error = assert_raises(Down::Error) { Down.open("http://example.com/image.jpg") }
+      assert_match "request to http://example.com/image.jpg returned status 404 and body:\nFile not found", error.message
+
+      stub_request(:get, "http://example.com/image.jpg").to_return(status: 500, body: "There has been an error")
+      error = assert_raises(Down::Error) { Down.open("http://example.com/image.jpg") }
+      assert_equal "request to http://example.com/image.jpg returned status 500 and body:\nThere has been an error", error.message
+    end
   end
 
   describe "#copy_to_tempfile" do

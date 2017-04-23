@@ -1,5 +1,7 @@
 ## HEAD
 
+* Raise `Down::NotFound` on 4xx and 5xx responses in `Down.open`.
+
 * Write `:status` and `:headers` information to `Down::ChunkedIO#data` in `Down.open`.
 
 * Add `#data` attribute to `Down::ChunkedIO` for saving custom result data.
