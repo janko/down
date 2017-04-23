@@ -100,19 +100,22 @@ describe Down do
     end
 
     it "follows redirects" do
-      stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example1.com'})
-      stub_request(:get, "http://example1.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
-
-      stub_request(:get, "http://example2.com").to_return(body: "a" * 5)
+      # Double redirect
+      stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => '/foo'}) # relative
+      stub_request(:get, "http://example.com/foo").to_return(status: 301, headers: {'Location' => 'https://example.com/bar'}) # HTTP => HTTPS
+      stub_request(:get, "https://example.com/bar").to_return(body: "file", headers: {"Content-Type" => "text/plain"})
       tempfile = Down.download("http://example.com")
-      assert_equal "aaaaa", tempfile.read
+      assert_equal "file", tempfile.read
+      assert_equal "bar", tempfile.original_filename
+      assert_equal "text/plain", tempfile.content_type
 
-      stub_request(:get, "http://example2.com").to_return(status: 301, headers: {'Location' => 'http://example3.com'})
-      assert_raises(Down::NotFound) { Down.download("http://example.com") }
-
-      stub_request(:get, "http://example3.com").to_return(body: "a" * 5)
+      stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example.com/foo'})
+      stub_request(:get, "http://example.com/foo").to_return(status: 301, headers: {'Location' => 'http://example.com/bar'})
+      stub_request(:get, "http://example.com/bar").to_return(status: 301, headers: {'Location' => 'http://example.com/baz'})
+      stub_request(:get, "http://example.com/baz").to_return(body: "file")
+      assert_raises(Down::Error) { Down.download("http://example.com") }
       tempfile = Down.download("http://example.com", max_redirects: 3)
-      assert_equal "aaaaa", tempfile.read
+      assert_equal "file", tempfile.read
     end
 
     it "preserves extension" do
