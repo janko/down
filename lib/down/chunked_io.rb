@@ -24,7 +24,7 @@ module Down
 
     def each_chunk
       return enum_for(__method__) if !block_given?
-      yield download_chunk until download_finished?
+      yield retrieve_chunk until download_finished?
     end
 
     def eof?
@@ -43,8 +43,11 @@ module Down
     private
 
     def download_chunk
+      write(retrieve_chunk)
+    end
+
+    def retrieve_chunk
       chunk = @chunks.next
-      write(chunk)
       peek_chunk
       chunk
     end

@@ -1,5 +1,7 @@
 ## HEAD
 
+* Don't save retrieved chunks into the file in `Down::ChunkedIO#each_chunk`.
+
 * Add `:proxy` option to `Down.download` and `Down.open`.
 
 ## 2.4.3 (2017-04-06)
