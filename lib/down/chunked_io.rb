@@ -64,10 +64,8 @@ module Down
     end
 
     def terminate_download
-      if @on_close
-        @on_close.call
-        @on_close = nil
-      end
+      @on_close.call if @on_close
+      @on_close = nil
     end
 
     def write(chunk)
