@@ -1,5 +1,9 @@
 ## HEAD
 
+* Write `:status` and `:headers` information to `Down::ChunkedIO#data` in `Down.open`.
+
+* Add `#data` attribute to `Down::ChunkedIO` for saving custom result data.
+
 * Don't save retrieved chunks into the file in `Down::ChunkedIO#each_chunk`.
 
 * Add `:proxy` option to `Down.download` and `Down.open`.

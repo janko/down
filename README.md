@@ -145,7 +145,15 @@ end
 remote_file.close
 ```
 
-It accepts the `:ssl_verify_mode` and `:ssl_ca_cert` options with the same
+You can access the response status and headers of the HTTP request that was made:
+
+```rb
+remote_file = Down.open("http://example.com/image.jpg")
+remote_file.data[:status]  #=> 200
+remote_file.data[:headers] #=> { ... }
+```
+
+`Down.open` accepts `:ssl_verify_mode` and `:ssl_ca_cert` options with the same
 semantics as in `open-uri`, and any options with String keys will be
 interpreted as request headers.
 

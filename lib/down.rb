@@ -152,18 +152,28 @@ module Down
 
       request.resume # close HTTP connection
 
-      ChunkedIO.new(
+      chunked_io = ChunkedIO.new(
         chunks: Enumerator.new { |y| y << tempfile.read(16*1024) until tempfile.eof? },
         size: tempfile.size,
         on_close: -> { tempfile.close! },
       )
     else
-      ChunkedIO.new(
+      chunked_io = ChunkedIO.new(
         chunks: response.enum_for(:read_body),
         size: response["Content-Length"] && response["Content-Length"].to_i,
         on_close: -> { request.resume }, # close HTTP connnection
       )
     end
+
+    chunked_io.data[:status]  = response.code.to_i
+    chunked_io.data[:headers] = {}
+
+    response.each_header do |downcased_name, value|
+      name = downcased_name.split("-").map(&:capitalize).join("-")
+      chunked_io.data[:headers].merge!(name => value)
+    end
+
+    chunked_io
   end
 
   def copy_to_tempfile(basename, io)

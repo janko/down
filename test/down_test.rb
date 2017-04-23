@@ -245,6 +245,16 @@ describe Down do
       Down.open("http://example.com/image.jpg", proxy: "http://proxy.org")
       Down.open("http://example.com/image.jpg", proxy: "http://user:password@proxy.org")
     end
+
+    it "saves the response status and headers" do
+      stub_request(:get, "http://example.com/image.jpg")
+        .to_return(body: "abc", headers: {"My-Header" => "Value"})
+
+      io = Down.open("http://example.com/image.jpg")
+
+      assert_equal 200, io.data[:status]
+      assert_equal Hash["My-Header" => "Value"], io.data[:headers]
+    end
   end
 
   describe "#copy_to_tempfile" do

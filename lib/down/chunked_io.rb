@@ -2,12 +2,13 @@ require "tempfile"
 
 module Down
   class ChunkedIO
-    attr_reader :tempfile
+    attr_reader :tempfile, :data
 
     def initialize(options)
       @size     = options.fetch(:size)
       @chunks   = options.fetch(:chunks)
       @on_close = options.fetch(:on_close, ->{})
+      @data     = options.fetch(:data, {})
       @tempfile = Tempfile.new("down", binmode: true)
 
       peek_chunk
