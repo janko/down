@@ -5,6 +5,7 @@ require "open-uri"
 require "net/http"
 require "tempfile"
 require "fileutils"
+require "cgi"
 require "cgi/util"
 
 module Down
