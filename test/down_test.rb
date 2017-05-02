@@ -131,7 +131,10 @@ describe Down do
 
     it "automatically applies basic authentication" do
       stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5) if ENV["CI"]
-      stub_request(:get, "http://user:password@example.com/image.jpg").to_return(body: "a" * 5)
+      stub_request(:get, "http://example.com/image.jpg").
+        with(headers: {'Accept'=>'*/*', 'Accept-Encoding'=>'gzip;q=1.0,deflate;q=0.6,identity;q=0.3', 'Authorization'=>'Basic dXNlcjpwYXNzd29yZA==', 'User-Agent'=>'Down/2.4.3'}).
+        to_return(status: 200, body: "a" * 5, headers: {})
+
       tempfile = Down.download("http://user:password@example.com/image.jpg")
       assert_equal "aaaaa", tempfile.read
     end
