@@ -203,6 +203,11 @@ describe Down do
       Down.open("http://example.com/image.jpg?foo=bar")
     end
 
+    it "works with URI parameter" do
+      stub_request(:get, "http://example.com/image.jpg?foo=bar")
+      Down.open(URI("http://example.com/image.jpg?foo=bar"))
+    end
+
     it "extracts size from Content-Length" do
       stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
       io = Down.open("http://example.com/image.jpg")
