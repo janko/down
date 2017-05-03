@@ -133,8 +133,7 @@ describe Down do
     end
 
     it "automatically applies basic authentication" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5) if ENV["CI"]
-      stub_request(:get, "http://user:password@example.com/image.jpg").to_return(body: "a" * 5)
+      stub_request(:get, "http://example.com/image.jpg").with(headers: {'Authorization'=>'Basic dXNlcjpwYXNzd29yZA=='}).to_return(body: "a" * 5)
       tempfile = Down.download("http://user:password@example.com/image.jpg")
       assert_equal "aaaaa", tempfile.read
     end
