@@ -1,5 +1,7 @@
 ## HEAD
 
+* Work around a `CGI.unescape` bug in Ruby 2.4.
+
 * Apply HTTP Basic authentication contained in URLs in `Down.open`.
 
 * Raise `Down::NotFound` on 4xx and 5xx responses in `Down.open`.
