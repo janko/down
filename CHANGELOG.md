@@ -1,4 +1,4 @@
-## HEAD
+## 2.5.0 (2017-05-03)
 
 * Support both Strings and `URI` objects in `Down.download` and `Down.open` (@olleolleolle)
 
