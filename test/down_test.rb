@@ -15,6 +15,11 @@ describe Down do
       Down.download("http://example.com/image.jpg?foo=bar")
     end
 
+    it "accepts an URI object" do
+      stub_request(:get, "http://example.com/image.jpg?foo=bar")
+      Down.download(URI("http://example.com/image.jpg?foo=bar"))
+    end
+
     it "converts small StringIOs to tempfiles" do
       stub_request(:get, "http://example.com/small.jpg").to_return(body: "a" * 5)
       tempfile = Down.download("http://example.com/small.jpg")
@@ -143,6 +148,7 @@ describe Down do
 
       Down.download("http://example.com/image.jpg", proxy: "http://proxy.org")
       Down.download("http://example.com/image.jpg", proxy: "http://user:password@proxy.org")
+      Down.download("http://example.com/image.jpg", proxy: URI("http://user:password@proxy.org"))
     end
 
     it "forwards options to open-uri" do
@@ -207,6 +213,11 @@ describe Down do
     it "works with query parameters" do
       stub_request(:get, "http://example.com/image.jpg?foo=bar")
       Down.open("http://example.com/image.jpg?foo=bar")
+    end
+
+    it "accepts an URI object" do
+      stub_request(:get, "http://example.com/image.jpg?foo=bar")
+      Down.open(URI("http://example.com/image.jpg?foo=bar"))
     end
 
     it "extracts size from Content-Length" do

@@ -1,5 +1,7 @@
 ## HEAD
 
+* Support both Strings and `URI` objects in `Down.download` and `Down.open` (@olleolleolle)
+
 * Work around a `CGI.unescape` bug in Ruby 2.4.
 
 * Apply HTTP Basic authentication contained in URLs in `Down.open`.

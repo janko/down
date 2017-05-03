@@ -14,7 +14,7 @@ module Down
 
   module_function
 
-  def download(url, options = {})
+  def download(uri, options = {})
     warn "Passing :timeout option to `Down.download` is deprecated and will be removed in Down 3. You should use open-uri's :open_timeout and/or :read_timeout." if options.key?(:timeout)
     warn "Passing :progress option to `Down.download` is deprecated and will be removed in Down 3. You should use open-uri's :progress_proc." if options.key?(:progress)
 
@@ -25,7 +25,7 @@ module Down
     timeout             = options.delete(:timeout)
 
     if options[:proxy]
-      proxy    = URI.parse(options[:proxy])
+      proxy    = URI(options[:proxy])
       user     = proxy.user
       password = proxy.password
 
@@ -41,7 +41,7 @@ module Down
     tries = max_redirects + 1
 
     begin
-      uri = URI.parse(url)
+      uri = URI(uri)
 
       open_uri_options = {
         "User-Agent" => "Down/#{VERSION}",
@@ -71,12 +71,12 @@ module Down
 
       downloaded_file = uri.open(open_uri_options)
     rescue OpenURI::HTTPRedirect => redirect
-      url = redirect.uri.to_s
+      uri = redirect.uri
       retry if (tries -= 1) > 0
-      raise Down::NotFound, "too many redirects: #{url}"
+      raise Down::NotFound, "too many redirects: #{uri.to_s}"
     rescue => error
       raise if error.is_a?(Down::Error)
-      raise Down::NotFound, "file not found: #{url}"
+      raise Down::NotFound, "file not found: #{uri.to_s}"
     end
 
     # open-uri will return a StringIO instead of a Tempfile if the filesize is
@@ -99,9 +99,8 @@ module Down
     io.close
   end
 
-  def open(url, options = {})
-    uri = URI.parse(url)
-
+  def open(uri, options = {})
+    uri = URI(uri)
     http_class = Net::HTTP
 
     if options[:proxy]
@@ -142,13 +141,13 @@ module Down
 
     response = request.resume
 
-    raise Down::NotFound, "request to #{url} returned status #{response.code} and body:\n#{response.body}" if response.code.to_i.between?(400, 599)
+    raise Down::NotFound, "request to #{uri.to_s} returned status #{response.code} and body:\n#{response.body}" if response.code.to_i.between?(400, 599)
 
     if response.chunked?
       # Net::HTTP's implementation of reading "Transfer-Encoding: chunked"
       # raises a Fiber error, so we work around it by downloading the whole
       # response body without Enumerators (which internally use Fibers).
-      warn "Response from #{url} returned as \"Transfer-Encoding: chunked\", which Down cannot partially download, so the whole response body will be downloaded instead."
+      warn "Response from #{uri.to_s} returned as \"Transfer-Encoding: chunked\", which Down cannot partially download, so the whole response body will be downloaded instead."
 
       tempfile = Tempfile.new("down", binmode: true)
       response.read_body { |chunk| tempfile << chunk }
