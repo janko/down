@@ -223,6 +223,8 @@ tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116
 * MRI 2.0
 * MRI 2.1
 * MRI 2.2
+* MRI 2.3
+* MRI 2.4
 * JRuby
 * Rubinius
 
