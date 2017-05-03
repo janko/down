@@ -5,7 +5,7 @@ require "open-uri"
 require "net/http"
 require "tempfile"
 require "fileutils"
-require "cgi/util"
+require "cgi"
 
 module Down
   class Error < StandardError; end
