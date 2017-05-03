@@ -113,18 +113,6 @@ Down.download "http://example.com/image.jpg",
   read_timeout: 5
 ```
 
-### Copying to tempfile
-
-Down has another "hidden" utility method, `#copy_to_tempfile`, which creates
-a Tempfile out of the given file. The `#download` method uses it internally,
-but it's also publicly available for direct use:
-
-```rb
-io # IO object that you want to copy to tempfile
-tempfile = Down.copy_to_tempfile "basename.jpg", io
-tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116-77262-jgcx65.jpg"
-```
-
 ## Streaming
 
 Down has the ability to access content of the remote file *as it is being
@@ -157,7 +145,18 @@ end
 remote_file.close
 ```
 
-It accepts the `:ssl_verify_mode` and `:ssl_ca_cert` options with the same
+You can access the response status and headers of the HTTP request that was made:
+
+```rb
+remote_file = Down.open("http://example.com/image.jpg")
+remote_file.data[:status]  #=> 200
+remote_file.data[:headers] #=> { ... }
+```
+
+Note that `Down::NotFound` error will automatically be raised if response
+status was 4xx or 5xx.
+
+`Down.open` accepts `:ssl_verify_mode` and `:ssl_ca_cert` options with the same
 semantics as in `open-uri`, and any options with String keys will be
 interpreted as request headers.
 
@@ -194,6 +193,28 @@ io = Down::ChunkedIO.new(
   chunks: stream.enum_for(:each),
   on_close: -> { stream.close },
 )
+```
+
+### Proxy
+
+Both `Down.download` and `Down.open` support a `:proxy` option, where you can
+specify a URL to an HTTP proxy which should be used when downloading.
+
+```rb
+Down.download("http://example.com/image.jpg", proxy: "http://proxy.org")
+Down.open("http://example.com/image.jpg", proxy: "http://user:password@proxy.org")
+```
+
+### Copying to tempfile
+
+Down has another "hidden" utility method, `#copy_to_tempfile`, which creates
+a Tempfile out of the given file. The `#download` method uses it internally,
+but it's also publicly available for direct use:
+
+```rb
+io # IO object that you want to copy to tempfile
+tempfile = Down.copy_to_tempfile "basename.jpg", io
+tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116-77262-jgcx65.jpg"
 ```
 
 ## Supported Ruby versions

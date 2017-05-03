@@ -6,7 +6,6 @@ require "net/http"
 require "tempfile"
 require "fileutils"
 require "cgi"
-require "cgi/util"
 
 module Down
   class Error < StandardError; end
@@ -24,6 +23,20 @@ module Down
     progress_proc       = options.delete(:progress_proc) || options.delete(:progress)
     content_length_proc = options.delete(:content_length_proc)
     timeout             = options.delete(:timeout)
+
+    if options[:proxy]
+      proxy    = URI.parse(options[:proxy])
+      user     = proxy.user
+      password = proxy.password
+
+      if user || password
+        proxy.user     = nil
+        proxy.password = nil
+
+        options[:proxy_http_basic_authentication] = [proxy.to_s, user, password]
+        options.delete(:proxy)
+      end
+    end
 
     tries = max_redirects + 1
 
@@ -90,7 +103,15 @@ module Down
   # @param options [Hash]
   def open(uri, options = {})
     uri = URI.parse(uri) unless uri.is_a?(URI)
-    http = Net::HTTP.new(uri.host, uri.port)
+
+    http_class = Net::HTTP
+
+    if options[:proxy]
+      proxy = URI.parse(options[:proxy])
+      http_class = Net::HTTP::Proxy(proxy.hostname, proxy.port, proxy.user, proxy.password)
+    end
+
+    http = http_class.new(uri.host, uri.port)
 
     # taken from open-uri implementation
     if uri.is_a?(URI::HTTPS)
@@ -121,6 +142,8 @@ module Down
 
     response = request.resume
 
+    raise Down::NotFound, "request to #{uri.to_s} returned status #{response.code} and body:\n#{response.body}" if response.code.to_i.between?(400, 599)
+
     if response.chunked?
       # Net::HTTP's implementation of reading "Transfer-Encoding: chunked"
       # raises a Fiber error, so we work around it by downloading the whole
@@ -133,18 +156,28 @@ module Down
 
       request.resume # close HTTP connection
 
-      ChunkedIO.new(
+      chunked_io = ChunkedIO.new(
         chunks: Enumerator.new { |y| y << tempfile.read(16*1024) until tempfile.eof? },
         size: tempfile.size,
         on_close: -> { tempfile.close! },
       )
     else
-      ChunkedIO.new(
+      chunked_io = ChunkedIO.new(
         chunks: response.enum_for(:read_body),
         size: response["Content-Length"] && response["Content-Length"].to_i,
         on_close: -> { request.resume }, # close HTTP connnection
       )
     end
+
+    chunked_io.data[:status]  = response.code.to_i
+    chunked_io.data[:headers] = {}
+
+    response.each_header do |downcased_name, value|
+      name = downcased_name.split("-").map(&:capitalize).join("-")
+      chunked_io.data[:headers].merge!(name => value)
+    end
+
+    chunked_io
   end
 
   def copy_to_tempfile(basename, io)

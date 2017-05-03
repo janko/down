@@ -1,3 +1,15 @@
+## HEAD
+
+* Raise `Down::NotFound` on 4xx and 5xx responses in `Down.open`.
+
+* Write `:status` and `:headers` information to `Down::ChunkedIO#data` in `Down.open`.
+
+* Add `#data` attribute to `Down::ChunkedIO` for saving custom result data.
+
+* Don't save retrieved chunks into the file in `Down::ChunkedIO#each_chunk`.
+
+* Add `:proxy` option to `Down.download` and `Down.open`.
+
 ## 2.4.3 (2017-04-06)
 
 * Show the input URL in the `Down::Error` message.

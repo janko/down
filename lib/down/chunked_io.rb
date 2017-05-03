@@ -2,12 +2,13 @@ require "tempfile"
 
 module Down
   class ChunkedIO
-    attr_reader :tempfile
+    attr_reader :tempfile, :data
 
     def initialize(options)
       @size     = options.fetch(:size)
       @chunks   = options.fetch(:chunks)
       @on_close = options.fetch(:on_close, ->{})
+      @data     = options.fetch(:data, {})
       @tempfile = Tempfile.new("down", binmode: true)
 
       peek_chunk
@@ -24,7 +25,7 @@ module Down
 
     def each_chunk
       return enum_for(__method__) if !block_given?
-      yield download_chunk until download_finished?
+      yield retrieve_chunk until download_finished?
     end
 
     def eof?
@@ -43,8 +44,11 @@ module Down
     private
 
     def download_chunk
+      write(retrieve_chunk)
+    end
+
+    def retrieve_chunk
       chunk = @chunks.next
-      write(chunk)
       peek_chunk
       chunk
     end
@@ -64,10 +68,8 @@ module Down
     end
 
     def terminate_download
-      if @on_close
-        @on_close.call
-        @on_close = nil
-      end
+      @on_close.call if @on_close
+      @on_close = nil
     end
 
     def write(chunk)
