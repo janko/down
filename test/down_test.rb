@@ -248,6 +248,12 @@ describe Down do
       Down.open("http://example.com/image.jpg", proxy: "http://user:password@proxy.org")
     end
 
+    it "applies HTTP basic authentication" do
+      stub_request(:get, "http://example.com/image.jpg").with(headers: {'Authorization'=>'Basic dXNlcjpwYXNzd29yZA=='}).to_return(body: "a" * 5)
+      tempfile = Down.open("http://user:password@example.com/image.jpg")
+      assert_equal "aaaaa", tempfile.read
+    end
+
     it "saves the response status and headers" do
       stub_request(:get, "http://example.com/image.jpg")
         .to_return(body: "abc", headers: {"My-Header" => "Value"})

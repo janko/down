@@ -1,5 +1,7 @@
 ## HEAD
 
+* Apply HTTP Basic authentication contained in URLs in `Down.open`.
+
 * Raise `Down::NotFound` on 4xx and 5xx responses in `Down.open`.
 
 * Write `:status` and `:headers` information to `Down::ChunkedIO#data` in `Down.open`.

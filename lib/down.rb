@@ -131,7 +131,9 @@ module Down
 
     request = Fiber.new do
       http.start do
-        http.request_get(uri.request_uri, request_headers) do |response|
+        req = Net::HTTP::Get.new(uri.request_uri, request_headers)
+        req.basic_auth(uri.user, uri.password) if uri.user || uri.password
+        http.request(req) do |response|
           Fiber.yield response
           response.instance_variable_set("@read", true)
         end
