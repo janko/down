@@ -99,8 +99,10 @@ module Down
     io.close
   end
 
-  def open(url, options = {})
-    uri = URI.parse(url)
+  # @param uri [String, URI]
+  # @param options [Hash]
+  def open(uri, options = {})
+    uri = URI.parse(uri) unless uri.is_a?(URI)
 
     http_class = Net::HTTP
 
@@ -140,13 +142,13 @@ module Down
 
     response = request.resume
 
-    raise Down::NotFound, "request to #{url} returned status #{response.code} and body:\n#{response.body}" if response.code.to_i.between?(400, 599)
+    raise Down::NotFound, "request to #{uri.to_s} returned status #{response.code} and body:\n#{response.body}" if response.code.to_i.between?(400, 599)
 
     if response.chunked?
       # Net::HTTP's implementation of reading "Transfer-Encoding: chunked"
       # raises a Fiber error, so we work around it by downloading the whole
       # response body without Enumerators (which internally use Fibers).
-      warn "Response from #{url} returned as \"Transfer-Encoding: chunked\", which Down cannot partially download, so the whole response body will be downloaded instead."
+      warn "Response from #{uri.to_s} returned as \"Transfer-Encoding: chunked\", which Down cannot partially download, so the whole response body will be downloaded instead."
 
       tempfile = Tempfile.new("down", binmode: true)
       response.read_body { |chunk| tempfile << chunk }
