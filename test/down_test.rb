@@ -148,11 +148,15 @@ describe Down do
     end
 
     it "adds #original_filename extracted from Content-Disposition" do
-      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"my%20filename.ext\"")
-      assert_equal "my filename.ext", tempfile.original_filename
+      if RUBY_VERSION >= "2.2"
+        tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"my%20filename.ext\"")
+        assert_equal "my filename.ext", tempfile.original_filename
+      end
 
-      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"my%2520filename.ext\"")
-      assert_equal "my filename.ext", tempfile.original_filename
+      if RUBY_VERSION >= "2.2"
+        tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"my%2520filename.ext\"")
+        assert_equal "my filename.ext", tempfile.original_filename
+      end
 
       tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=myfilename.ext ")
       assert_equal "myfilename.ext", tempfile.original_filename
@@ -168,8 +172,10 @@ describe Down do
       tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=")
       assert_equal "response-headers", tempfile.original_filename
 
-      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"\"")
-      assert_equal "response-headers", tempfile.original_filename
+      if RUBY_VERSION >= "2.2"
+        tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"\"")
+        assert_equal "response-headers", tempfile.original_filename
+      end
 
       tempfile = Down.download("#{$httpbin}/")
       assert_nil tempfile.original_filename
