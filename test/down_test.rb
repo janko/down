@@ -148,13 +148,13 @@ describe Down do
     end
 
     it "adds #original_filename extracted from Content-Disposition" do
-      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline; filename=\"my filename.ext\"")
+      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"my%20filename.ext\"")
       assert_equal "my filename.ext", tempfile.original_filename
 
-      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline; filename=\"my%2520filename.ext\"")
+      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"my%2520filename.ext\"")
       assert_equal "my filename.ext", tempfile.original_filename
 
-      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline; filename=myfilename.ext ")
+      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=myfilename.ext ")
       assert_equal "myfilename.ext", tempfile.original_filename
     end
 
@@ -165,10 +165,10 @@ describe Down do
       tempfile = Down.download("#{$httpbin}/basic-auth/user/pass%20word", http_basic_authentication: ["user", "pass word"])
       assert_equal "pass word", tempfile.original_filename
 
-      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline; filename=")
+      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=")
       assert_equal "response-headers", tempfile.original_filename
 
-      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline; filename=\"\"")
+      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"\"")
       assert_equal "response-headers", tempfile.original_filename
 
       tempfile = Down.download("#{$httpbin}/")
@@ -178,17 +178,16 @@ describe Down do
       assert_nil tempfile.original_filename
     end
 
-    it "raises NotFound on HTTP errors" do
+    it "raises NotFound on HTTP error responses" do
       assert_raises(Down::NotFound) { Down.download("#{$httpbin}/status/400") }
       assert_raises(Down::NotFound) { Down.download("#{$httpbin}/status/500") }
     end
 
-    it "raises on invalid URL" do
-      assert_raises(Down::Error) { Down.download("http:\\example.com/") }
-    end
-
-    it "raises on invalid scheme" do
-      assert_raises(Down::Error) { Down.download("foo://example.com/") }
+    it "raises NotFound on invalid URL" do
+      assert_raises(Down::NotFound) { Down.download("http:\\example.org") }
+      assert_raises(Down::NotFound) { Down.download("http:/example.org") }
+      assert_raises(Down::NotFound) { Down.download("foo:/example.org") }
+      assert_raises(Down::NotFound) { Down.download("#{$httpbin}/get", read_timeout: 0) }
     end
 
     it "doesn't allow shell execution" do

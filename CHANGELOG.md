@@ -1,8 +1,10 @@
 ## HEAD
 
+* Reraise only a subset of exceptions as `Down::NotFound` in `Down.download` (@janko-m)
+
 * Stop testing on MRI 1.9.3 (@janko-m)
 
-* Support streaming of "Transfer-Encoding: chunked" responses again (@janko-m)
+* Support streaming of "Transfer-Encoding: chunked" responses in `Down.open` again (@janko-m)
 
 * Remove deprecated `Down.stream` (@janko-m)
 

@@ -43,6 +43,10 @@ module Down
     begin
       uri = URI(uri)
 
+      if uri.class != URI::HTTP && uri.class != URI::HTTPS
+        raise URI::InvalidURIError, "url is not http nor https"
+      end
+
       open_uri_options = {
         "User-Agent" => "Down/#{VERSION}",
         content_length_proc: proc { |size|
@@ -71,11 +75,17 @@ module Down
 
       downloaded_file = uri.open(open_uri_options)
     rescue OpenURI::HTTPRedirect => redirect
-      uri = redirect.uri
-      retry if (tries -= 1) > 0
-      raise Down::NotFound, "too many redirects"
-    rescue => error
-      raise if error.is_a?(Down::Error)
+      if (tries -= 1) > 0
+        uri = redirect.uri
+        retry
+      else
+        raise Down::NotFound, "too many redirects"
+      end
+    rescue OpenURI::HTTPError,
+           URI::InvalidURIError,
+           Errno::ECONNREFUSED,
+           SocketError,
+           Timeout::Error
       raise Down::NotFound, "file not found"
     end
 
