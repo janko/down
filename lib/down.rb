@@ -73,10 +73,10 @@ module Down
     rescue OpenURI::HTTPRedirect => redirect
       uri = redirect.uri
       retry if (tries -= 1) > 0
-      raise Down::NotFound, "too many redirects: #{uri.to_s}"
+      raise Down::NotFound, "too many redirects"
     rescue => error
       raise if error.is_a?(Down::Error)
-      raise Down::NotFound, "file not found: #{uri.to_s}"
+      raise Down::NotFound, "file not found"
     end
 
     # open-uri will return a StringIO instead of a Tempfile if the filesize is

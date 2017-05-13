@@ -1,3 +1,7 @@
+## 2.5.1 (2017-05-13)
+
+* Remove URL from the error messages (@janko-m)
+
 ## 2.5.0 (2017-05-03)
 
 * Support both Strings and `URI` objects in `Down.download` and `Down.open` (@olleolleolle)
