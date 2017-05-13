@@ -13,7 +13,6 @@ Gem::Specification.new do |spec|
   spec.files         = Dir["README.md", "LICENSE.txt", "*.gemspec", "lib/**/*.rb"]
   spec.require_paths = ["lib"]
 
-  spec.add_development_dependency "rake"
   spec.add_development_dependency "minitest", "~> 5.8"
   spec.add_development_dependency "mocha"
   spec.add_development_dependency "http"
