@@ -1,177 +1,194 @@
 require "test_helper"
+
+require "down"
+
 require "stringio"
+require "json"
+require "base64"
 
 describe Down do
   describe "#download" do
-    it "downloads url to disk" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024)
-      tempfile = Down.download("http://example.com/image.jpg")
+    it "downloads content" do
+      tempfile = Down.download("#{$httpbin}/bytes/#{20*1024}?seed=0")
+      assert_equal HTTP.get("#{$httpbin}/bytes/#{20*1024}?seed=0").to_s, tempfile.read
+
+      tempfile = Down.download("#{$httpbin}/bytes/#{1024}?seed=0")
+      assert_equal HTTP.get("#{$httpbin}/bytes/#{1024}?seed=0").to_s, tempfile.read
+    end
+
+    it "returns a Tempfile" do
+      tempfile = Down.download("#{$httpbin}/bytes/#{20*1024}")
       assert_instance_of Tempfile, tempfile
+
+      # open-uri returns a StringIO on files with 10KB or less
+      tempfile = Down.download("#{$httpbin}/bytes/#{1024}")
+      assert_instance_of Tempfile, tempfile
+    end
+
+    it "saves Tempfile to disk" do
+      tempfile = Down.download("#{$httpbin}/bytes/#{20*1024}")
+      assert File.exist?(tempfile.path)
+
+      # open-uri returns a StringIO on files with 10KB or less
+      tempfile = Down.download("#{$httpbin}/bytes/#{1024}")
       assert File.exist?(tempfile.path)
     end
 
-    it "works with query parameters" do
-      stub_request(:get, "http://example.com/image.jpg?foo=bar")
-      Down.download("http://example.com/image.jpg?foo=bar")
+    it "opens the Tempfile in binary mode" do
+      tempfile = Down.download("#{$httpbin}/bytes/#{20*1024}")
+      assert tempfile.binmode?
+
+      # open-uri returns a StringIO on files with 10KB or less
+      tempfile = Down.download("#{$httpbin}/bytes/#{1024}")
+      assert tempfile.binmode?
+    end
+
+    it "gives the Tempfile a file extension" do
+      tempfile = Down.download("#{$httpbin}/robots.txt")
+      assert_match /\.txt$/, tempfile.path
     end
 
     it "accepts an URI object" do
-      stub_request(:get, "http://example.com/image.jpg?foo=bar")
-      Down.download(URI("http://example.com/image.jpg?foo=bar"))
+      tempfile = Down.download(URI("#{$httpbin}/bytes/100"))
+      assert_equal 100, tempfile.size
     end
 
-    it "converts small StringIOs to tempfiles" do
-      stub_request(:get, "http://example.com/small.jpg").to_return(body: "a" * 5)
-      tempfile = Down.download("http://example.com/small.jpg")
-      assert_instance_of Tempfile, tempfile
-      assert File.exist?(tempfile.path)
-      assert_equal "aaaaa", tempfile.read
+    it "uses a default User-Agent" do
+      tempfile = Down.download("#{$httpbin}/user-agent")
+      assert_equal "Down/#{Down::VERSION}", JSON.parse(tempfile.read)["user-agent"]
+
+      tempfile = Down.download("#{$httpbin}/user-agent", {"User-Agent" => "Custom/Agent"})
+      assert_equal "Custom/Agent", JSON.parse(tempfile.read)["user-agent"]
     end
 
     it "accepts max size" do
-      # "Content-Length" header
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Length' => 5})
-      assert_raises(Down::TooLarge) { Down.download("http://example.com/image.jpg", max_size: 4) }
+      assert_raises(Down::TooLarge) do
+        Down.download("#{$httpbin}/response-headers?Content-Length=5", max_size: 4)
+      end
+      assert_raises(Down::TooLarge) do
+        Down.download("#{$httpbin}/response-headers?Content-Length=5", max_size: 4, content_length_proc: ->(n){})
+      end
 
-      # no "Content-Length" header
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
-      assert_raises(Down::TooLarge) { Down.download("http://example.com/image.jpg", max_size: 4) }
+      assert_raises(Down::TooLarge) do
+        Down.download("#{$httpbin}/stream-bytes/100", max_size: 50)
+      end
+      assert_raises(Down::TooLarge) do
+        Down.download("#{$httpbin}/stream-bytes/100", max_size: 50, progress_proc: ->(n){})
+      end
 
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Length' => 5})
-      tempfile = Down.download("http://example.com/image.jpg", max_size: 6)
+      tempfile = Down.download("#{$httpbin}/response-headers?Content-Length=5", max_size: 6)
       assert File.exist?(tempfile.path)
     end
 
-    it "accepts :progress_proc and :content_length_proc" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Length' => 5})
-      Down.download "http://example.com/image.jpg",
-        content_length_proc: ->(n) { @content_length = n },
-        progress_proc:       ->(n) { @progress = n }
-      assert_equal 5, @content_length
-      assert_equal 5, @progress
+    it "accepts content length proc" do
+      Down.download "#{$httpbin}/response-headers?Content-Length=10",
+        content_length_proc: ->(n) { @content_length = n }
+
+      assert_equal 10, @content_length
     end
 
-    it "adds #content_type to downloaded files" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024, headers: {'Content-Type' => 'image/jpeg'})
-      tempfile = Down.download("http://example.com/image.jpg")
-      assert_equal "image/jpeg", tempfile.content_type
+    it "accepts progress proc" do
+      Down.download "#{$httpbin}/stream-bytes/100?chunk_size=10",
+        progress_proc: ->(n) { (@progress ||= []) << n }
 
-      stub_request(:get, "http://example.com/small.jpg").to_return(body: "a" * 5, headers: {'Content-Type' => 'image/jpeg'})
-      tempfile = Down.download("http://example.com/small.jpg")
-      assert_equal "image/jpeg", tempfile.content_type
+      assert_equal [10, 20, 30, 40, 50, 60, 70, 80, 90, 100], @progress
+    end
+
+    it "detects and applies basic authentication from URL" do
+      tempfile = Down.download("#{$httpbin.sub("http://", '\0user:password@')}/basic-auth/user/password")
+      assert_equal true, JSON.parse(tempfile.read)["authenticated"]
+    end
+
+    it "follows redirects" do
+      tempfile = Down.download("#{$httpbin}/redirect/1")
+      assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
+      tempfile = Down.download("#{$httpbin}/redirect/2")
+      assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
+      error = assert_raises(Down::Error) { Down.download("#{$httpbin}/redirect/3") }
+      assert_equal "too many redirects", error.message
+
+      tempfile = Down.download("#{$httpbin}/redirect/3", max_redirects: 3)
+      assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
+      error = assert_raises(Down::Error) { Down.download("#{$httpbin}/redirect/4", max_redirects: 3) }
+      assert_equal "too many redirects", error.message
+
+      tempfile = Down.download("#{$httpbin}/absolute-redirect/1")
+      assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
+      tempfile = Down.download("#{$httpbin}/relative-redirect/1")
+      assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
+    end
+
+    # I don't know how to test that the proxy is actually used
+    it "accepts proxy" do
+      tempfile = Down.download("#{$httpbin}/bytes/100", proxy: $httpbin)
+      assert_equal 100, tempfile.size
+
+      tempfile = Down.download("#{$httpbin}/bytes/100", proxy: $httpbin.sub("http://", '\0user:password@'))
+      assert_equal 100, tempfile.size
+
+      tempfile = Down.download("#{$httpbin}/bytes/100", proxy: URI($httpbin.sub("http://", '\0user:password@')))
+      assert_equal 100, tempfile.size
+    end
+
+    it "forwards other options to open-uri" do
+      tempfile = Down.download("#{$httpbin}/basic-auth/user/password", http_basic_authentication: ["user", "password"])
+      assert_equal true, JSON.parse(tempfile.read)["authenticated"]
+
+      tempfile = Down.download("#{$httpbin}/basic-auth/user/password", {"Authorization" => "Basic #{Base64.encode64("user:password")}"})
+      assert_equal true, JSON.parse(tempfile.read)["authenticated"]
+    end
+
+    it "adds #content_type extracted from Content-Type" do
+      tempfile = Down.download("#{$httpbin}/image/png")
+      assert_equal "image/png", tempfile.content_type
+
+      # We also want to test scenario when Content-Type is blank, but httpbin
+      # doesn't seem to have such an endpoint, and /response-headers appends
+      # the given Content-Type onto the default "application/json".
     end
 
     it "adds #original_filename extracted from Content-Disposition" do
-      stub_request(:get, "http://example.com/foo.jpg")
-        .to_return(body: "a" * 5, headers: {'Content-Disposition' => 'filename="my filename.ext"'})
-      tempfile = Down.download("http://example.com/foo.jpg")
+      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline; filename=\"my filename.ext\"")
       assert_equal "my filename.ext", tempfile.original_filename
 
-      stub_request(:get, "http://example.com/bar.jpg")
-        .to_return(body: "a" * 5, headers: {'Content-Disposition' => 'filename="my%20filename.ext"'})
-      tempfile = Down.download("http://example.com/bar.jpg")
+      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline; filename=\"my%2520filename.ext\"")
       assert_equal "my filename.ext", tempfile.original_filename
 
-      stub_request(:get, "http://example.com/baz.jpg")
-        .to_return(body: "a" * 5, headers: {'Content-Disposition' => 'filename=myfilename.ext '})
-      tempfile = Down.download("http://example.com/baz.jpg")
+      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline; filename=myfilename.ext ")
       assert_equal "myfilename.ext", tempfile.original_filename
     end
 
     it "adds #original_filename extracted from URI path if Content-Disposition is blank" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
-      tempfile = Down.download("http://example.com/image.jpg")
-      assert_equal "image.jpg", tempfile.original_filename
+      tempfile = Down.download("#{$httpbin}/robots.txt")
+      assert_equal "robots.txt", tempfile.original_filename
 
-      stub_request(:get, "http://example.com/image%20space%2Fslash.jpg").to_return(body: "a" * 5)
-      tempfile = Down.download("http://example.com/image%20space%2Fslash.jpg")
-      assert_equal "image space/slash.jpg", tempfile.original_filename
+      tempfile = Down.download("#{$httpbin}/basic-auth/user/pass%20word", http_basic_authentication: ["user", "pass word"])
+      assert_equal "pass word", tempfile.original_filename
 
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Disposition' => 'inline; filename='})
-      tempfile = Down.download("http://example.com/image.jpg")
-      assert_equal "image.jpg", tempfile.original_filename
+      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline; filename=")
+      assert_equal "response-headers", tempfile.original_filename
 
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5, headers: {'Content-Disposition' => 'inline; filename=""'})
-      tempfile = Down.download("http://example.com/image.jpg")
-      assert_equal "image.jpg", tempfile.original_filename
+      tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline; filename=\"\"")
+      assert_equal "response-headers", tempfile.original_filename
 
-      stub_request(:get, "http://example.com").to_return(body: "a" * 5)
-      tempfile = Down.download("http://example.com")
+      tempfile = Down.download("#{$httpbin}/")
       assert_nil tempfile.original_filename
 
-      stub_request(:get, "http://example.com/").to_return(body: "a" * 5)
-      tempfile = Down.download("http://example.com/")
+      tempfile = Down.download("#{$httpbin}")
       assert_nil tempfile.original_filename
-    end
-
-    it "follows redirects" do
-      # Double redirect
-      stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => '/foo'}) # relative
-      stub_request(:get, "http://example.com/foo").to_return(status: 301, headers: {'Location' => 'https://example.com/bar'}) # HTTP => HTTPS
-      stub_request(:get, "https://example.com/bar").to_return(body: "file", headers: {"Content-Type" => "text/plain"})
-      tempfile = Down.download("http://example.com")
-      assert_equal "file", tempfile.read
-      assert_equal "bar", tempfile.original_filename
-      assert_equal "text/plain", tempfile.content_type
-
-      stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example.com/foo'})
-      stub_request(:get, "http://example.com/foo").to_return(status: 301, headers: {'Location' => 'http://example.com/bar'})
-      stub_request(:get, "http://example.com/bar").to_return(status: 301, headers: {'Location' => 'http://example.com/baz'})
-      stub_request(:get, "http://example.com/baz").to_return(body: "file")
-      assert_raises(Down::Error) { Down.download("http://example.com") }
-      tempfile = Down.download("http://example.com", max_redirects: 3)
-      assert_equal "file", tempfile.read
-    end
-
-    it "preserves extension" do
-      # Tempfile
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 20 * 1024)
-      tempfile = Down.download("http://example.com/image.jpg")
-      assert_equal ".jpg", File.extname(tempfile.path)
-      assert File.exist?(tempfile.path)
-
-      # StringIO
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "a" * 5)
-      tempfile = Down.download("http://example.com/image.jpg")
-      assert_equal ".jpg", File.extname(tempfile.path)
-      assert File.exist?(tempfile.path)
-    end
-
-    it "automatically applies basic authentication" do
-      stub_request(:get, "http://example.com/image.jpg").with(headers: {'Authorization'=>'Basic dXNlcjpwYXNzd29yZA=='}).to_return(body: "a" * 5)
-      tempfile = Down.download("http://user:password@example.com/image.jpg")
-      assert_equal "aaaaa", tempfile.read
-    end
-
-    it "accepts a proxy" do
-      stub_request(:get, "http://example.com/image.jpg")
-
-      Down.download("http://example.com/image.jpg", proxy: "http://proxy.org")
-      Down.download("http://example.com/image.jpg", proxy: "http://user:password@proxy.org")
-      Down.download("http://example.com/image.jpg", proxy: URI("http://user:password@proxy.org"))
-    end
-
-    it "forwards options to open-uri" do
-      stub_request(:get, "http://example.com").to_return(status: 301, headers: {'Location' => 'http://example2.com'})
-      stub_request(:get, "http://example2.com").to_return(body: "redirected")
-      tempfile = Down.download("http://example.com", redirect: true)
-      assert_equal "redirected", tempfile.read
     end
 
     it "raises NotFound on HTTP errors" do
-      stub_request(:get, "http://example.com").to_return(status: 404)
-      assert_raises(Down::NotFound) { Down.download("http://example.com") }
-
-      stub_request(:get, "http://example.com").to_return(status: 500)
-      assert_raises(Down::NotFound) { Down.download("http://example.com") }
+      assert_raises(Down::NotFound) { Down.download("#{$httpbin}/status/400") }
+      assert_raises(Down::NotFound) { Down.download("#{$httpbin}/status/500") }
     end
 
     it "raises on invalid URL" do
-      assert_raises(Down::Error) { Down.download("http:\\example.com/image.jpg") }
+      assert_raises(Down::Error) { Down.download("http:\\example.com/") }
     end
 
     it "raises on invalid scheme" do
-      assert_raises(Down::Error) { Down.download("foo://example.com/image.jpg") }
+      assert_raises(Down::Error) { Down.download("foo://example.com/") }
     end
 
     it "doesn't allow shell execution" do
@@ -180,78 +197,70 @@ describe Down do
   end
 
   describe "#open" do
-    it "assigns chunks from response body" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc")
-      io = Down.open("http://example.com/image.jpg")
-      assert_equal "abc", io.read
-    end
-
-    it "works with query parameters" do
-      stub_request(:get, "http://example.com/image.jpg?foo=bar")
-      Down.open("http://example.com/image.jpg?foo=bar")
+    it "streams response body in chunks" do
+      io = Down.open("#{$httpbin}/stream/10")
+      assert_equal 10, io.each_chunk.count
     end
 
     it "accepts an URI object" do
-      stub_request(:get, "http://example.com/image.jpg?foo=bar")
-      Down.open(URI("http://example.com/image.jpg?foo=bar"))
+      io = Down.open(URI("#{$httpbin}/stream/10"))
+      assert_equal 10, io.each_chunk.count
+    end
+
+    it "downloads on demand" do
+      start = Time.now
+      io = Down.open("#{$httpbin}/drip?duration=1&delay=0")
+      io.close
+      assert_operator Time.now - start, :<, 1
     end
 
     it "extracts size from Content-Length" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Content-Length' => 3})
-      io = Down.open("http://example.com/image.jpg")
-      assert_equal 3, io.size
+      io = Down.open(URI("#{$httpbin}/bytes/100"))
+      assert_equal 100, io.size
 
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc")
-      io = Down.open("http://example.com/image.jpg")
+      io = Down.open(URI("#{$httpbin}/stream-bytes/100"))
       assert_nil io.size
     end
 
-    it "closes connection on #close" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc")
-      io = Down.open("http://example.com/image.jpg")
-      Net::HTTP.any_instance.expects(:do_finish)
+    it "responds to #close" do
+      io = Down.open("#{$httpbin}/bytes/100")
       io.close
     end
 
     it "accepts request headers" do
-      stub_request(:get, "http://example.com/image.jpg")
-        .with(headers: {"Header" => "value"})
-        .to_return(body: "abc")
-
-      Down.open("http://example.com/image.jpg", {"Header" => "value"})
+      io = Down.open("#{$httpbin}/headers", {"Key" => "Value"})
+      assert_equal "Value", JSON.parse(io.read)["headers"]["Key"]
     end
 
-    it "accepts a proxy" do
-      stub_request(:get, "http://example.com/image.jpg")
+    # I don't know how to test that the proxy is actually used
+    it "accepts proxy" do
+      io = Down.open("#{$httpbin}/bytes/100", proxy: $httpbin)
+      assert_equal 100, io.size
 
-      Down.open("http://example.com/image.jpg", proxy: "http://proxy.org")
-      Down.open("http://example.com/image.jpg", proxy: "http://user:password@proxy.org")
+      io = Down.open("#{$httpbin}/bytes/100", proxy: $httpbin.sub("http://", '\0user:password@'))
+      assert_equal 100, io.size
+
+      io = Down.open("#{$httpbin}/bytes/100", proxy: URI($httpbin.sub("http://", '\0user:password@')))
+      assert_equal 100, io.size
     end
 
-    it "applies HTTP basic authentication" do
-      stub_request(:get, "http://example.com/image.jpg").with(headers: {'Authorization'=>'Basic dXNlcjpwYXNzd29yZA=='}).to_return(body: "a" * 5)
-      tempfile = Down.open("http://user:password@example.com/image.jpg")
-      assert_equal "aaaaa", tempfile.read
+    it "detects and applies basic authentication from URL" do
+      io = Down.open("#{$httpbin.sub("http://", '\0user:password@')}/basic-auth/user/password")
+      assert_equal true, JSON.parse(io.read)["authenticated"]
     end
 
     it "saves the response status and headers" do
-      stub_request(:get, "http://example.com/image.jpg")
-        .to_return(body: "abc", headers: {"My-Header" => "Value"})
-
-      io = Down.open("http://example.com/image.jpg")
-
-      assert_equal 200, io.data[:status]
-      assert_equal Hash["My-Header" => "Value"], io.data[:headers]
+      io = Down.open("#{$httpbin}/response-headers?Key=Value")
+      assert_equal "Value", io.data[:headers]["Key"]
+      assert_equal 200,     io.data[:status]
     end
 
     it "raises an error on 4xx and 5xx response" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(status: 404, body: "File not found")
-      error = assert_raises(Down::Error) { Down.open("http://example.com/image.jpg") }
-      assert_match "request to http://example.com/image.jpg returned status 404 and body:\nFile not found", error.message
+      error = assert_raises(Down::Error) { Down.open("#{$httpbin}/status/404") }
+      assert_match "request returned status 404 and body:\n", error.message
 
-      stub_request(:get, "http://example.com/image.jpg").to_return(status: 500, body: "There has been an error")
-      error = assert_raises(Down::Error) { Down.open("http://example.com/image.jpg") }
-      assert_equal "request to http://example.com/image.jpg returned status 500 and body:\nThere has been an error", error.message
+      error = assert_raises(Down::Error) { Down.open("#{$httpbin}/status/500") }
+      assert_equal "request returned status 500 and body:\n", error.message
     end
   end
 

@@ -229,6 +229,15 @@ tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116
 
 ## Development
 
+The test suite runs the http://httpbin.org/ server locally, and uses it to test
+downloads. Httpbin is a Python package which is run with GUnicorn:
+
+```
+$ pip install gunicorn httpbin
+```
+
+Afterwards you can run tests with
+
 ```
 $ rake test
 ```

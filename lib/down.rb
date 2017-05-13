@@ -134,7 +134,7 @@ module Down
 
     response = request.resume
 
-    raise Down::NotFound, "request to #{uri.to_s} returned status #{response.code} and body:\n#{response.body}" if response.code.to_i.between?(400, 599)
+    raise Down::NotFound, "request returned status #{response.code} and body:\n#{response.body}" if response.code.to_i.between?(400, 599)
 
     chunked_io = ChunkedIO.new(
       chunks: response.enum_for(:read_body),
