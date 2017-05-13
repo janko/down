@@ -219,7 +219,6 @@ tempfile.path #=> "/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/down20151116
 
 ## Supported Ruby versions
 
-* MRI 1.9.3
 * MRI 2.0
 * MRI 2.1
 * MRI 2.2

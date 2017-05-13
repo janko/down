@@ -1,5 +1,7 @@
 ## HEAD
 
+* Stop testing on MRI 1.9.3 (@janko-m)
+
 * Support streaming of "Transfer-Encoding: chunked" responses again (@janko-m)
 
 * Remove deprecated `Down.stream` (@janko-m)
