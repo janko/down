@@ -241,12 +241,6 @@ Afterwards you can run tests with
 $ rake test
 ```
 
-If you want to test across Ruby versions and you're using rbenv, run
-
-```
-$ bin/test-versions
-```
-
 ## License
 
 [MIT](LICENSE.txt)
