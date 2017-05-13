@@ -1,3 +1,7 @@
+## HEAD
+
+* Remove deprecated `Down.stream` (@janko-m)
+
 ## 2.5.1 (2017-05-13)
 
 * Remove URL from the error messages (@janko-m)

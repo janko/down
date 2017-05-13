@@ -92,13 +92,6 @@ module Down
     downloaded_file
   end
 
-  def stream(url, options = {})
-    warn "Down.stream is deprecated and will be removed in Down 3. Use Down.open instead."
-    io = open(url, options)
-    io.each_chunk { |chunk| yield chunk, io.size }
-    io.close
-  end
-
   def open(uri, options = {})
     uri = URI(uri)
     http_class = Net::HTTP
