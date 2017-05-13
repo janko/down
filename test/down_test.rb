@@ -206,13 +206,6 @@ describe Down do
       assert_nil io.size
     end
 
-    it "works around chunked Transfer-Encoding response" do
-      stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc", headers: {'Transfer-Encoding' => 'chunked'})
-      io = Down.open("http://example.com/image.jpg")
-      assert_equal 3, io.size
-      assert_equal "abc", io.read
-    end
-
     it "closes connection on #close" do
       stub_request(:get, "http://example.com/image.jpg").to_return(body: "abc")
       io = Down.open("http://example.com/image.jpg")

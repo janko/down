@@ -136,30 +136,11 @@ module Down
 
     raise Down::NotFound, "request to #{uri.to_s} returned status #{response.code} and body:\n#{response.body}" if response.code.to_i.between?(400, 599)
 
-    if response.chunked?
-      # Net::HTTP's implementation of reading "Transfer-Encoding: chunked"
-      # raises a Fiber error, so we work around it by downloading the whole
-      # response body without Enumerators (which internally use Fibers).
-      warn "Response from #{uri.to_s} returned as \"Transfer-Encoding: chunked\", which Down cannot partially download, so the whole response body will be downloaded instead."
-
-      tempfile = Tempfile.new("down", binmode: true)
-      response.read_body { |chunk| tempfile << chunk }
-      tempfile.rewind
-
-      request.resume # close HTTP connection
-
-      chunked_io = ChunkedIO.new(
-        chunks: Enumerator.new { |y| y << tempfile.read(16*1024) until tempfile.eof? },
-        size: tempfile.size,
-        on_close: -> { tempfile.close! },
-      )
-    else
-      chunked_io = ChunkedIO.new(
-        chunks: response.enum_for(:read_body),
-        size: response["Content-Length"] && response["Content-Length"].to_i,
-        on_close: -> { request.resume }, # close HTTP connnection
-      )
-    end
+    chunked_io = ChunkedIO.new(
+      chunks: response.enum_for(:read_body),
+      size: response["Content-Length"] && response["Content-Length"].to_i,
+      on_close: -> { request.resume }, # close HTTP connnection
+    )
 
     chunked_io.data[:status]  = response.code.to_i
     chunked_io.data[:headers] = {}

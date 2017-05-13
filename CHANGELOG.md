@@ -1,5 +1,7 @@
 ## HEAD
 
+* Support streaming of "Transfer-Encoding: chunked" responses again (@janko-m)
+
 * Remove deprecated `Down.stream` (@janko-m)
 
 ## 2.5.1 (2017-05-13)
