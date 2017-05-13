@@ -15,14 +15,12 @@ module Down
   module_function
 
   def download(uri, options = {})
-    warn "Passing :timeout option to `Down.download` is deprecated and will be removed in Down 3. You should use open-uri's :open_timeout and/or :read_timeout." if options.key?(:timeout)
     warn "Passing :progress option to `Down.download` is deprecated and will be removed in Down 3. You should use open-uri's :progress_proc." if options.key?(:progress)
 
     max_size            = options.delete(:max_size)
     max_redirects       = options.delete(:max_redirects) || 2
     progress_proc       = options.delete(:progress_proc) || options.delete(:progress)
     content_length_proc = options.delete(:content_length_proc)
-    timeout             = options.delete(:timeout)
 
     if options[:proxy]
       proxy    = URI(options[:proxy])
@@ -61,7 +59,6 @@ module Down
           end
           progress_proc.call(current_size) if progress_proc
         },
-        read_timeout: timeout,
         redirect: false,
       }
 
