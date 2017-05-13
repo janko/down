@@ -15,11 +15,9 @@ module Down
   module_function
 
   def download(uri, options = {})
-    warn "Passing :progress option to `Down.download` is deprecated and will be removed in Down 3. You should use open-uri's :progress_proc." if options.key?(:progress)
-
     max_size            = options.delete(:max_size)
     max_redirects       = options.delete(:max_redirects) || 2
-    progress_proc       = options.delete(:progress_proc) || options.delete(:progress)
+    progress_proc       = options.delete(:progress_proc)
     content_length_proc = options.delete(:content_length_proc)
 
     if options[:proxy]

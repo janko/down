@@ -1,5 +1,7 @@
 ## HEAD
 
+* Remove deprecated `:progress` option (@janko-m)
+
 * Remove deprecated `:timeout` option (@janko-m)
 
 * Reraise only a subset of exceptions as `Down::NotFound` in `Down.download` (@janko-m)
