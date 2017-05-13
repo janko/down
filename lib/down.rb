@@ -97,7 +97,7 @@ module Down
     http_class = Net::HTTP
 
     if options[:proxy]
-      proxy = URI.parse(options[:proxy])
+      proxy = URI(options[:proxy])
       http_class = Net::HTTP::Proxy(proxy.hostname, proxy.port, proxy.user, proxy.password)
     end
 
