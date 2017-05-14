@@ -1,17 +1,19 @@
 require File.expand_path("../lib/down/version", __FILE__)
 
 Gem::Specification.new do |spec|
-  spec.name          = "down"
-  spec.version       = Down::VERSION
-  spec.authors       = ["Janko Marohnić"]
-  spec.email         = ["janko.marohnic@gmail.com"]
+  spec.name         = "down"
+  spec.version      = Down::VERSION
 
-  spec.summary       = "Robust streaming downloads using net/http."
-  spec.homepage      = "https://github.com/janko-m/down"
-  spec.license       = "MIT"
+  spec.required_ruby_version = ">= 2.1"
 
-  spec.files         = Dir["README.md", "LICENSE.txt", "*.gemspec", "lib/**/*.rb"]
-  spec.require_paths = ["lib"]
+  spec.summary      = "Robust streaming downloads using net/http."
+  spec.homepage     = "https://github.com/janko-m/down"
+  spec.authors      = ["Janko Marohnić"]
+  spec.email        = ["janko.marohnic@gmail.com"]
+  spec.license      = "MIT"
+
+  spec.files        = Dir["README.md", "LICENSE.txt", "*.gemspec", "lib/**/*.rb"]
+  spec.require_path = "lib"
 
   spec.add_development_dependency "minitest", "~> 5.8"
   spec.add_development_dependency "mocha"
