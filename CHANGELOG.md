@@ -1,12 +1,14 @@
 ## HEAD
 
+* Drop support for MRI 2.0 (@janko-m)
+
+* Drop support for MRI 1.9.3 (@janko-m)
+
 * Remove deprecated `:progress` option (@janko-m)
 
 * Remove deprecated `:timeout` option (@janko-m)
 
 * Reraise only a subset of exceptions as `Down::NotFound` in `Down.download` (@janko-m)
-
-* Stop testing on MRI 1.9.3 (@janko-m)
 
 * Support streaming of "Transfer-Encoding: chunked" responses in `Down.open` again (@janko-m)
 
