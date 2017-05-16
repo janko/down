@@ -1,82 +1,105 @@
 require "tempfile"
+require "fiber"
 
 module Down
   class ChunkedIO
-    attr_reader :tempfile, :data
+    attr_accessor :size, :data
 
-    def initialize(options)
-      @size     = options.fetch(:size)
-      @chunks   = options.fetch(:chunks)
-      @on_close = options.fetch(:on_close, ->{})
-      @data     = options.fetch(:data, {})
-      @tempfile = Tempfile.new("down", binmode: true)
+    def initialize(chunks:, size: nil, on_close: ->{}, data: {}, rewindable: true)
+      @chunks   = chunks
+      @size     = size
+      @on_close = on_close
+      @data     = data
 
-      peek_chunk
-    end
+      @buffer   = String.new
+      @tempfile = Tempfile.new("down-chunked_io", binmode: true) if rewindable
 
-    def size
-      @size
-    end
-
-    def read(length = nil, outbuf = nil)
-      download_chunk until enough_downloaded?(length) || download_finished?
-      @tempfile.read(length, outbuf)
+      retrieve_chunk
     end
 
     def each_chunk
+      raise IOError, "closed stream" if @closed
+
       return enum_for(__method__) if !block_given?
-      yield retrieve_chunk until download_finished?
+      yield retrieve_chunk until chunks_depleted?
+    end
+
+    def read(length = nil, outbuf = nil)
+      raise IOError, "closed stream" if @closed
+
+      outbuf = outbuf.to_s.replace("")
+
+      @tempfile.read(length, outbuf) if @tempfile && !@tempfile.eof?
+
+      until outbuf.bytesize == length || chunks_depleted?
+        @buffer << retrieve_chunk if @buffer.empty?
+
+        buffered_data = if length && length - outbuf.bytesize < @buffer.bytesize
+                          @buffer.byteslice(0, length - outbuf.bytesize)
+                        else
+                          @buffer
+                        end
+
+        @tempfile.write(buffered_data) if @tempfile
+
+        outbuf << buffered_data
+
+        if buffered_data.bytesize < @buffer.bytesize
+          @buffer.replace @buffer.byteslice(buffered_data.bytesize..-1)
+        else
+          @buffer.clear
+        end
+      end
+
+      outbuf unless length && outbuf.empty?
     end
 
     def eof?
-      @tempfile.eof? && download_finished?
+      raise IOError, "closed stream" if @closed
+
+      return false if @tempfile && !@tempfile.eof?
+      @buffer.empty? && chunks_depleted?
     end
 
     def rewind
+      raise IOError, "closed stream" if @closed
+      raise IOError, "this Down::ChunkedIO is not rewindable" if !@tempfile
+
       @tempfile.rewind
     end
 
     def close
-      terminate_download
-      @tempfile.close!
+      return if @closed
+
+      chunks_fiber.resume(:terminate) if chunks_fiber.alive?
+      @buffer.clear
+      @tempfile.close! if @tempfile
+      @closed = true
     end
 
     private
 
-    def download_chunk
-      write(retrieve_chunk)
-    end
-
     def retrieve_chunk
-      chunk = @chunks.next
-      peek_chunk
+      chunk = @next_chunk
+      @next_chunk = chunks_fiber.resume
       chunk
     end
 
-    def peek_chunk
-      @chunks.peek
-    rescue StopIteration
-      terminate_download
+    def chunks_depleted?
+      !chunks_fiber.alive?
     end
 
-    def enough_downloaded?(length)
-      length && (@tempfile.pos + length <= @tempfile.size)
-    end
-
-    def download_finished?
-      !@on_close
-    end
-
-    def terminate_download
-      @on_close.call if @on_close
-      @on_close = nil
-    end
-
-    def write(chunk)
-      current_pos = @tempfile.pos
-      @tempfile.pos = @tempfile.size
-      @tempfile.write(chunk)
-      @tempfile.pos = current_pos
+    def chunks_fiber
+      @chunks_fiber ||= Fiber.new do
+        begin
+          @chunks.each do |chunk|
+            action = Fiber.yield chunk
+            break if action == :terminate
+          end
+        ensure
+          @on_close.call
+        end
+      end
     end
   end
 end

@@ -1,5 +1,17 @@
 ## HEAD
 
+* `Down::ChunkedIO#read`, `#each_chunk`, `#eof?`, `rewind` now raise an `IOError` when `Down::ChunkedIO` has been closed (@janko-m)
+
+* `Down::ChunkedIO` now caches only the content that has been read (@janko-m)
+
+* Add `Down::ChunkedIO#size=` to allow assigning size after the `Down::ChunkedIO` has been instantiated (@janko-m)
+
+* Make `:size` an optional argument in `Down::ChunkedIO` (@janko-m)
+
+* Call enumerator's `ensure` block when `Down::ChunkedIO#close` is called (@janko-m)
+
+* Add `:rewindable` option to `Down::ChunkedIO` for disabling caching read content into a file (@janko-m)
+
 * Drop support for MRI 2.0 (@janko-m)
 
 * Drop support for MRI 1.9.3 (@janko-m)
