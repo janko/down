@@ -115,10 +115,10 @@ Down.download "http://example.com/image.jpg",
 
 ## Streaming
 
-Down has the ability to access content of the remote file *as it is being
-downloaded*. The `Down.open` method returns an IO object which represents the
-remote file on the given URL. When you read from it, Down internally downloads
-chunks of the remote file, but only how much is needed.
+Down has the ability to retrieve content of the remote file *as it is being
+downloaded*. The `Down.open` method returns a `Down::ChunkedIO` object which
+represents the remote file on the given URL. When you read from it, Down
+internally downloads chunks of the remote file, but only how much is needed.
 
 ```rb
 remote_file = Down.open("http://example.com/image.jpg")
@@ -126,22 +126,40 @@ remote_file.size # read from the "Content-Length" header
 
 remote_file.read(1024) # downloads and returns first 1 KB
 remote_file.read(1024) # downloads and returns next 1 KB
-remote_file.read       # downloads and returns the rest of the file
 
-remote_file.eof? #=> true
-remote_file.rewind
 remote_file.eof? #=> false
+remote_file.read # downloads and returns the rest of the file content
+remote_file.eof? #=> true
 
 remote_file.close # closes the HTTP connection and deletes the internal Tempfile
 ```
 
-You can also yield chunks directly as they're downloaded:
+By default the downloaded content is internally cached into a `Tempfile`, so
+that when you rewind the `Down::ChunkedIO`, it continues reading the cached
+content that it had already retrieved.
 
 ```rb
 remote_file = Down.open("http://example.com/image.jpg")
-remote_file.each_chunk do |chunk|
-  # ...
-end
+remote_file.read(1*1024*1024) # downloads, caches, and returns first 1MB
+remote_file.rewind
+remote_file.read(1*1024*1024) # reads the cached content
+remote_file.read(1*1024*1024) # downloads the next 1MB
+```
+
+If you want to save on IO calls and on disk usage, and don't need to be able to
+rewind the `Down::ChunkedIO`, you can disable caching downloaded content:
+
+```rb
+Down.open("http://example.com/image.jpg", rewindable: false)
+```
+
+You can also yield chunks directly as they're downloaded via `#each_chunk`, in
+which case the downloaded content is not cached into a file regardless of the
+`:rewindable` option.
+
+```rb
+remote_file = Down.open("http://example.com/image.jpg")
+remote_file.each_chunk { |chunk| ... }
 remote_file.close
 ```
 
@@ -173,9 +191,11 @@ The `Down.open` method uses `Down::ChunkedIO` internally. However,
 Down::ChunkedIO.new(...)
 ```
 
-* `:size` – size of the file, if it's known
-* `:chunks` – an `Enumerator` which returns chunks
-* `:on_close` – called when streaming finishes
+* `:chunks` – an `Enumerator` which retrieves chunks
+* `:size` – size of the file if it's known (returned by `#size`)
+* `:on_close` – called when streaming finishes or IO is closed
+* `:data` - custom data that you want to store (returned by `#data`)
+* `:rewindable` - whether to cache retrieved data into a file (defaults to `true`)
 
 Here is an example of wrapping streaming MongoDB files:
 
@@ -185,7 +205,7 @@ require "down/chunked_io"
 mongo = Mongo::Client.new(...)
 bucket = mongo.database.fs
 
-content_length = bucket.find(_id: id).first["length"]
+content_length = bucket.find(_id: id).first[:length]
 stream = bucket.open_download_stream(id)
 
 io = Down::ChunkedIO.new(
