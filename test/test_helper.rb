@@ -6,8 +6,6 @@ require "minitest"
 require "minitest/spec"
 require "minitest/pride"
 
-require "mocha/mini_test"
-
 require "http"
 
 if ENV["CI"]
