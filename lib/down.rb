@@ -178,6 +178,10 @@ module Down
       filename_from_content_disposition || filename_from_uri
     end
 
+    def content_type
+      super unless meta["content-type"].to_s.empty?
+    end
+
     private
 
     def filename_from_content_disposition

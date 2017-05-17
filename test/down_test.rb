@@ -138,15 +138,6 @@ describe Down do
       assert_equal true, JSON.parse(tempfile.read)["authenticated"]
     end
 
-    it "adds #content_type extracted from Content-Type" do
-      tempfile = Down.download("#{$httpbin}/image/png")
-      assert_equal "image/png", tempfile.content_type
-
-      # We also want to test scenario when Content-Type is blank, but httpbin
-      # doesn't seem to have such an endpoint, and /response-headers appends
-      # the given Content-Type onto the default "application/json".
-    end
-
     it "adds #original_filename extracted from Content-Disposition" do
       if RUBY_VERSION >= "2.2"
         tempfile = Down.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"my%20filename.ext\"")
@@ -182,6 +173,20 @@ describe Down do
 
       tempfile = Down.download("#{$httpbin}")
       assert_nil tempfile.original_filename
+    end
+
+    it "adds #content_type extracted from Content-Type" do
+      tempfile = Down.download("#{$httpbin}/image/png")
+      assert_equal "image/png", tempfile.content_type
+
+      tempfile.meta.delete("content-type")
+      assert_equal nil, tempfile.content_type
+
+      tempfile.meta["content-type"] = nil
+      assert_equal nil, tempfile.content_type
+
+      tempfile.meta["content-type"] = ""
+      assert_equal nil, tempfile.content_type
     end
 
     it "raises NotFound on HTTP error responses" do
