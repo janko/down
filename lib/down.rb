@@ -22,8 +22,25 @@ module Down
     progress_proc       = options.delete(:progress_proc)
     content_length_proc = options.delete(:content_length_proc)
 
+    open_uri_options = {
+      "User-Agent" => "Down/#{VERSION}",
+      content_length_proc: proc { |size|
+        if size && max_size && size > max_size
+          raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
+        end
+        content_length_proc.call(size) if content_length_proc
+      },
+      progress_proc: proc { |current_size|
+        if max_size && current_size > max_size
+          raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
+        end
+        progress_proc.call(current_size) if progress_proc
+      },
+      redirect: false,
+    }
+
     if options[:proxy]
-      proxy    = URI(options[:proxy])
+      proxy    = URI(options.delete(:proxy))
       user     = proxy.user
       password = proxy.password
 
@@ -31,10 +48,13 @@ module Down
         proxy.user     = nil
         proxy.password = nil
 
-        options[:proxy_http_basic_authentication] = [proxy.to_s, user, password]
-        options.delete(:proxy)
+        open_uri_options[:proxy_http_basic_authentication] = [proxy.to_s, user, password]
+      else
+        open_uri_options[:proxy] = proxy.to_s
       end
     end
+
+    open_uri_options.update(options)
 
     tries = max_redirects + 1
 
@@ -45,35 +65,21 @@ module Down
         raise URI::InvalidURIError, "url is not http nor https"
       end
 
-      open_uri_options = {
-        "User-Agent" => "Down/#{VERSION}",
-        content_length_proc: proc { |size|
-          if size && max_size && size > max_size
-            raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
-          end
-          content_length_proc.call(size) if content_length_proc
-        },
-        progress_proc: proc { |current_size|
-          if max_size && current_size > max_size
-            raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
-          end
-          progress_proc.call(current_size) if progress_proc
-        },
-        redirect: false,
-      }
-
       if uri.user || uri.password
-        open_uri_options[:http_basic_authentication] = [uri.user, uri.password]
+        open_uri_options[:http_basic_authentication] ||= [uri.user, uri.password]
         uri.user = nil
         uri.password = nil
       end
-
-      open_uri_options.update(options)
 
       downloaded_file = uri.open(open_uri_options)
     rescue OpenURI::HTTPRedirect => redirect
       if (tries -= 1) > 0
         uri = redirect.uri
+
+        if !redirect.io.meta["set-cookie"].to_s.empty?
+          open_uri_options["Cookie"] = redirect.io.meta["set-cookie"]
+        end
+
         retry
       else
         raise Down::NotFound, "too many redirects"

@@ -116,6 +116,10 @@ describe Down do
       assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
       tempfile = Down.download("#{$httpbin}/relative-redirect/1")
       assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
+
+      # We also want to test that cookies are being forwarded on redirects, but
+      # httpbin doesn't have an endpoint which can both redirect and return a
+      # "Set-Cookie" header.
     end
 
     # I don't know how to test that the proxy is actually used
