@@ -1,3 +1,5 @@
+# frozen-string-literal: true
+
 require "down/version"
 require "down/chunked_io"
 

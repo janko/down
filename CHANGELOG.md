@@ -1,5 +1,7 @@
 ## HEAD
 
+* Add `frozen-string-literal: true` comments for less string allocations on Ruby 2.3+ (@janko-m)
+
 * Modify `#content_type` to return nil instead of `application/octet-stream` when `Content-Type` is blank in `Down.download` (@janko-m)
 
 * `Down::ChunkedIO#read`, `#each_chunk`, `#eof?`, `rewind` now raise an `IOError` when `Down::ChunkedIO` has been closed (@janko-m)
