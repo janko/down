@@ -10,7 +10,7 @@
 
 * Call enumerator's `ensure` block when `Down::ChunkedIO#close` is called (@janko-m)
 
-* Add `:rewindable` option to `Down::ChunkedIO` for disabling caching read content into a file (@janko-m)
+* Add `:rewindable` option to `Down::ChunkedIO` and `Down.open` for disabling caching read content into a file (@janko-m)
 
 * Drop support for MRI 2.0 (@janko-m)
 

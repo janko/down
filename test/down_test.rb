@@ -214,9 +214,15 @@ describe Down do
 
     it "downloads on demand" do
       start = Time.now
-      io = Down.open("#{$httpbin}/drip?duration=1&delay=0")
+      io = Down.open("#{$httpbin}/drip?duration=0.5&delay=0")
       io.close
-      assert_operator Time.now - start, :<, 1
+      assert_operator Time.now - start, :<, 0.5
+    end
+
+    it "doesn't have to be rewindable" do
+      io = Down.open("#{$httpbin}/stream/10", rewindable: false)
+      io.read
+      assert_raises(IOError) { io.rewind }
     end
 
     it "extracts size from Content-Length" do

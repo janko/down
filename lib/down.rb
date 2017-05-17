@@ -145,6 +145,7 @@ module Down
       chunks: response.enum_for(:read_body),
       size: response["Content-Length"] && response["Content-Length"].to_i,
       on_close: -> { request.resume }, # close HTTP connnection
+      rewindable: options.fetch(:rewindable, true),
     )
 
     chunked_io.data[:status]  = response.code.to_i
