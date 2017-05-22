@@ -13,7 +13,7 @@ module Down
       @on_close = on_close
       @data     = data
 
-      @buffer   = String.new
+      @buffer   = String.new.force_encoding(Encoding::BINARY)
       @tempfile = Tempfile.new("down-chunked_io", binmode: true) if rewindable
 
       retrieve_chunk
