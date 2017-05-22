@@ -1,5 +1,9 @@
 ## HEAD
 
+* Add HTTP.rb backend as an alternative to Net::HTTP (@janko-m)
+
+* Stop testing on MRI 2.1 (@janko-m)
+
 * Forward cookies from the `Set-Cookie` response header when redirecting (@janko-m)
 
 * Add `frozen-string-literal: true` comments for less string allocations on Ruby 2.3+ (@janko-m)

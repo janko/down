@@ -16,5 +16,6 @@ Gem::Specification.new do |spec|
   spec.require_path = "lib"
 
   spec.add_development_dependency "minitest", "~> 5.8"
-  spec.add_development_dependency "http"
+  spec.add_development_dependency "mocha"
+  spec.add_development_dependency "http", "~> 2.1"
 end
