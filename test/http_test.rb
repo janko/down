@@ -118,8 +118,8 @@ describe Down::Http do
 
   describe "#open" do
     it "returns an IO which streams content" do
-      io = Down::Http.open("#{$httpbin}/stream-bytes/1000?chunk_size=10&seed=0")
-      assert_equal HTTP.get("#{$httpbin}/stream-bytes/1000?chunk_size=10&seed=0").to_s, io.read
+      io = Down::Http.open("#{$httpbin}/bytes/1000?seed=0")
+      assert_equal HTTP.get("#{$httpbin}/bytes/1000?seed=0").to_s, io.read
     end
 
     it "sets content length" do
