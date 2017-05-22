@@ -1,4 +1,4 @@
-## HEAD
+## 3.0.0 (2017-05-24)
 
 * Make `Down.open` pass encoding from content type charset to `Down::ChunkedIO` (@janko-m)
 
