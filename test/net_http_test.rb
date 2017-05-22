@@ -184,13 +184,13 @@ describe Down do
       assert_equal "image/png", tempfile.content_type
 
       tempfile.meta.delete("content-type")
-      assert_equal nil, tempfile.content_type
+      assert_nil tempfile.content_type
 
       tempfile.meta["content-type"] = nil
-      assert_equal nil, tempfile.content_type
+      assert_nil tempfile.content_type
 
       tempfile.meta["content-type"] = ""
-      assert_equal nil, tempfile.content_type
+      assert_nil tempfile.content_type
     end
 
     it "raises NotFound on HTTP error responses" do

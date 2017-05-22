@@ -91,13 +91,13 @@ describe Down::Http do
       assert_equal "image/png", tempfile.content_type
 
       tempfile.headers.delete("Content-Type")
-      assert_equal nil, tempfile.content_type
+      assert_nil tempfile.content_type
 
       tempfile.headers["Content-Type"] = nil
-      assert_equal nil, tempfile.content_type
+      assert_nil tempfile.content_type
 
       tempfile.headers["Content-Type"] = ""
-      assert_equal nil, tempfile.content_type
+      assert_nil tempfile.content_type
     end
 
     it "adds #charset extracted from Content-Type" do
@@ -106,13 +106,13 @@ describe Down::Http do
       assert_equal "utf-8", tempfile.charset
 
       tempfile.headers.delete("Content-Type")
-      assert_equal nil, tempfile.charset
+      assert_nil tempfile.charset
 
       tempfile.headers["Content-Type"] = nil
-      assert_equal nil, tempfile.charset
+      assert_nil tempfile.charset
 
       tempfile.headers["Content-Type"] = ""
-      assert_equal nil, tempfile.charset
+      assert_nil tempfile.charset
     end
   end
 
@@ -127,7 +127,7 @@ describe Down::Http do
       assert_equal 100, io.size
 
       io = Down::Http.open("#{$httpbin}/stream-bytes/100")
-      assert_equal nil, io.size
+      assert_nil io.size
     end
 
     it "follows redirects" do
