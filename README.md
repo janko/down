@@ -257,6 +257,8 @@ gem "down"
 ```
 ```rb
 require "down/http"
+tempfile = Down.download("http://example.org/image.jpg")
+tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/20150925-55456-z7vxqz.jpg>
 ```
 
 Some features that give the HTTP.rb backend an advantage over open-uri +
