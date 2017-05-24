@@ -162,7 +162,7 @@ Down::ChunkedIO.new(...)
 * `:on_close` – called when streaming finishes or IO is closed
 * `:data` - custom data that you want to store (returned by `#data`)
 * `:rewindable` - whether to cache retrieved data into a file (defaults to `true`)
-* `:encoding` - force content to be returned in specified encoding (defaults to ASCII-8BIT)
+* `:encoding` - force content to be returned in specified encoding (defaults to `Encoding::BINARY`)
 
 Here is an example of wrapping streaming MongoDB files:
 
