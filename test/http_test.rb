@@ -90,6 +90,10 @@ describe Down::Http do
       tempfile = Down::Http.download("#{$httpbin}/image/png")
       assert_equal "image/png", tempfile.content_type
 
+      tempfile = Down::Http.download("#{$httpbin}/encoding/utf8")
+      assert_equal "text/html; charset=utf-8", tempfile.headers["Content-Type"]
+      assert_equal "text/html", tempfile.content_type
+
       tempfile.headers.delete("Content-Type")
       assert_nil tempfile.content_type
 

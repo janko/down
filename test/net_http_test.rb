@@ -183,6 +183,10 @@ describe Down do
       tempfile = Down::NetHttp.download("#{$httpbin}/image/png")
       assert_equal "image/png", tempfile.content_type
 
+      tempfile = Down::NetHttp.download("#{$httpbin}/encoding/utf8")
+      assert_equal "text/html; charset=utf-8", tempfile.meta["content-type"]
+      assert_equal "text/html", tempfile.content_type
+
       tempfile.meta.delete("content-type")
       assert_nil tempfile.content_type
 
