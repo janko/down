@@ -1,5 +1,7 @@
 ## HEAD
 
+* Add `:encoding` option to `Down::ChunkedIO.new` for specifying the encoding of returned content (@janko-m)
+
 * Add HTTP.rb backend as an alternative to Net::HTTP (@janko-m)
 
 * Stop testing on MRI 2.1 (@janko-m)

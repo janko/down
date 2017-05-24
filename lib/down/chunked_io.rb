@@ -5,15 +5,16 @@ require "fiber"
 
 module Down
   class ChunkedIO
-    attr_accessor :size, :data
+    attr_accessor :size, :data, :encoding
 
-    def initialize(chunks:, size: nil, on_close: ->{}, data: {}, rewindable: true)
+    def initialize(chunks:, size: nil, on_close: ->{}, data: {}, rewindable: true, encoding: Encoding::BINARY)
       @chunks   = chunks
       @size     = size
       @on_close = on_close
       @data     = data
+      @encoding = find_encoding(encoding)
 
-      @buffer   = String.new.force_encoding(Encoding::BINARY)
+      @buffer   = String.new("").force_encoding(@encoding)
       @tempfile = Tempfile.new("down-chunked_io", binmode: true) if rewindable
 
       retrieve_chunk
@@ -29,9 +30,12 @@ module Down
     def read(length = nil, outbuf = nil)
       raise IOError, "closed stream" if @closed
 
-      outbuf = outbuf.to_s.replace("")
+      outbuf = outbuf.to_s.replace("").force_encoding(@encoding)
 
-      @tempfile.read(length, outbuf) if @tempfile && !@tempfile.eof?
+      if @tempfile && !@tempfile.eof?
+        @tempfile.read(length, outbuf)
+        outbuf.force_encoding(@encoding)
+      end
 
       until outbuf.bytesize == length || chunks_depleted?
         @buffer << retrieve_chunk if @buffer.empty?
@@ -84,7 +88,7 @@ module Down
     def retrieve_chunk
       chunk = @next_chunk
       @next_chunk = chunks_fiber.resume
-      chunk
+      chunk.force_encoding(@encoding) if chunk
     end
 
     def chunks_depleted?
@@ -102,6 +106,12 @@ module Down
           @on_close.call
         end
       end
+    end
+
+    def find_encoding(encoding)
+      Encoding.find(encoding)
+    rescue ArgumentError
+      Encoding::BINARY
     end
   end
 end

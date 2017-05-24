@@ -22,6 +22,13 @@ describe Down::ChunkedIO do
       assert_equal "bar", io.data[:foo]
     end
 
+    it "accepts :encoding" do
+      assert_equal Encoding::BINARY, chunked_io(chunks: [].each).encoding
+      assert_equal Encoding::UTF_8,  chunked_io(chunks: [].each, encoding: "utf-8").encoding
+      assert_equal Encoding::UTF_8,  chunked_io(chunks: [].each, encoding: Encoding::UTF_8).encoding
+      assert_equal Encoding::BINARY, chunked_io(chunks: [].each, encoding: "unknown").encoding
+    end
+
     it "retreives the first chunk" do
       exceptional_chunks = Enumerator.new { |y| raise Timeout::Error }
       assert_raises(Timeout::Error) { chunked_io(chunks: exceptional_chunks) }
@@ -70,6 +77,18 @@ describe Down::ChunkedIO do
         io = chunked_io(chunks: ["ab", "c"].each, rewindable: false)
         io.read(1)
         assert_equal "bc", io.read
+      end
+
+      it "returns content in correct encoding" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        assert_equal Encoding::BINARY, io.read.encoding
+        io.rewind
+        assert_equal Encoding::BINARY, io.read.encoding
+
+        io = chunked_io(chunks: ["ab", "c"].each, encoding: "utf-8")
+        assert_equal Encoding::UTF_8, io.read.encoding
+        io.rewind
+        assert_equal Encoding::UTF_8, io.read.encoding
       end
 
       it "doesn't use #size" do
@@ -123,6 +142,18 @@ describe Down::ChunkedIO do
         assert_equal "bc", io.read(2)
       end
 
+      it "returns content in correct encoding" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        assert_equal Encoding::BINARY, io.read(1).encoding
+        io.rewind
+        assert_equal Encoding::BINARY, io.read(1).encoding
+
+        io = chunked_io(chunks: ["ab", "c"].each, encoding: "utf-8")
+        assert_equal Encoding::UTF_8, io.read(1).encoding
+        io.rewind
+        assert_equal Encoding::UTF_8, io.read(1).encoding
+      end
+
       it "doesn't use #size" do
         io = chunked_io(chunks: ["ab", "c"].each, size: :bogus)
         assert_equal "a",  io.read(1)
@@ -131,13 +162,23 @@ describe Down::ChunkedIO do
     end
 
     describe "with length and buffer" do
-      it "reads partial content" do
+      it "reads partial content into the buffer" do
         io = chunked_io(chunks: ["ab", "c"].each)
         buffer = ""
         io.read(1, buffer)
         assert_equal "a", buffer
         io.read(2, buffer)
         assert_equal "bc", buffer
+      end
+
+      it "returns the given buffer" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        buffer = ""
+        assert_equal buffer.object_id, io.read(1, buffer).object_id
+        assert_equal buffer.object_id, io.read(2, buffer).object_id
+        io.rewind
+        assert_equal buffer.object_id, io.read(1, buffer).object_id
+        assert_equal buffer.object_id, io.read(2, buffer).object_id
       end
 
       it "reads as much as it can read" do
@@ -189,6 +230,19 @@ describe Down::ChunkedIO do
         assert_equal "a", buffer
         io.read(2, buffer)
         assert_equal "bc", buffer
+      end
+
+      it "returns content in correct encoding" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        buffer = ""
+        assert_equal Encoding::BINARY, io.read(1, buffer).encoding
+        io.rewind
+        assert_equal Encoding::BINARY, io.read(1, buffer).encoding
+
+        io = chunked_io(chunks: ["ab", "c"].each, encoding: "utf-8")
+        assert_equal Encoding::UTF_8, io.read(1, buffer).encoding
+        io.rewind
+        assert_equal Encoding::UTF_8, io.read(1, buffer).encoding
       end
 
       it "doesn't use #size" do
@@ -282,6 +336,14 @@ describe Down::ChunkedIO do
       io.each_chunk {}
       io.rewind
       assert_equal "", io.read
+    end
+
+    it "returns chunks in correct encoding" do
+      io = chunked_io(chunks: ["ab", "c"].each)
+      io.each_chunk { |chunk| assert_equal Encoding::BINARY, chunk.encoding }
+
+      io = chunked_io(chunks: ["ab", "c"].each, encoding: "utf-8")
+      io.each_chunk { |chunk| assert_equal Encoding::UTF_8, chunk.encoding }
     end
 
     it "raises IOError when closed" do
