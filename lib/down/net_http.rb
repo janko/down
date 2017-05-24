@@ -160,21 +160,23 @@ module Down
 
       raise Down::NotFound, "request returned status #{response.code} and body:\n#{response.body}" if response.code.to_i.between?(400, 599)
 
-      chunked_io = ChunkedIO.new(
+      down_params = {
         chunks: response.enum_for(:read_body),
         size: response["Content-Length"] && response["Content-Length"].to_i,
         on_close: -> { request.resume }, # close HTTP connnection
-        rewindable: options.fetch(:rewindable, true),
-      )
+        data: {
+          status: response.code.to_i,
+          headers: response.each_header.inject({}) { |headers, (downcased_name, value)|
+            name = downcased_name.split("-").map(&:capitalize).join("-")
+            headers.merge!(name => value)
+          },
+          response: response,
+        }
+      }
+      down_params[:rewindable] = options[:rewindable] if options.key?(:rewindable)
+      down_params[:encoding] = response.type_params["charset"] if response.type_params["charset"]
 
-      chunked_io.data[:status] = response.code.to_i
-      response.each_header do |downcased_name, value|
-        name = downcased_name.split("-").map(&:capitalize).join("-")
-        (chunked_io.data[:headers] ||= {}).merge!(name => value)
-      end
-      chunked_io.data[:response] = response
-
-      chunked_io
+      Down::ChunkedIO.new(down_params)
     end
 
     def copy_to_tempfile(basename, io)

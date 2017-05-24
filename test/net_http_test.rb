@@ -232,6 +232,17 @@ describe Down do
       assert_operator Time.now - start, :<, 0.5
     end
 
+    it "returns content in encoding specified by charset" do
+      io = Down::NetHttp.open("#{$httpbin}/stream/10")
+      assert_equal Encoding::BINARY, io.read.encoding
+
+      io = Down::NetHttp.open("#{$httpbin}/get")
+      assert_equal Encoding::BINARY, io.read.encoding
+
+      io = Down::NetHttp.open("#{$httpbin}/encoding/utf8")
+      assert_equal Encoding::UTF_8, io.read.encoding
+    end
+
     it "doesn't have to be rewindable" do
       io = Down::NetHttp.open("#{$httpbin}/stream/10", rewindable: false)
       io.read

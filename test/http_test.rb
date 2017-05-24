@@ -122,8 +122,19 @@ describe Down::Http do
 
   describe "#open" do
     it "returns an IO which streams content" do
-      io = Down::Http.open("#{$httpbin}/bytes/1000?seed=0")
-      assert_equal HTTP.get("#{$httpbin}/bytes/1000?seed=0").to_s, io.read
+      io = Down::Http.open("#{$httpbin}/stream-bytes/1000?chunk_size=10&seed=0")
+      assert_equal HTTP.get("#{$httpbin}/stream-bytes/1000?chunk_size=10&seed=0").to_s, io.read
+    end
+
+    it "returns content in encoding specified by charset" do
+      io = Down::Http.open("#{$httpbin}/stream/10")
+      assert_equal Encoding::BINARY, io.read.encoding
+
+      io = Down::Http.open("#{$httpbin}/get")
+      assert_equal Encoding::BINARY, io.read.encoding
+
+      io = Down::Http.open("#{$httpbin}/encoding/utf8")
+      assert_equal Encoding::UTF_8, io.read.encoding
     end
 
     it "sets content length" do
