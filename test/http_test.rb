@@ -250,10 +250,9 @@ describe Down::Http do
     end
 
     it "raises Down::NotFound on invalid URL" do
-      assert_raises(Down::NotFound) { Down::Http.download("http:\\example.org") }
-      assert_raises(Down::NotFound) { Down::Http.download("http:/example.org") }
-      assert_raises(Down::NotFound) { Down::Http.download("foo:/example.org") }
-      assert_raises(Down::NotFound) { Down::Http.download("#{$httpbin}/get") { |c| c.timeout(read: 0) } }
+      assert_raises(Down::NotFound) { Down::Http.open("http:\\example.org") }
+      assert_raises(Down::NotFound) { Down::Http.open("foo:/example.org") }
+      assert_raises(Down::NotFound) { Down::Http.open("#{$httpbin}/delay/0.5"){ |c| c.timeout(read: 0)}.read }
     end
   end
 end
