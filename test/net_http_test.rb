@@ -1,6 +1,7 @@
 require "test_helper"
 
 require "down/net_http"
+require "http"
 
 require "stringio"
 require "json"

@@ -18,4 +18,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "minitest", "~> 5.8"
   spec.add_development_dependency "mocha"
   spec.add_development_dependency "http", "~> 2.1"
+  spec.add_development_dependency "docker-api"
 end

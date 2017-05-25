@@ -1,6 +1,9 @@
-language: ruby
+sudo: required
 
-sudo: false
+services:
+  - docker
+
+language: ruby
 
 rvm:
   - "2.2.7"
@@ -8,6 +11,6 @@ rvm:
   - "2.4.1"
   - "jruby-9.1.8.0"
 
-script: rake test
-
 cache: bundler
+
+script: rake test
