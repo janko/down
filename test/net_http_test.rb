@@ -205,7 +205,6 @@ describe Down do
 
     it "raises NotFound on invalid URL" do
       assert_raises(Down::NotFound) { Down::NetHttp.download("http:\\example.org") }
-      assert_raises(Down::NotFound) { Down::NetHttp.download("http:/example.org") }
       assert_raises(Down::NotFound) { Down::NetHttp.download("foo:/example.org") }
       assert_raises(Down::NotFound) { Down::NetHttp.download("#{$httpbin}/get", read_timeout: 0) }
     end
