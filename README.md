@@ -317,18 +317,14 @@ backend is thread safe.
 
 ## Development
 
-The test suite runs the http://httpbin.org/ server locally, and uses it to test
-downloads. Httpbin is a Python package which is run with GUnicorn:
-
-```
-$ pip install gunicorn httpbin
-```
-
-Afterwards you can run tests with
+You can run tests with
 
 ```
 $ rake test
 ```
+
+The test suite pulls and runs [kennethreitz/httpbin] as a Docker container, so
+you'll need to have Docker installed and running.
 
 ## License
 
@@ -337,3 +333,4 @@ $ rake test
 [open-uri]: http://ruby-doc.org/stdlib-2.3.0/libdoc/open-uri/rdoc/OpenURI.html
 [HTTP.rb]: https://github.com/httprb/http
 [Addressable::URI]: https://github.com/sporkmonger/addressable
+[kennethreitz/httpbin]: https://github.com/kennethreitz/httpbin
