@@ -72,9 +72,9 @@ module Down
       end
 
       down_options = {
-        chunks:   response.body.enum_for(:each),
-        size:     response.content_length,
-        data:     { status: response.status, headers: response.headers.to_h, response: response },
+        chunks: response.body.enum_for(:each),
+        size:   response.content_length,
+        data:   { status: response.code, headers: response.headers.to_h, response: response },
       }
       down_options[:encoding]   = response.content_type.charset if response.content_type.charset
       down_options[:on_close]   = -> { response.connection.close } unless client.persistent?

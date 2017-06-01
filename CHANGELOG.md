@@ -1,3 +1,7 @@
+## HEAD
+
+* Return an `Integer` in `data[:status]` on a result of `Down.open` when using the HTTP.rb strategy (@janko-m)
+
 ## 3.0.0 (2017-05-24)
 
 * Make `Down.open` pass encoding from content type charset to `Down::ChunkedIO` (@janko-m)
