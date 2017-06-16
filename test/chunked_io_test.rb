@@ -35,7 +35,7 @@ describe Down::ChunkedIO do
     end
   end
 
-  describe "reading" do
+  describe "#read" do
     describe "without arguments" do
       it "reads whole content" do
         io = chunked_io(chunks: ["ab", "c"].each)
@@ -319,7 +319,7 @@ describe Down::ChunkedIO do
     end
   end
 
-  describe "retrieving chunks" do
+  describe "#each_chunk" do
     it "yields chunks with a block" do
       io = chunked_io(chunks: ["ab", "c"].each)
       io.each_chunk { |chunk| (@chunks ||= []) << chunk }
@@ -405,7 +405,7 @@ describe Down::ChunkedIO do
     end
   end
 
-  describe "rewinding" do
+  describe "#rewind" do
     it "rewinds the IO if it's rewindable" do
       io = chunked_io(chunks: ["ab", "c"].each)
       assert_equal "abc", io.read
