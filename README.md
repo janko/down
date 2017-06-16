@@ -259,6 +259,16 @@ Down::NetHttp.download("http://example.com/image.jpg", proxy: "http://proxy.org"
 Down::NetHttp.open("http://example.com/image.jpg",     proxy: "http://user:password@proxy.org")
 ```
 
+#### Timeouts
+
+Both `Down.download` and `Down.open` support `:read_timeout` and `:open_timeout`
+options, which are forwarded to `Net::HTTP`:
+
+```rb
+Down::NetHttp.download("http://example.com/image.jpg", open_timeout: 5)
+Down::NetHttp.open("http://example.com/image.jpg", read_timeout: 10)
+```
+
 #### Additional options
 
 Any additional options passed to `Down.download` will be forwarded to

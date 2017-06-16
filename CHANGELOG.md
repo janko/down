@@ -1,5 +1,7 @@
 ## HEAD
 
+* Add `:read_timeout` and `:open_timeout` options to `Down::NetHttp.open` (@janko-m)
+
 * Return an `Integer` in `data[:status]` on a result of `Down.open` when using the HTTP.rb strategy (@janko-m)
 
 ## 3.0.0 (2017-05-24)

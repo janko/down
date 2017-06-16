@@ -143,6 +143,9 @@ module Down
         http.cert_store = store
       end
 
+      http.read_timeout = options[:read_timeout] if options.key?(:read_timeout)
+      http.open_timeout = options[:open_timeout] if options.key?(:open_timeout)
+
       request_headers = options.select { |key, value| key.is_a?(String) }
       get = Net::HTTP::Get.new(uri.request_uri, request_headers)
       get.basic_auth(uri.user, uri.password) if uri.user || uri.password
