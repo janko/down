@@ -1,5 +1,7 @@
 ## HEAD
 
+* Add `Down::ChunkedIO#rewindable?` (@janko-m)
+
 * In `Down::ChunkedIO` only create the Tempfile if it's going to be used (@janko-m)
 
 ## 3.1.0 (2017-06-16)

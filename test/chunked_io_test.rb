@@ -474,4 +474,16 @@ describe Down::ChunkedIO do
       assert_equal 1, @on_close_called
     end
   end
+
+  describe "#rewindable?" do
+    it "returns true by default" do
+      io = chunked_io(chunks: [].each)
+      assert_equal true, io.rewindable?
+    end
+
+    it "returns false if :rewindable is false" do
+      io = chunked_io(chunks: [].each, rewindable: false)
+      assert_equal false, io.rewindable?
+    end
+  end
 end

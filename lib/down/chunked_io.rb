@@ -83,6 +83,10 @@ module Down
       @closed = true
     end
 
+    def rewindable?
+      @rewindable
+    end
+
     private
 
     def cache
