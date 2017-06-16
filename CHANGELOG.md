@@ -1,4 +1,4 @@
-## HEAD
+## 3.1.0 (2017-06-16)
 
 * Split `Down::NotFound` into explanatory exceptions (@janko-m)
 
