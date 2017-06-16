@@ -285,7 +285,7 @@ Down::NetHttp.open("http://example.com/image.jpg", {"Authorization" => "..."})
 ### HTTP.rb
 
 ```rb
-gem "down", "~> 3.0"
+gem "down", ">= 3.0"
 gem "http", "~> 2.1"
 ```
 ```rb
