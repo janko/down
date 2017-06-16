@@ -21,14 +21,14 @@ module Down
     end
 
     def each_chunk
-      raise IOError, "closed stream" if @closed
+      raise IOError, "closed stream" if closed?
 
       return enum_for(__method__) if !block_given?
       yield retrieve_chunk until chunks_depleted?
     end
 
     def read(length = nil, outbuf = nil)
-      raise IOError, "closed stream" if @closed
+      raise IOError, "closed stream" if closed?
 
       outbuf = outbuf.to_s.replace("").force_encoding(@encoding)
 
@@ -61,14 +61,14 @@ module Down
     end
 
     def eof?
-      raise IOError, "closed stream" if @closed
+      raise IOError, "closed stream" if closed?
 
       return false if cache && !cache.eof?
       @buffer.empty? && chunks_depleted?
     end
 
     def rewind
-      raise IOError, "closed stream" if @closed
+      raise IOError, "closed stream" if closed?
       raise IOError, "this Down::ChunkedIO is not rewindable" if cache.nil?
 
       cache.rewind
@@ -81,6 +81,10 @@ module Down
       @buffer.clear
       cache.close! if cache
       @closed = true
+    end
+
+    def closed?
+      !!@closed
     end
 
     def rewindable?

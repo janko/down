@@ -475,6 +475,19 @@ describe Down::ChunkedIO do
     end
   end
 
+  describe "#closed?" do
+    it "returns false when #close was not called" do
+      io = chunked_io(chunks: [].each)
+      assert_equal false, io.closed?
+    end
+
+    it "returns truen when #close was called" do
+      io = chunked_io(chunks: [].each)
+      io.close
+      assert_equal true, io.closed?
+    end
+  end
+
   describe "#rewindable?" do
     it "returns true by default" do
       io = chunked_io(chunks: [].each)
