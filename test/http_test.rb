@@ -150,7 +150,7 @@ describe Down::Http do
       assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(tempfile.read)["url"]
       tempfile = Down::Http.download("#{$httpbin}/redirect/2")
       assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(tempfile.read)["url"]
-      assert_raises(Down::NotFound) { Down::Http.download("#{$httpbin}/redirect/3") }
+      assert_raises(Down::TooManyRedirects) { Down::Http.download("#{$httpbin}/redirect/3") }
 
       tempfile = Down::Http.download("#{$httpbin}/absolute-redirect/1")
       assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(tempfile.read)["url"]
@@ -241,18 +241,30 @@ describe Down::Http do
       io.close
     end
 
-    it "raises Down::NotFound on 4xx and 5xx responses" do
-      error = assert_raises(Down::NotFound) { Down::Http.open("#{$httpbin}/status/404") }
-      assert_equal 404, error.response.code
+    it "raises on HTTP error responses" do
+      error = assert_raises(Down::ClientError) { Down::Http.open("#{$httpbin}/status/404") }
+      assert_equal "404 Not Found", error.message
+      assert_instance_of HTTP::Response, error.response
 
-      error = assert_raises(Down::NotFound) { Down::Http.open("#{$httpbin}/status/500") }
-      assert_equal 500, error.response.code
+      error = assert_raises(Down::ServerError) { Down::Http.open("#{$httpbin}/status/500") }
+      assert_equal "500 Internal Server Error", error.message
+      assert_instance_of HTTP::Response, error.response
+
+      error = assert_raises(Down::ResponseError) { Down::Http.open("#{$httpbin}/status/100") }
+      assert_equal "100 Continue", error.message
+      assert_instance_of HTTP::Response, error.response
     end
 
-    it "raises Down::NotFound on invalid URL" do
-      assert_raises(Down::NotFound) { Down::Http.open("http:\\example.org") }
-      assert_raises(Down::NotFound) { Down::Http.open("foo:/example.org") }
-      assert_raises(Down::NotFound) { Down::Http.open("#{$httpbin}/delay/0.5"){ |c| c.timeout(read: 0)}.read }
+    it "raises on connection errors" do
+      assert_raises(Down::ConnectionError) { Down::Http.open("http://localhost:99999") }
+    end
+
+    it "raises on timeout errors" do
+      assert_raises(Down::TimeoutError) { Down::Http.open("#{$httpbin}/delay/0.5"){ |c| c.timeout(read: 0)}.read }
+    end
+
+    it "raises on invalid URL" do
+      assert_raises(Down::InvalidUrl) { Down::Http.open("foo://example.org") }
     end
   end
 end

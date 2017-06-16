@@ -111,12 +111,12 @@ describe Down do
       assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
       tempfile = Down::NetHttp.download("#{$httpbin}/redirect/2")
       assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
-      error = assert_raises(Down::Error) { Down::NetHttp.download("#{$httpbin}/redirect/3") }
+      error = assert_raises(Down::TooManyRedirects) { Down::NetHttp.download("#{$httpbin}/redirect/3") }
       assert_equal "too many redirects", error.message
 
       tempfile = Down::NetHttp.download("#{$httpbin}/redirect/3", max_redirects: 3)
       assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
-      error = assert_raises(Down::Error) { Down::NetHttp.download("#{$httpbin}/redirect/4", max_redirects: 3) }
+      error = assert_raises(Down::TooManyRedirects) { Down::NetHttp.download("#{$httpbin}/redirect/4", max_redirects: 3) }
       assert_equal "too many redirects", error.message
 
       tempfile = Down::NetHttp.download("#{$httpbin}/absolute-redirect/1")
@@ -198,19 +198,29 @@ describe Down do
       assert_nil tempfile.content_type
     end
 
-    it "raises NotFound on HTTP error responses" do
-      assert_raises(Down::NotFound) { Down::NetHttp.download("#{$httpbin}/status/400") }
-      assert_raises(Down::NotFound) { Down::NetHttp.download("#{$httpbin}/status/500") }
+    it "raises on HTTP error responses" do
+      error = assert_raises(Down::ClientError) { Down::NetHttp.download("#{$httpbin}/status/404") }
+      assert_equal "404 Not Found", error.message
+      assert_kind_of Net::HTTPResponse, error.response
+
+      error = assert_raises(Down::ServerError) { Down::NetHttp.download("#{$httpbin}/status/500") }
+      assert_equal "500 Internal Server Error", error.message
+      assert_kind_of Net::HTTPResponse, error.response
     end
 
-    it "raises NotFound on invalid URL" do
-      assert_raises(Down::NotFound) { Down::NetHttp.download("http:\\example.org") }
-      assert_raises(Down::NotFound) { Down::NetHttp.download("foo:/example.org") }
-      assert_raises(Down::NotFound) { Down::NetHttp.download("#{$httpbin}/delay/0.5", read_timeout: 0) }
+    it "raises on invalid URLs" do
+      assert_raises(Down::InvalidUrl) { Down::NetHttp.download("http:\\example.org") }
+      assert_raises(Down::InvalidUrl) { Down::NetHttp.download("foo://example.org") }
+      assert_raises(Down::InvalidUrl) { Down::NetHttp.download("| ls") }
     end
 
-    it "doesn't allow shell execution" do
-      assert_raises(Down::Error) { Down::NetHttp.download("| ls") }
+    it "raises on connection errors" do
+      assert_raises(Down::ConnectionError) { Down::NetHttp.download("http://localhost:99999") }
+      assert_raises(Down::ConnectionError) { Down::NetHttp.download("#{$httpbin}/status/100") }
+    end
+
+    it "raises on timeout errors" do
+      assert_raises(Down::TimeoutError) { Down::NetHttp.download("#{$httpbin}/delay/0.5", read_timeout: 0, open_timeout: 0) }
     end
   end
 
@@ -292,12 +302,33 @@ describe Down do
       assert_kind_of Net::HTTPResponse, io.data[:response]
     end
 
-    it "raises an error on 4xx and 5xx response" do
-      error = assert_raises(Down::Error) { Down::NetHttp.open("#{$httpbin}/status/404") }
-      assert_match "request returned status 404 and body:\n", error.message
+    it "raises on HTTP error responses" do
+      error = assert_raises(Down::ClientError) { Down::NetHttp.open("#{$httpbin}/status/404") }
+      assert_equal "404 Not Found", error.message
+      assert_kind_of Net::HTTPResponse, error.response
 
-      error = assert_raises(Down::Error) { Down::NetHttp.open("#{$httpbin}/status/500") }
-      assert_equal "request returned status 500 and body:\n", error.message
+      error = assert_raises(Down::ServerError) { Down::NetHttp.open("#{$httpbin}/status/500") }
+      assert_equal "500 Internal Server Error", error.message
+      assert_kind_of Net::HTTPResponse, error.response
+
+      error = assert_raises(Down::ResponseError) { Down::NetHttp.open("#{$httpbin}/status/301") }
+      assert_equal "301 Moved Permanently", error.message
+      assert_kind_of Net::HTTPResponse, error.response
+    end
+
+    it "raises on invalid URLs" do
+      assert_raises(Down::InvalidUrl) { Down::NetHttp.open("http:\\example.org") }
+      assert_raises(Down::InvalidUrl) { Down::NetHttp.open("foo://example.org") }
+      assert_raises(Down::InvalidUrl) { Down::NetHttp.open("| ls") }
+    end
+
+    it "raises on connection errors" do
+      assert_raises(Down::ConnectionError) { Down::NetHttp.open("http://localhost:99999") }
+      assert_raises(Down::ConnectionError) { Down::NetHttp.open("#{$httpbin}/status/100") }
+    end
+
+    it "raises on timeout errors" do
+      assert_raises(Down::TimeoutError) { Down::NetHttp.open("#{$httpbin}/delay/0.5", read_timeout: 0, open_timeout: 0).read }
     end
   end
 

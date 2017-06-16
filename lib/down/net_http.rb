@@ -73,7 +73,7 @@ module Down
         uri = URI(uri)
 
         if uri.class != URI::HTTP && uri.class != URI::HTTPS
-          raise URI::InvalidURIError, "url is not http nor https"
+          raise Down::InvalidUrl, "URL scheme needs to be http or https"
         end
 
         if uri.user || uri.password
@@ -83,24 +83,29 @@ module Down
         end
 
         downloaded_file = uri.open(open_uri_options)
-      rescue OpenURI::HTTPRedirect => redirect
+      rescue OpenURI::HTTPRedirect => exception
         if (tries -= 1) > 0
-          uri = redirect.uri
+          uri = exception.uri
 
-          if !redirect.io.meta["set-cookie"].to_s.empty?
-            open_uri_options["Cookie"] = redirect.io.meta["set-cookie"]
+          if !exception.io.meta["set-cookie"].to_s.empty?
+            open_uri_options["Cookie"] = exception.io.meta["set-cookie"]
           end
 
           retry
         else
-          raise Down::NotFound, "too many redirects"
+          raise Down::TooManyRedirects, "too many redirects"
         end
-      rescue OpenURI::HTTPError,
-             URI::InvalidURIError,
-             Errno::ECONNREFUSED,
-             SocketError,
-             Timeout::Error
-        raise Down::NotFound, "file not found"
+      rescue OpenURI::HTTPError => exception
+        code, message = exception.io.status
+        response_class = Net::HTTPResponse::CODE_TO_OBJ.fetch(code)
+        response = response_class.new(nil, code, message)
+        exception.io.metas.each do |name, values|
+          values.each { |value| response.add_field(name, value) }
+        end
+
+        response_error!(response)
+      rescue => exception
+        request_error!(exception)
       end
 
       # open-uri will return a StringIO instead of a Tempfile if the filesize is
@@ -117,7 +122,15 @@ module Down
     end
 
     def open(uri, options = {})
-      uri = URI(uri)
+      begin
+        uri = URI(uri)
+        if uri.class != URI::HTTP && uri.class != URI::HTTPS
+          raise Down::InvalidUrl, "URL scheme needs to be http or https"
+        end
+      rescue URI::InvalidURIError
+        raise Down::InvalidUrl, "URL was invalid"
+      end
+
       http_class = Net::HTTP
 
       if options[:proxy]
@@ -159,9 +172,13 @@ module Down
         end
       end
 
-      response = request.resume
+      begin
+        response = request.resume
 
-      raise Down::NotFound, "request returned status #{response.code} and body:\n#{response.body}" if response.code.to_i.between?(400, 599)
+        response_error!(response) unless (200..299).cover?(response.code.to_i)
+      rescue => exception
+        request_error!(exception)
+      end
 
       down_params = {
         chunks: response.enum_for(:read_body),
@@ -194,6 +211,47 @@ module Down
       end
       tempfile.open
       tempfile
+    end
+
+    def response_error!(response)
+      code    = response.code.to_i
+      message = response.message.split(" ").map(&:capitalize).join(" ")
+
+      args = ["#{code} #{message}", response: response]
+
+      case response.code.to_i
+      when 400..499 then raise Down::ClientError.new(*args)
+      when 500..599 then raise Down::ServerError.new(*args)
+      else               raise Down::ResponseError.new(*args)
+      end
+    end
+
+    def request_error!(exception)
+      case exception
+      when URI::InvalidURIError
+        raise Down::InvalidUrl, "URL was invalid"
+      when Errno::ECONNREFUSED
+        raise Down::ConnectionError, "connection was refused"
+      when EOFError,
+           IOError,
+           Errno::ECONNABORTED,
+           Errno::ECONNRESET,
+           Errno::EPIPE,
+           Errno::EINVAL,
+           Errno::EHOSTUNREACH
+        raise Down::ConnectionError, exception.message
+      when SocketError
+        raise Down::ConnectionError, "domain name could not be resolved"
+      when Errno::ETIMEDOUT,
+           Timeout::Error,
+           Net::OpenTimeout,
+           Net::ReadTimeout
+        raise Down::TimeoutError, "request timed out"
+      when defined?(OpenSSL) && OpenSSL::SSL::SSLError
+        raise Down::SSLError, exception.message
+      else
+        raise exception
+      end
     end
 
     module DownloadedFile

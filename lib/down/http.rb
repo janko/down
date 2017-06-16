@@ -65,10 +65,11 @@ module Down
     def open(url, **options, &block)
       rewindable = options.delete(:rewindable)
 
-      response = get(url, **options, &block)
-
-      if response.code.between?(400, 599)
-        raise Down::NotFound.new("file not found", response: response)
+      begin
+        response = get(url, **options, &block)
+        response_error!(response) if !response.status.success?
+      rescue => exception
+        request_error!(exception)
       end
 
       down_options = {
@@ -81,12 +82,6 @@ module Down
       down_options[:rewindable] = rewindable if rewindable != nil
 
       Down::ChunkedIO.new(down_options)
-    rescue HTTP::ConnectionError,
-           HTTP::Request::UnsupportedSchemeError,
-           HTTP::TimeoutError
-      raise Down::NotFound, "file not found"
-    rescue HTTP::Redirector::TooManyRedirectsError
-      raise Down::NotFound, "too many redirects"
     end
 
     def get(url, **options, &block)
@@ -110,6 +105,42 @@ module Down
 
     def client=(value)
       Thread.current[:down_client] = value
+    end
+
+    def response_error!(response)
+      args = [response.status.to_s, response: response]
+
+      case response.code
+      when 400..499 then raise Down::ClientError.new(*args)
+      when 500..599 then raise Down::ServerError.new(*args)
+      else               raise Down::ResponseError.new(*args)
+      end
+    end
+
+    def request_error!(exception)
+      case exception
+      when HTTP::Request::UnsupportedSchemeError
+        raise Down::InvalidUrl, exception.message
+      when Errno::ECONNREFUSED
+        raise Down::ConnectionError, "connection was refused"
+      when HTTP::ConnectionError,
+           Errno::ECONNABORTED,
+           Errno::ECONNRESET,
+           Errno::EPIPE,
+           Errno::EINVAL,
+           Errno::EHOSTUNREACH
+        raise Down::ConnectionError, exception.message
+      when SocketError
+        raise Down::ConnectionError, "domain name could not be resolved"
+      when HTTP::TimeoutError
+        raise Down::TimeoutError, exception.message
+      when HTTP::Redirector::TooManyRedirectsError
+        raise Down::TooManyRedirects, exception.message
+      when defined?(OpenSSL) && OpenSSL::SSL::SSLError
+        raise Down::SSLError, exception.message
+      else
+        raise exception
+      end
     end
 
     module DownloadedFile

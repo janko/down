@@ -57,29 +57,6 @@ Down.download("http://user:password@example.org")
 Down.open("http://user:password@example.org")
 ```
 
-### Download errors
-
-There are a lot of ways in which a download can fail:
-
-* Response status was 4xx or 5xx
-* Domain was not found
-* Timeout occurred
-* URL is invalid
-* ...
-
-Down attempts to unify all of these exceptions into one `Down::NotFound` error
-(because this is what actually happened from the outside perspective). If you
-want to retrieve the original error raised, in Ruby 2.1+ you can use
-`Exception#cause`:
-
-```rb
-begin
-  Down.download("http://example.com")
-rescue Down::Error => exception
-  exception.cause #=> #<Timeout::Error>
-end
-```
-
 ## Streaming
 
 Down has the ability to retrieve content of the remote file *as it is being
@@ -181,6 +158,23 @@ io = Down::ChunkedIO.new(
   on_close: -> { stream.close },
 )
 ```
+
+### Exceptions
+
+Down tries to recognize various types of exceptions and re-raise them as one of
+the `Down::Error` subclasses. This is Down's exception hierarchy:
+
+* `Down::Error`
+  * `Down::TooLarge`
+  * `Down::NotFound`
+    * `Down::InvalidUrl`
+    * `Down::TooManyRedirects`
+    * `Down::ResponseError`
+      * `Down::ClientError`
+      * `Down::ServerError`
+    * `Down::ConnectionError`
+    * `Down::TimeoutError`
+    * `Down::SSLError`
 
 ## Backends
 
