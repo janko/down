@@ -8,14 +8,14 @@ module Down
     attr_accessor :size, :data, :encoding
 
     def initialize(chunks:, size: nil, on_close: ->{}, data: {}, rewindable: true, encoding: Encoding::BINARY)
-      @chunks   = chunks
-      @size     = size
-      @on_close = on_close
-      @data     = data
-      @encoding = find_encoding(encoding)
+      @chunks     = chunks
+      @size       = size
+      @on_close   = on_close
+      @data       = data
+      @encoding   = find_encoding(encoding)
+      @rewindable = rewindable
 
-      @buffer   = String.new("").force_encoding(@encoding)
-      @tempfile = Tempfile.new("down-chunked_io", binmode: true) if rewindable
+      @buffer = String.new("").force_encoding(@encoding)
 
       retrieve_chunk
     end
@@ -32,8 +32,8 @@ module Down
 
       outbuf = outbuf.to_s.replace("").force_encoding(@encoding)
 
-      if @tempfile && !@tempfile.eof?
-        @tempfile.read(length, outbuf)
+      if cache && !cache.eof?
+        cache.read(length, outbuf)
         outbuf.force_encoding(@encoding)
       end
 
@@ -46,7 +46,7 @@ module Down
                           @buffer
                         end
 
-        @tempfile.write(buffered_data) if @tempfile
+        cache.write(buffered_data) if cache
 
         outbuf << buffered_data
 
@@ -63,15 +63,15 @@ module Down
     def eof?
       raise IOError, "closed stream" if @closed
 
-      return false if @tempfile && !@tempfile.eof?
+      return false if cache && !cache.eof?
       @buffer.empty? && chunks_depleted?
     end
 
     def rewind
       raise IOError, "closed stream" if @closed
-      raise IOError, "this Down::ChunkedIO is not rewindable" if !@tempfile
+      raise IOError, "this Down::ChunkedIO is not rewindable" if cache.nil?
 
-      @tempfile.rewind
+      cache.rewind
     end
 
     def close
@@ -79,11 +79,15 @@ module Down
 
       chunks_fiber.resume(:terminate) if chunks_fiber.alive?
       @buffer.clear
-      @tempfile.close! if @tempfile
+      cache.close! if cache
       @closed = true
     end
 
     private
+
+    def cache
+      @cache ||= Tempfile.new("down-chunked_io", binmode: true) if @rewindable
+    end
 
     def retrieve_chunk
       chunk = @next_chunk
