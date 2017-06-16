@@ -7,7 +7,7 @@ module Down
   class ChunkedIO
     attr_accessor :size, :data, :encoding
 
-    def initialize(chunks:, size: nil, on_close: ->{}, data: {}, rewindable: true, encoding: Encoding::BINARY)
+    def initialize(chunks:, size: nil, on_close: nil, data: {}, rewindable: true, encoding: Encoding::BINARY)
       @chunks     = chunks
       @size       = size
       @on_close   = on_close
@@ -91,6 +91,19 @@ module Down
       @rewindable
     end
 
+    def inspect
+      string  = String.new
+      string << "#<Down::ChunkedIO"
+      string << " chunks=#{@chunks.inspect}"
+      string << " size=#{size.inspect}"
+      string << " encoding=#{encoding.inspect}"
+      string << " data=#{data.inspect}"
+      string << " on_close=#{@on_close.inspect}"
+      string << " rewindable=#{@rewindable.inspect}"
+      string << " (closed)" if closed?
+      string << ">"
+    end
+
     private
 
     def cache
@@ -115,7 +128,7 @@ module Down
             break if action == :terminate
           end
         ensure
-          @on_close.call
+          @on_close.call if @on_close
         end
       end
     end

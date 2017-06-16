@@ -499,4 +499,23 @@ describe Down::ChunkedIO do
       assert_equal false, io.rewindable?
     end
   end
+
+  describe "#inspect" do
+    it "shows important information" do
+      assert_equal "#<Down::ChunkedIO chunks=#<Enumerator: [\"\"]:each> size=nil encoding=#<Encoding:ASCII-8BIT> data={} on_close=nil rewindable=true>",
+                   chunked_io(chunks: [""].each).inspect
+      assert_equal "#<Down::ChunkedIO chunks=#<Enumerator: [\"\"]:each> size=10 encoding=#<Encoding:ASCII-8BIT> data={} on_close=nil rewindable=true>",
+                   chunked_io(chunks: [""].each, size: 10).inspect
+      assert_equal "#<Down::ChunkedIO chunks=#<Enumerator: [\"\"]:each> size=nil encoding=#<Encoding:UTF-8> data={} on_close=nil rewindable=true>",
+                   chunked_io(chunks: [""].each, encoding: "utf-8").inspect
+      assert_equal "#<Down::ChunkedIO chunks=#<Enumerator: [\"\"]:each> size=nil encoding=#<Encoding:ASCII-8BIT> data={:foo=>\"bar\"} on_close=nil rewindable=true>",
+                   chunked_io(chunks: [""].each, data: {foo: "bar"}).inspect
+      assert_equal "#<Down::ChunkedIO chunks=#<Enumerator: [\"\"]:each> size=nil encoding=#<Encoding:ASCII-8BIT> data={} on_close=:callable rewindable=true>",
+                   chunked_io(chunks: [""].each, on_close: :callable).inspect
+      assert_equal "#<Down::ChunkedIO chunks=#<Enumerator: [\"\"]:each> size=nil encoding=#<Encoding:ASCII-8BIT> data={} on_close=nil rewindable=false>",
+                   chunked_io(chunks: [""].each, rewindable: false).inspect
+      assert_equal "#<Down::ChunkedIO chunks=#<Enumerator: [\"\"]:each> size=nil encoding=#<Encoding:ASCII-8BIT> data={} on_close=nil rewindable=true (closed)>",
+                   chunked_io(chunks: [""].each).tap(&:close).inspect
+    end
+  end
 end

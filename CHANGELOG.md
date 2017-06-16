@@ -1,5 +1,7 @@
 ## HEAD
 
+* Strip internal variables from `Down::ChunkedIO#inspect` and show only the important ones (@janko-m)
+
 * Add `Down::ChunkedIO#closed?` (@janko-m)
 
 * Add `Down::ChunkedIO#rewindable?` (@janko-m)
