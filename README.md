@@ -182,30 +182,61 @@ io = Down::ChunkedIO.new(
 )
 ```
 
-## open-uri + Net::HTTP
+## Backends
 
-Then [open-uri] + Net::HTTP is the default backend, loaded by requiring `down`
-or `down/net_http`:
+By default Down implements `Down.download` and `Down.open` using the built-in
+[open-uri] + [Net::HTTP] Ruby standard libraries. However, there are other
+backends as well:
 
 ```rb
-require "down"
-# or
-require "down/net_http"
+require "down/net_http" # uses open-uri + Net::HTTP
+require "down/http"     # uses HTTP.rb gem
 ```
 
-`Down.download` is implemented as a wrapper around open-uri, and fixes some of
-open-uri's undesired behaviours:
+When a backend is loaded, is overrides `Down.download` and `Down.open` methods,
+but it's recommended you always use the backends explicitly:
 
-* open-uri returns `StringIO` for files smaller than 10KB, and `Tempfile`
-  otherwise, but `Down.download` always returns a `Tempfile`
-* open-uri doesn't give any extension to the returned `Tempfile`, but
-  `Down.download` adds the extension from the URL
-* ...
+```rb
+# not recommended
+Down.download("...")
+Down.open("...")
 
-Since open-uri doesn't expose support for partial downloads, `Down.open` is
-implemented using `Net::HTTP` directly.
+# recommended
+Down::NetHttp.download("...")
+Down::NetHttp.open("...")
+```
 
-### Redirects
+### open-uri + Net::HTTP
+
+```rb
+gem "down", ">= 3.0"
+```
+```rb
+require "down/net_http"
+
+tempfile = Down::NetHttp.download("http://nature.com/forest.jpg")
+tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/20150925-55456-z7vxqz.jpg>
+
+io = Down::NetHttp.open("http://nature.com/forest.jpg")
+io #=> #<Down::ChunkedIO ...>
+```
+
+`Down::NetHttp.download` is implemented as a wrapper around open-uri, and fixes
+some of open-uri's undesired behaviours:
+
+* uses `URI::HTTP#open` or `URI::HTTPS#open` directly for [security](https://sakurity.com/blog/2015/02/28/openuri.html)
+* always returns a `Tempfile` object, whereas open-uri returns `StringIO`
+  when file is smaller than 10KB
+* gives the extension to the `Tempfile` object from the URL
+* allows you to limit maximum number of redirects
+
+On the other hand `Down::NetHttp.open` is implemented using Net::HTTP directly,
+as open-uri
+
+Since open-uri doesn't expose support for partial downloads,
+`Down::NetHttp.open` is implemented using `Net::HTTP` directly.
+
+#### Redirects
 
 `Down.download` turns off open-uri's following redirects, as open-uri doesn't
 have a way to limit the maximum number of hops, and implements its own. By
@@ -213,28 +244,28 @@ default maximum of 2 redirects will be followed, but you can change it via the
 `:max_redirects` option:
 
 ```rb
-Down.download("http://example.com/image.jpg")                   # 2 redirects allowed
-Down.download("http://example.com/image.jpg", max_redirects: 5) # 5 redirects allowed
-Down.download("http://example.com/image.jpg", max_redirects: 0) # 0 redirects allowed
+Down::NetHttp.download("http://example.com/image.jpg")                   # 2 redirects allowed
+Down::NetHttp.download("http://example.com/image.jpg", max_redirects: 5) # 5 redirects allowed
+Down::NetHttp.download("http://example.com/image.jpg", max_redirects: 0) # 0 redirects allowed
 ```
 
-### Proxy
+#### Proxy
 
 Both `Down.download` and `Down.open` support a `:proxy` option, where you can
 specify a URL to an HTTP proxy which should be used when downloading.
 
 ```rb
-Down.download("http://example.com/image.jpg", proxy: "http://proxy.org")
-Down.open("http://example.com/image.jpg",     proxy: "http://user:password@proxy.org")
+Down::NetHttp.download("http://example.com/image.jpg", proxy: "http://proxy.org")
+Down::NetHttp.open("http://example.com/image.jpg",     proxy: "http://user:password@proxy.org")
 ```
 
-### Additional options
+#### Additional options
 
 Any additional options passed to `Down.download` will be forwarded to
 [open-uri], so you can for example add basic authentication or a timeout:
 
 ```rb
-Down.download "http://example.com/image.jpg",
+Down::NetHttp.download "http://example.com/image.jpg",
   http_basic_authentication: ['john', 'secret'],
   read_timeout: 5
 ```
@@ -244,21 +275,23 @@ semantics as in open-uri, and any options with String keys will be interpreted
 as request headers, like with open-uri.
 
 ```rb
-Down.open("http://example.com/image.jpg", {"Authorization" => "..."})
+Down::NetHttp.open("http://example.com/image.jpg", {"Authorization" => "..."})
 ```
 
-## HTTP.rb
-
-The [HTTP.rb] backend can be used by requiring `down/http`:
+### HTTP.rb
 
 ```rb
+gem "down", "~> 3.0"
 gem "http", "~> 2.1"
-gem "down"
 ```
 ```rb
 require "down/http"
-tempfile = Down.download("http://example.org/image.jpg")
+
+tempfile = Down::Http.download("http://nature.com/forest.jpg")
 tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/20150925-55456-z7vxqz.jpg>
+
+io = Down::Http.open("http://nature.com/forest.jpg")
+io #=> #<Down::ChunkedIO ...>
 ```
 
 Some features that give the HTTP.rb backend an advantage over open-uri +
@@ -268,9 +301,7 @@ Net::HTTP include:
 * Proper support for streaming downloads (`#download` and now reuse `#open`)
 * Proper support for SSL
 * Chaninable HTTP client builder API for setting default options
-* Persistent connections
-* Auto-inflating compressed response bodies
-* ...
+* Support for persistent connections
 
 ### Default client
 
@@ -292,13 +323,13 @@ All additional options passed to `Down::Download` and `Down.open` will be
 forwarded to `HTTP::Client#request`:
 
 ```rb
-Down.download("http://example.org/image.jpg", headers: {"Accept-Encoding" => "gzip"})
+Down::Http.download("http://example.org/image.jpg", headers: {"Accept-Encoding" => "gzip"})
 ```
 
 If you prefer to add options using the chainable API, you can pass a block:
 
 ```rb
-Down.open("http://example.org/image.jpg") do |client|
+Down::Http.open("http://example.org/image.jpg") do |client|
   client.timeout(read: 3)
 end
 ```
@@ -331,6 +362,7 @@ you'll need to have Docker installed and running.
 [MIT](LICENSE.txt)
 
 [open-uri]: http://ruby-doc.org/stdlib-2.3.0/libdoc/open-uri/rdoc/OpenURI.html
+[Net::HTTP]: https://ruby-doc.org/stdlib-2.4.1/libdoc/net/http/rdoc/Net/HTTP.html
 [HTTP.rb]: https://github.com/httprb/http
 [Addressable::URI]: https://github.com/sporkmonger/addressable
 [kennethreitz/httpbin]: https://github.com/kennethreitz/httpbin
