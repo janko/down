@@ -1,3 +1,5 @@
+# frozen-string-literal: true
+
 module Down
   # generic error which is a superclass to all other errors
   class Error < StandardError; end
