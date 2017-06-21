@@ -334,29 +334,29 @@ describe Down do
 
   describe "#copy_to_tempfile" do
     it "returns a tempfile" do
-      tempfile = Down.copy_to_tempfile("foo", StringIO.new("foo"))
+      tempfile = Down::NetHttp.copy_to_tempfile("foo", StringIO.new("foo"))
       assert_instance_of Tempfile, tempfile
     end
 
     it "rewinds IOs" do
       io = StringIO.new("foo")
-      tempfile = Down.copy_to_tempfile("foo", io)
+      tempfile = Down::NetHttp.copy_to_tempfile("foo", io)
       assert_equal "foo", io.read
       assert_equal "foo", tempfile.read
     end
 
     it "opens in binmode" do
-      tempfile = Down.copy_to_tempfile("foo", StringIO.new("foo"))
+      tempfile = Down::NetHttp.copy_to_tempfile("foo", StringIO.new("foo"))
       assert tempfile.binmode?
     end
 
     it "accepts basenames to be nested paths" do
-      tempfile = Down.copy_to_tempfile("foo/bar/baz", StringIO.new("foo"))
+      tempfile = Down::NetHttp.copy_to_tempfile("foo/bar/baz", StringIO.new("foo"))
       assert File.exist?(tempfile.path)
     end
 
     it "preserves extension" do
-      tempfile = Down.copy_to_tempfile("foo.jpg", StringIO.new("foo"))
+      tempfile = Down::NetHttp.copy_to_tempfile("foo.jpg", StringIO.new("foo"))
       assert_equal ".jpg", File.extname(tempfile.path)
     end
   end
