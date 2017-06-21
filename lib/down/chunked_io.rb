@@ -7,12 +7,12 @@ module Down
   class ChunkedIO
     attr_accessor :size, :data, :encoding
 
-    def initialize(chunks:, size: nil, on_close: nil, data: {}, rewindable: true, encoding: Encoding::BINARY)
+    def initialize(chunks:, size: nil, on_close: nil, data: {}, rewindable: true, encoding: nil)
       @chunks     = chunks
       @size       = size
       @on_close   = on_close
       @data       = data
-      @encoding   = find_encoding(encoding)
+      @encoding   = find_encoding(encoding || Encoding::BINARY)
       @rewindable = rewindable
       @buffer     = nil
 

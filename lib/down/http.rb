@@ -62,9 +62,7 @@ module Down
       io.close if io
     end
 
-    def open(url, **options, &block)
-      rewindable = options.delete(:rewindable)
-
+    def open(url, rewindable: true, **options, &block)
       begin
         response = get(url, **options, &block)
         response_error!(response) if !response.status.success?
@@ -72,16 +70,14 @@ module Down
         request_error!(exception)
       end
 
-      down_options = {
-        chunks: response.body.enum_for(:each),
-        size:   response.content_length,
-        data:   { status: response.code, headers: response.headers.to_h, response: response },
-      }
-      down_options[:encoding]   = response.content_type.charset if response.content_type.charset
-      down_options[:on_close]   = -> { response.connection.close } unless client.persistent?
-      down_options[:rewindable] = rewindable if rewindable != nil
-
-      Down::ChunkedIO.new(down_options)
+      Down::ChunkedIO.new(
+        chunks:     response.body.enum_for(:each),
+        size:       response.content_length,
+        encoding:   response.content_type.charset,
+        rewindable: rewindable,
+        on_close:   (-> { response.connection.close } unless client.persistent?),
+        data:       { status: response.code, headers: response.headers.to_h, response: response },
+      )
     end
 
     def get(url, **options, &block)

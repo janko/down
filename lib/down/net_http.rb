@@ -180,23 +180,21 @@ module Down
         request_error!(exception)
       end
 
-      down_params = {
-        chunks: response.enum_for(:read_body),
-        size: response["Content-Length"] && response["Content-Length"].to_i,
-        on_close: -> { request.resume }, # close HTTP connnection
+      Down::ChunkedIO.new(
+        chunks:     response.enum_for(:read_body),
+        size:       response["Content-Length"] && response["Content-Length"].to_i,
+        encoding:   response.type_params["charset"],
+        rewindable: options.fetch(:rewindable, true),
+        on_close:   -> { request.resume }, # close HTTP connnection
         data: {
-          status: response.code.to_i,
-          headers: response.each_header.inject({}) { |headers, (downcased_name, value)|
-            name = downcased_name.split("-").map(&:capitalize).join("-")
-            headers.merge!(name => value)
-          },
+          status:   response.code.to_i,
+          headers:  response.each_header.inject({}) { |headers, (downcased_name, value)|
+                      name = downcased_name.split("-").map(&:capitalize).join("-")
+                      headers.merge!(name => value)
+                    },
           response: response,
-        }
-      }
-      down_params[:rewindable] = options[:rewindable] if options.key?(:rewindable)
-      down_params[:encoding] = response.type_params["charset"] if response.type_params["charset"]
-
-      Down::ChunkedIO.new(down_params)
+        },
+      )
     end
 
     def copy_to_tempfile(basename, io)
