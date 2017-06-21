@@ -38,12 +38,17 @@ describe Down::ChunkedIO do
   describe "#read" do
     describe "without arguments" do
       it "reads whole content" do
+        io = chunked_io(chunks: ["abc"].each)
+        assert_equal "abc", io.read
+      end
+
+      it "reads across chunks" do
         io = chunked_io(chunks: ["ab", "c"].each)
         assert_equal "abc", io.read
       end
 
       it "reads remaining content" do
-        io = chunked_io(chunks: ["ab", "c"].each)
+        io = chunked_io(chunks: ["abc"].each)
         io.read(1)
         assert_equal "bc", io.read
       end
@@ -68,7 +73,7 @@ describe Down::ChunkedIO do
         assert_equal "", io.read
       end
 
-      it "handles zero chunks" do
+      it "returns empty string on zero chunks" do
         io = chunked_io(chunks: [].each)
         assert_equal "", io.read
       end
@@ -90,16 +95,16 @@ describe Down::ChunkedIO do
         io.rewind
         assert_equal Encoding::UTF_8, io.read.encoding
       end
-
-      it "doesn't use #size" do
-        io = chunked_io(chunks: ["ab", "c"].each, size: :bogus)
-        io.read(1)
-        assert_equal "bc", io.read
-      end
     end
 
     describe "with length" do
-      it "reads partial content" do
+      it "reads specified number of bytes" do
+        io = chunked_io(chunks: ["abc"].each)
+        assert_equal "a",  io.read(1)
+        assert_equal "bc", io.read(2)
+      end
+
+      it "reads across chunks" do
         io = chunked_io(chunks: ["ab", "c"].each)
         assert_equal "a",  io.read(1)
         assert_equal "bc", io.read(2)
@@ -127,11 +132,11 @@ describe Down::ChunkedIO do
 
       it "returns nil on eof" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        io.read(3)
+        io.read
         assert_nil io.read(1)
       end
 
-      it "handles zero chunks" do
+      it "returns nil on zero chunks" do
         io = chunked_io(chunks: [].each)
         assert_nil io.read(1)
       end
@@ -153,17 +158,23 @@ describe Down::ChunkedIO do
         io.rewind
         assert_equal Encoding::UTF_8, io.read(1).encoding
       end
-
-      it "doesn't use #size" do
-        io = chunked_io(chunks: ["ab", "c"].each, size: :bogus)
-        assert_equal "a",  io.read(1)
-        assert_equal "bc", io.read(2)
-      end
     end
 
     describe "with length and buffer" do
-      it "reads partial content into the buffer" do
+      it "reads specified number of bytes" do
+        io = chunked_io(chunks: ["abc"].each)
+        assert_equal "a",  io.read(1, "")
+        assert_equal "bc", io.read(2, "")
+      end
+
+      it "reads across chunks" do
         io = chunked_io(chunks: ["ab", "c"].each)
+        assert_equal "a",  io.read(1, "")
+        assert_equal "bc", io.read(2, "")
+      end
+
+      it "writes read content into the buffer" do
+        io = chunked_io(chunks: ["abc"].each)
         buffer = ""
         io.read(1, buffer)
         assert_equal "a", buffer
@@ -171,7 +182,7 @@ describe Down::ChunkedIO do
         assert_equal "bc", buffer
       end
 
-      it "returns the given buffer" do
+      it "returns the buffer" do
         io = chunked_io(chunks: ["ab", "c"].each)
         buffer = ""
         assert_equal buffer.object_id, io.read(1, buffer).object_id
@@ -183,40 +194,33 @@ describe Down::ChunkedIO do
 
       it "reads as much as it can read" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        buffer = ""
-        io.read(4, buffer)
-        assert_equal "abc", buffer
+        assert_equal "abc", io.read(4, "")
       end
 
       it "reads from cache" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        io.read(1)
+        io.read(1, "")
         io.rewind
-        buffer = ""
-        io.read(1, buffer)
-        assert_equal "a", buffer
-        io.read(2, buffer)
-        assert_equal "bc", buffer
+        assert_equal "a",  io.read(1, "")
+        assert_equal "bc", io.read(2, "")
       end
 
       it "seamlessly switches between reading cached and new content" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        io.read(1)
+        io.read(1, "")
         io.rewind
-        buffer = ""
-        io.read(3, buffer)
-        assert_equal "abc", buffer
+        assert_equal "abc", io.read(3, "")
       end
 
       it "returns nil on eof" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        buffer = ""
-        io.read(3, buffer)
+        io.read
+        buffer = "buffer"
         assert_nil io.read(1, buffer)
         assert_equal "", buffer
       end
 
-      it "handles zero chunks" do
+      it "returns nil on zero chunks" do
         io = chunked_io(chunks: [].each)
         buffer = "buffer"
         assert_nil io.read(1, buffer)
@@ -225,36 +229,31 @@ describe Down::ChunkedIO do
 
       it "works when not rewindable" do
         io = chunked_io(chunks: ["ab", "c"].each, rewindable: false)
-        buffer = ""
-        io.read(1, buffer)
-        assert_equal "a", buffer
-        io.read(2, buffer)
-        assert_equal "bc", buffer
+        assert_equal "a",  io.read(1, "")
+        assert_equal "bc", io.read(2, "")
       end
 
       it "returns content in correct encoding" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        buffer = ""
-        assert_equal Encoding::BINARY, io.read(1, buffer).encoding
+        assert_equal Encoding::BINARY, io.read(1, "").encoding
         io.rewind
-        assert_equal Encoding::BINARY, io.read(1, buffer).encoding
+        assert_equal Encoding::BINARY, io.read(1, "").encoding
 
         io = chunked_io(chunks: ["ab", "c"].each, encoding: "utf-8")
-        assert_equal Encoding::UTF_8, io.read(1, buffer).encoding
+        assert_equal Encoding::UTF_8, io.read(1, "").encoding
         io.rewind
-        assert_equal Encoding::UTF_8, io.read(1, buffer).encoding
-      end
-
-      it "doesn't use #size" do
-        io = chunked_io(chunks: ["ab", "c"].each, size: :bogus)
-        buffer = ""
-        io.read(1, buffer)
-        assert_equal "a", buffer
-        io.read(2, buffer)
-        assert_equal "bc", buffer
+        assert_equal Encoding::UTF_8, io.read(1, "").encoding
       end
     end
 
+    it "raises IOError when closed" do
+      io = chunked_io(chunks: ["ab", "c"].each)
+      io.close
+      assert_raises(IOError) { io.read }
+    end
+  end
+
+  describe "reading" do
     it "downloads only how much it needs" do
       chunks = Enumerator.new do |y|
         y << "ab"
@@ -280,12 +279,6 @@ describe Down::ChunkedIO do
       io.rewind
       io.read
       assert_equal 1, @on_close_called
-    end
-
-    it "raises IOError when closed" do
-      io = chunked_io(chunks: ["ab", "c"].each)
-      io.close
-      assert_raises(IOError) { io.read }
     end
 
     it "propagates exceptions that occur when retrieving chunks" do

@@ -14,8 +14,7 @@ module Down
       @data       = data
       @encoding   = find_encoding(encoding)
       @rewindable = rewindable
-
-      @buffer = String.new("").force_encoding(@encoding)
+      @buffer     = nil
 
       retrieve_chunk
     end
@@ -37,8 +36,8 @@ module Down
         outbuf.force_encoding(@encoding)
       end
 
-      until outbuf.bytesize == length || chunks_depleted?
-        @buffer << retrieve_chunk if @buffer.empty?
+      until outbuf.bytesize == length || (@buffer.nil? && chunks_depleted?)
+        @buffer = retrieve_chunk if @buffer.nil?
 
         buffered_data = if length && length - outbuf.bytesize < @buffer.bytesize
                           @buffer.byteslice(0, length - outbuf.bytesize)
@@ -46,25 +45,25 @@ module Down
                           @buffer
                         end
 
-        cache.write(buffered_data) if cache
-
         outbuf << buffered_data
 
+        cache.write(buffered_data) if cache
+
         if buffered_data.bytesize < @buffer.bytesize
-          @buffer.replace @buffer.byteslice(buffered_data.bytesize..-1)
+          @buffer = @buffer.byteslice(buffered_data.bytesize..-1)
         else
-          @buffer.clear
+          @buffer = nil
         end
       end
 
-      outbuf unless length && outbuf.empty?
+      outbuf unless outbuf.empty? && length
     end
 
     def eof?
       raise IOError, "closed stream" if closed?
 
       return false if cache && !cache.eof?
-      @buffer.empty? && chunks_depleted?
+      @buffer.nil? && chunks_depleted?
     end
 
     def rewind
@@ -78,7 +77,7 @@ module Down
       return if @closed
 
       chunks_fiber.resume(:terminate) if chunks_fiber.alive?
-      @buffer.clear
+      @buffer = nil
       cache.close! if cache
       @closed = true
     end
