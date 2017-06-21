@@ -59,6 +59,23 @@ module Down
       outbuf unless outbuf.empty? && length
     end
 
+    def readpartial(maxlen = nil, outbuf = nil)
+      raise IOError, "closed stream" if closed?
+
+      available_length  = 0
+      available_length += cache.size - cache.pos if cache
+      available_length += @buffer.bytesize if @buffer
+
+      if available_length > 0
+        read([available_length, *maxlen].min, outbuf)
+      elsif !chunks_depleted?
+        read([@next_chunk.bytesize, *maxlen].min, outbuf)
+      else
+        outbuf.replace("").force_encoding(@encoding) if outbuf
+        raise EOFError, "end of file reached"
+      end
+    end
+
     def eof?
       raise IOError, "closed stream" if closed?
 

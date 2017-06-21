@@ -1,5 +1,7 @@
 ## HEAD
 
+* Add `Down::ChunkedIO#readpartial` for more memory efficient reading (@janko-m)
+
 * Fix `Down::ChunkedIO` not returning second part of the last chunk if it was previously partially read (@janko-m)
 
 * Strip internal variables from `Down::ChunkedIO#inspect` and show only the important ones (@janko-m)

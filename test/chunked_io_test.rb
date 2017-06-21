@@ -253,6 +253,162 @@ describe Down::ChunkedIO do
     end
   end
 
+  describe "#readpartial" do
+    describe "without arguments" do
+      it "reads the next chunk" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        assert_equal "ab", io.readpartial
+        assert_equal "c",  io.readpartial
+      end
+
+      it "reads the remainder of a chunk" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        io.readpartial(1)
+        assert_equal "b", io.readpartial
+        assert_equal "c", io.readpartial
+      end
+
+      it "reads available data from cache" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        io.readpartial
+        io.rewind
+        assert_equal "ab", io.readpartial
+        assert_equal "c",  io.readpartial
+      end
+
+      it "reads available data from cache and buffer" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        io.readpartial(1)
+        io.rewind
+        assert_equal "ab", io.readpartial
+      end
+
+      it "raises EOFError on eof" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        io.read
+        assert_raises(EOFError) { io.readpartial }
+      end
+
+      it "raises EOFError on zero chunks" do
+        io = chunked_io(chunks: [].each)
+        assert_raises(EOFError) { io.readpartial }
+      end
+    end
+
+    describe "with maxlen" do
+      it "reads specified number of bytes" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        assert_equal "a", io.readpartial(1)
+        assert_equal "b", io.readpartial(1)
+        assert_equal "c", io.readpartial(1)
+      end
+
+      it "reads maximum of one chunk" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        assert_equal "ab", io.readpartial(3)
+
+        io = chunked_io(chunks: ["ab", "c"].each)
+        assert_equal "a", io.readpartial(1)
+        assert_equal "b", io.readpartial(3)
+      end
+
+      it "reads available data from cache" do
+        io = chunked_io(chunks: ["abc"].each)
+        io.readpartial(3)
+        io.rewind
+        assert_equal "a",  io.readpartial(1)
+        assert_equal "bc", io.readpartial(2)
+      end
+
+      it "reads available data from cache and buffer" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        io.readpartial(1)
+        io.rewind
+        assert_equal "ab", io.readpartial(4)
+      end
+
+      it "raises EOFError on eof" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        io.read
+        assert_raises(EOFError) { io.readpartial(1) }
+      end
+
+      it "raises EOFError on zero chunks" do
+        io = chunked_io(chunks: [].each)
+        assert_raises(EOFError) { io.readpartial(1) }
+      end
+    end
+
+    describe "with maxlen and buffer" do
+      it "reads specified number of bytes" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        assert_equal "a", io.readpartial(1, "")
+        assert_equal "b", io.readpartial(1, "")
+        assert_equal "c", io.readpartial(1, "")
+      end
+
+      it "reads maximum of one chunk" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        assert_equal "ab", io.readpartial(3, "")
+      end
+
+      it "writes read content into the buffer" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        buffer = ""
+        io.readpartial(1, buffer)
+        assert_equal "a", buffer
+        io.readpartial(1, buffer)
+        assert_equal "b", buffer
+      end
+
+      it "returns the buffer" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        buffer = ""
+        assert_equal buffer.object_id, io.readpartial(1, buffer).object_id
+        assert_equal buffer.object_id, io.readpartial(2, buffer).object_id
+        io.rewind
+        assert_equal buffer.object_id, io.readpartial(1, buffer).object_id
+        assert_equal buffer.object_id, io.readpartial(2, buffer).object_id
+      end
+
+      it "reads available data from cache" do
+        io = chunked_io(chunks: ["abc"].each)
+        io.readpartial(3, "")
+        io.rewind
+        assert_equal "a",  io.readpartial(1, "")
+        assert_equal "bc", io.readpartial(2, "")
+      end
+
+      it "reads available data from cache and buffer" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        io.readpartial(1, "")
+        io.rewind
+        assert_equal "ab", io.readpartial(4, "")
+      end
+
+      it "raises EOFError on eof" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        io.read
+        buffer = "buffer"
+        assert_raises(EOFError) { io.readpartial(1, buffer) }
+        assert_equal "", buffer
+      end
+
+      it "raises EOFError on zero chunks" do
+        io = chunked_io(chunks: [].each)
+        buffer = "buffer"
+        assert_raises(EOFError) { io.readpartial(1, buffer) }
+        assert_equal "", buffer
+      end
+    end
+
+    it "raises IOError when closed" do
+      io = chunked_io(chunks: ["ab", "c"].each)
+      io.close
+      assert_raises(IOError) { io.readpartial }
+    end
+  end
+
   describe "reading" do
     it "downloads only how much it needs" do
       chunks = Enumerator.new do |y|
