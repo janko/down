@@ -28,9 +28,7 @@ module Down
   module Http
     module_function
 
-    def download(url, **options, &block)
-      max_size = options.delete(:max_size)
-
+    def download(url, max_size: nil, **options, &block)
       io = open(url, **options, rewindable: false, &block)
 
       if max_size && io.size && io.size > max_size

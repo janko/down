@@ -126,6 +126,19 @@ describe Down::Http do
       assert_equal HTTP.get("#{$httpbin}/stream-bytes/1000?chunk_size=10&seed=0").to_s, io.read
     end
 
+    it "follows redirects" do
+      io = Down::Http.open("#{$httpbin}/redirect/1")
+      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
+      io = Down::Http.open("#{$httpbin}/redirect/2")
+      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
+      assert_raises(Down::TooManyRedirects) { Down::Http.open("#{$httpbin}/redirect/3") }
+
+      io = Down::Http.open("#{$httpbin}/absolute-redirect/1")
+      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
+      io = Down::Http.open("#{$httpbin}/relative-redirect/1")
+      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
+    end
+
     it "returns content in encoding specified by charset" do
       io = Down::Http.open("#{$httpbin}/stream/10")
       assert_equal Encoding::BINARY, io.read.encoding
@@ -145,21 +158,8 @@ describe Down::Http do
       assert_nil io.size
     end
 
-    it "follows redirects" do
-      tempfile = Down::Http.download("#{$httpbin}/redirect/1")
-      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(tempfile.read)["url"]
-      tempfile = Down::Http.download("#{$httpbin}/redirect/2")
-      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(tempfile.read)["url"]
-      assert_raises(Down::TooManyRedirects) { Down::Http.download("#{$httpbin}/redirect/3") }
-
-      tempfile = Down::Http.download("#{$httpbin}/absolute-redirect/1")
-      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(tempfile.read)["url"]
-      tempfile = Down::Http.download("#{$httpbin}/relative-redirect/1")
-      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(tempfile.read)["url"]
-    end
-
     it "detects and applies basic authentication from URL" do
-      tempfile = Down::Http.download("#{$httpbin.sub("http://", '\0user:password@')}/basic-auth/user/password")
+      tempfile = Down::Http.open("#{$httpbin.sub("http://", '\0user:password@')}/basic-auth/user/password")
       assert_equal true, JSON.parse(tempfile.read)["authenticated"]
     end
 
