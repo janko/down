@@ -38,7 +38,7 @@ module Down
       end
 
       extname  = File.extname(io.data[:response].uri.path)
-      tempfile = Tempfile.new(["down", extname], binmode: true)
+      tempfile = Tempfile.new(["down-http", extname], binmode: true)
 
       io.each_chunk do |chunk|
         tempfile.write(chunk)

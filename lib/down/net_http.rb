@@ -200,7 +200,7 @@ module Down
     end
 
     def copy_to_tempfile(basename, io)
-      tempfile = Tempfile.new(["down", File.extname(basename)], binmode: true)
+      tempfile = Tempfile.new(["down-net_http", File.extname(basename)], binmode: true)
       if io.is_a?(OpenURI::Meta) && io.is_a?(Tempfile)
         io.close
         tempfile.close
