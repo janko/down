@@ -29,23 +29,52 @@ module Down
     def read(length = nil, outbuf = nil)
       raise IOError, "closed stream" if closed?
 
-      outbuf = outbuf.to_s.replace("").force_encoding(@encoding)
+      remaining_length = length
 
-      if cache && !cache.eof?
-        cache.read(length, outbuf)
-        outbuf.force_encoding(@encoding)
+      begin
+        data = readpartial(remaining_length, outbuf)
+        data = data.dup unless outbuf
+        remaining_length = length - data.bytesize if length
+      rescue EOFError
       end
 
-      until outbuf.bytesize == length || (@buffer.nil? && chunks_depleted?)
-        @buffer = retrieve_chunk if @buffer.nil?
+      until remaining_length == 0 || eof?
+        data << readpartial(remaining_length)
+        remaining_length = length - data.bytesize if length
+      end
 
-        buffered_data = if length && length - outbuf.bytesize < @buffer.bytesize
-                          @buffer.byteslice(0, length - outbuf.bytesize)
+      data.to_s unless length && (data.nil? || data.empty?)
+    end
+
+    def readpartial(length = nil, outbuf = nil)
+      raise IOError, "closed stream" if closed?
+
+      data = outbuf.replace("").force_encoding(@encoding) if outbuf
+
+      if cache && !cache.eof?
+        data = cache.read(length, outbuf)
+        data.force_encoding(@encoding)
+      end
+
+      if @buffer.nil? && (data.nil? || data.empty?)
+        raise EOFError, "end of file reached" if chunks_depleted?
+        @buffer = retrieve_chunk
+      end
+
+      remaining_length = data && length ? length - data.bytesize : length
+
+      unless @buffer.nil? || remaining_length == 0
+        buffered_data = if remaining_length && remaining_length < @buffer.bytesize
+                          @buffer.byteslice(0, remaining_length)
                         else
                           @buffer
                         end
 
-        outbuf << buffered_data
+        if data
+          data << buffered_data
+        else
+          data = buffered_data
+        end
 
         cache.write(buffered_data) if cache
 
@@ -56,24 +85,7 @@ module Down
         end
       end
 
-      outbuf unless outbuf.empty? && length
-    end
-
-    def readpartial(maxlen = nil, outbuf = nil)
-      raise IOError, "closed stream" if closed?
-
-      available_length  = 0
-      available_length += cache.size - cache.pos if cache
-      available_length += @buffer.bytesize if @buffer
-
-      if available_length > 0
-        read([available_length, *maxlen].min, outbuf)
-      elsif !chunks_depleted?
-        read([@next_chunk.bytesize, *maxlen].min, outbuf)
-      else
-        outbuf.replace("").force_encoding(@encoding) if outbuf
-        raise EOFError, "end of file reached"
-      end
+      data
     end
 
     def eof?

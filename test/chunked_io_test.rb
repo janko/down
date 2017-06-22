@@ -43,8 +43,8 @@ describe Down::ChunkedIO do
       end
 
       it "reads across chunks" do
-        io = chunked_io(chunks: ["ab", "c"].each)
-        assert_equal "abc", io.read
+        io = chunked_io(chunks: ["ab", "cd", "e"].each)
+        assert_equal "abcde", io.read
       end
 
       it "reads remaining content" do
@@ -95,6 +95,14 @@ describe Down::ChunkedIO do
         io.rewind
         assert_equal Encoding::UTF_8, io.read.encoding
       end
+
+      it "doesn't modify chunks" do
+        chunks = ["ab", "c"]
+        io = chunked_io(chunks: chunks.each)
+        io.read
+        assert_equal "ab", chunks[0]
+        assert_equal "c",  chunks[1]
+      end
     end
 
     describe "with length" do
@@ -105,9 +113,10 @@ describe Down::ChunkedIO do
       end
 
       it "reads across chunks" do
-        io = chunked_io(chunks: ["ab", "c"].each)
+        io = chunked_io(chunks: ["ab", "cd", "e"].each)
         assert_equal "a",  io.read(1)
         assert_equal "bc", io.read(2)
+        assert_equal "de", io.read(2)
       end
 
       it "reads as much as it can read" do
@@ -158,6 +167,14 @@ describe Down::ChunkedIO do
         io.rewind
         assert_equal Encoding::UTF_8, io.read(1).encoding
       end
+
+      it "doesn't modify chunks" do
+        chunks = ["ab", "c"]
+        io = chunked_io(chunks: chunks.each)
+        io.read(5)
+        assert_equal "ab", chunks[0]
+        assert_equal "c",  chunks[1]
+      end
     end
 
     describe "with length and buffer" do
@@ -168,9 +185,10 @@ describe Down::ChunkedIO do
       end
 
       it "reads across chunks" do
-        io = chunked_io(chunks: ["ab", "c"].each)
+        io = chunked_io(chunks: ["ab", "cd", "e"].each)
         assert_equal "a",  io.read(1, "")
         assert_equal "bc", io.read(2, "")
+        assert_equal "de", io.read(2, "")
       end
 
       it "writes read content into the buffer" do
@@ -244,6 +262,14 @@ describe Down::ChunkedIO do
         io.rewind
         assert_equal Encoding::UTF_8, io.read(1, "").encoding
       end
+
+      it "doesn't modify chunks" do
+        chunks = ["ab", "c"]
+        io = chunked_io(chunks: chunks.each)
+        io.read(5, "")
+        assert_equal "ab", chunks[0]
+        assert_equal "c",  chunks[1]
+      end
     end
 
     it "raises IOError when closed" do
@@ -295,7 +321,7 @@ describe Down::ChunkedIO do
       end
     end
 
-    describe "with maxlen" do
+    describe "with length" do
       it "reads specified number of bytes" do
         io = chunked_io(chunks: ["ab", "c"].each)
         assert_equal "a", io.readpartial(1)
@@ -514,13 +540,13 @@ describe Down::ChunkedIO do
     end
 
     it "returns true when all data has been read" do
-      io = chunked_io(chunks: ["ab", "c"])
+      io = chunked_io(chunks: ["ab", "c"].each)
       io.read
       assert_equal true, io.eof?
     end
 
     it "returns false when there is still data to be read" do
-      io = chunked_io(chunks: ["ab", "cd"])
+      io = chunked_io(chunks: ["ab", "cd"].each)
       io.read(1)
       assert_equal false, io.eof?
       io.read(2)

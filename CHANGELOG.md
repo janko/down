@@ -1,3 +1,7 @@
+## HEAD
+
+* Halve string allocations in `Down::ChunkedIO#readpartial` when buffer string is not used (@janko-m)
+
 ## 3.2.0 (2017-06-21)
 
 * Add `Down::ChunkedIO#readpartial` for more memory efficient reading (@janko-m)
