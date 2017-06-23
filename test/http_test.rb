@@ -133,6 +133,10 @@ describe Down::Http do
       assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
       assert_raises(Down::TooManyRedirects) { Down::Http.open("#{$httpbin}/redirect/3") }
 
+      io = Down::Http.open("#{$httpbin}/redirect/3", follow: { max_hops: 3 })
+      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
+      assert_raises(Down::TooManyRedirects) { Down::Http.open("#{$httpbin}/redirect/4", follow: { max_hops: 3 }) }
+
       io = Down::Http.open("#{$httpbin}/absolute-redirect/1")
       assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
       io = Down::Http.open("#{$httpbin}/relative-redirect/1")
@@ -175,37 +179,25 @@ describe Down::Http do
       assert_raises(IOError) { io.rewind }
     end
 
-    it "forwards additional options to HTTP.rb" do
-      io = Down::Http.open("#{$httpbin}/headers", headers: {"Foo" => "Bar"})
-      request_headers = JSON.parse(io.read)["headers"]
-      assert_equal "Bar", request_headers["Foo"]
+    it "uses a default User-Agent" do
+      io = Down::Http.open("#{$httpbin}/user-agent")
+      assert_equal "Down/#{Down::VERSION}", JSON.parse(io.read)["user-agent"]
     end
 
-    it "supports overriding default client" do
-      Down::Http.client = Down::Http.client.headers("Foo" => "Bar")
-      io = Down::Http.open("#{$httpbin}/headers")
-      request_headers = JSON.parse(io.read)["headers"]
-      assert_equal "Bar", request_headers["Foo"]
+    it "forwards additional options to HTTP.rb" do
+      io = Down::Http.open("#{$httpbin}/user-agent", headers: {"User-Agent" => "Janko"})
+      assert_equal "Janko", JSON.parse(io.read)["user-agent"]
     end
 
     it "supports modifying the client with the chainable interface via a block" do
-      io = Down::Http.open("#{$httpbin}/headers") { |client| client.headers("Foo" => "Bar") }
-      request_headers = JSON.parse(io.read)["headers"]
-      assert_equal "Bar", request_headers["Foo"]
+      io = Down::Http.open("#{$httpbin}/user-agent") { |client| client.headers("User-Agent" => "Janko") }
+      assert_equal "Janko", JSON.parse(io.read)["user-agent"]
     end
 
-    it "uses a default User-Agent" do
-      io = Down::Http.open("#{$httpbin}/headers")
-      request_headers = JSON.parse(io.read)["headers"]
-      assert_equal "Down/#{Down::VERSION}", request_headers["User-Agent"]
-
-      io = Down::Http.open("#{$httpbin}/headers", headers: {"User-Agent" => "My-Agent"})
-      request_headers = JSON.parse(io.read)["headers"]
-      assert_equal "My-Agent", request_headers["User-Agent"]
-
-      io = Down::Http.open("#{$httpbin}/headers") { |client| client.headers("User-Agent" => "My-Agent") }
-      request_headers = JSON.parse(io.read)["headers"]
-      assert_equal "My-Agent", request_headers["User-Agent"]
+    it "supports overriding default client" do
+      Down::Http.client = Down::Http.client.headers("User-Agent" => "Janko")
+      io = Down::Http.open("#{$httpbin}/user-agent")
+      assert_equal "Janko", JSON.parse(io.read)["user-agent"]
     end
 
     it "uses the configured client object for making requests" do

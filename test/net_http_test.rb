@@ -63,9 +63,6 @@ describe Down do
     it "uses a default User-Agent" do
       tempfile = Down::NetHttp.download("#{$httpbin}/user-agent")
       assert_equal "Down/#{Down::VERSION}", JSON.parse(tempfile.read)["user-agent"]
-
-      tempfile = Down::NetHttp.download("#{$httpbin}/user-agent", {"User-Agent" => "Custom/Agent"})
-      assert_equal "Custom/Agent", JSON.parse(tempfile.read)["user-agent"]
     end
 
     it "accepts max size" do
@@ -111,13 +108,11 @@ describe Down do
       assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
       tempfile = Down::NetHttp.download("#{$httpbin}/redirect/2")
       assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
-      error = assert_raises(Down::TooManyRedirects) { Down::NetHttp.download("#{$httpbin}/redirect/3") }
-      assert_equal "too many redirects", error.message
+      assert_raises(Down::TooManyRedirects) { Down::NetHttp.download("#{$httpbin}/redirect/3") }
 
       tempfile = Down::NetHttp.download("#{$httpbin}/redirect/3", max_redirects: 3)
       assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
-      error = assert_raises(Down::TooManyRedirects) { Down::NetHttp.download("#{$httpbin}/redirect/4", max_redirects: 3) }
-      assert_equal "too many redirects", error.message
+      assert_raises(Down::TooManyRedirects) { Down::NetHttp.download("#{$httpbin}/redirect/4", max_redirects: 3) }
 
       tempfile = Down::NetHttp.download("#{$httpbin}/absolute-redirect/1")
       assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
@@ -142,10 +137,10 @@ describe Down do
     end
 
     it "forwards other options to open-uri" do
-      tempfile = Down::NetHttp.download("#{$httpbin}/basic-auth/user/password", http_basic_authentication: ["user", "password"])
-      assert_equal true, JSON.parse(tempfile.read)["authenticated"]
+      tempfile = Down::NetHttp.download("#{$httpbin}/user-agent", {"User-Agent" => "Custom/Agent"})
+      assert_equal "Custom/Agent", JSON.parse(tempfile.read)["user-agent"]
 
-      tempfile = Down::NetHttp.download("#{$httpbin}/basic-auth/user/password", {"Authorization" => "Basic #{Base64.encode64("user:password")}"})
+      tempfile = Down::NetHttp.download("#{$httpbin}/basic-auth/user/password", http_basic_authentication: ["user", "password"])
       assert_equal true, JSON.parse(tempfile.read)["authenticated"]
     end
 
