@@ -38,8 +38,8 @@ module Down
       extname  = File.extname(io.data[:response].uri.path)
       tempfile = Tempfile.new(["down-http", extname], binmode: true)
 
-      io.each_chunk do |chunk|
-        tempfile.write(chunk)
+      until io.eof?
+        tempfile.write(io.readpartial)
 
         if max_size && tempfile.size > max_size
           raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
