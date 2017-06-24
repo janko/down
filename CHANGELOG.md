@@ -1,5 +1,7 @@
 ## HEAD
 
+* Add Wget backend (@janko-m)
+
 * Add `:content_length_proc` and `:progress_proc` to the HTTP.rb backend (@janko-m)
 
 * Halve string allocations in `Down::ChunkedIO#readpartial` when buffer string is not used (@janko-m)
