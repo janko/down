@@ -1,27 +1,19 @@
 # frozen-string-literal: true
 
-require "down/version"
-require "down/chunked_io"
-require "down/errors"
-
 require "posix-spawn"
 require "http_parser"
+
+require "down/backend"
 
 require "tempfile"
 require "uri"
 require "cgi"
 
 module Down
-  def download(url, *args)
-    Wget.download(url, *args)
-  end
-
-  def open(url, *args)
-    Wget.open(url, *args)
-  end
-
-  module Wget
-    module_function
+  class Wget < Backend
+    def initialize(*arguments)
+      @arguments = [max_redirect: 2, user_agent: "Down/#{VERSION}"] + arguments
+    end
 
     def download(url, *args, max_size: nil, content_length_proc: nil, progress_proc: nil, **options)
       io = open(url, **options, rewindable: false)
@@ -103,11 +95,13 @@ module Down
       )
     end
 
+    private
+
     def generate_command(url, *args, **options)
       command = %W[wget --no-verbose --save-headers -O -]
 
-      options = default_arguments.grep(Hash).inject({}, :merge).merge(options)
-      args    = default_arguments.grep(Symbol) + args
+      options = @arguments.grep(Hash).inject({}, :merge).merge(options)
+      args    = @arguments.grep(Symbol) + args
 
       (args + options.to_a).each do |option, value|
         if option.length == 1
@@ -121,14 +115,6 @@ module Down
 
       command << url
       command
-    end
-
-    def default_arguments
-      @default_arguments ||= [max_redirect: 2, user_agent: "Down/#{VERSION}"]
-    end
-
-    def default_arguments=(value)
-      @default_arguments = value
     end
 
     class Command

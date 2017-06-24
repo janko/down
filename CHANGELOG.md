@@ -1,5 +1,13 @@
 ## HEAD
 
+* Don't apply `Down.download` and `Down.open` overrides when loading a backend (@janko-m)
+
+* Remove `Down::Http.client` attribute accessor (@janko-m)
+
+* Make `Down::NetHttp`, `Down::Http`, and `Down::Wget` classes instead of modules (@janko-m)
+
+* Remove `Down.copy_to_tempfile` (@janko-m)
+
 * Add Wget backend (@janko-m)
 
 * Add `:content_length_proc` and `:progress_proc` to the HTTP.rb backend (@janko-m)

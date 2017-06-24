@@ -4,10 +4,6 @@ require "http"
 require "json"
 
 describe Down::Http do
-  before do
-    Down::Http.client = nil
-  end
-
   describe "#download" do
     it "downloads content from url" do
       tempfile = Down::Http.download("#{$httpbin}/bytes/100?seed=0")
@@ -207,24 +203,14 @@ describe Down::Http do
       assert_equal "Janko", JSON.parse(io.read)["user-agent"]
     end
 
-    it "supports overriding default client" do
-      Down::Http.client = Down::Http.client.headers("User-Agent" => "Janko")
-      io = Down::Http.open("#{$httpbin}/user-agent")
+    it "can set default options" do
+      http = Down::Http.new(headers: {"User-Agent" => "Janko"})
+      io = http.open("#{$httpbin}/user-agent")
       assert_equal "Janko", JSON.parse(io.read)["user-agent"]
-    end
 
-    it "uses the configured client object for making requests" do
-      assert_nil Down::Http.client.instance_variable_get("@connection")
-      io = Down::Http.open("#{$httpbin}/bytes/100")
-      refute_nil Down::Http.client.instance_variable_get("@connection")
-    end
-
-    it "uses a separate client instance for each thread" do
-      client1 = Down::Http.client
-      client2 = Thread.new { Down::Http.client }.value
-      assert_instance_of HTTP::Client, client1
-      assert_instance_of HTTP::Client, client2
-      refute_equal client1, client2
+      http = Down::Http.new(HTTP.headers("User-Agent" => "Janko"))
+      io = http.open("#{$httpbin}/user-agent")
+      assert_equal "Janko", JSON.parse(io.read)["user-agent"]
     end
 
     it "closes the connection when content has been read" do
@@ -240,8 +226,8 @@ describe Down::Http do
     end
 
     it "doesn't close a persistent connection" do
-      Down::Http.client = Down::Http.client.persistent($httpbin)
-      io = Down::Http.open("#{$httpbin}/stream-bytes/1000?chunk_size=10")
+      http = Down::Http.new(HTTP.persistent($httpbin))
+      io = http.open("#{$httpbin}/stream-bytes/1000?chunk_size=10")
       HTTP::Connection.any_instance.expects(:close).never
       io.close
     end

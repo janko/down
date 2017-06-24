@@ -3,33 +3,21 @@
 require "open-uri"
 require "net/http"
 
-require "down/version"
-require "down/chunked_io"
-require "down/errors"
+require "down/backend"
 
 require "tempfile"
 require "fileutils"
 require "cgi"
 
 module Down
-  module_function
-
-  def download(uri, options = {})
-    NetHttp.download(uri, options)
-  end
-
-  def open(uri, options = {})
-    NetHttp.open(uri, options)
-  end
-
-  def copy_to_tempfile(basename, io)
-    NetHttp.copy_to_tempfile(basename, io)
-  end
-
-  module NetHttp
-    module_function
+  class NetHttp < Backend
+    def initialize(options = {})
+      @options = options
+    end
 
     def download(uri, options = {})
+      options = @options.merge(options)
+
       max_size            = options.delete(:max_size)
       max_redirects       = options.delete(:max_redirects) || 2
       progress_proc       = options.delete(:progress_proc)
@@ -67,7 +55,7 @@ module Down
         end
       end
 
-      open_uri_options.update(options)
+      open_uri_options.merge!(options)
 
       tries = max_redirects + 1
 
@@ -124,6 +112,8 @@ module Down
     end
 
     def open(uri, options = {})
+      options = @options.merge(options)
+
       begin
         uri = URI(uri)
         if uri.class != URI::HTTP && uri.class != URI::HTTPS
@@ -198,6 +188,8 @@ module Down
         },
       )
     end
+
+    private
 
     def copy_to_tempfile(basename, io)
       tempfile = Tempfile.new(["down-net_http", File.extname(basename)], binmode: true)

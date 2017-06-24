@@ -2,9 +2,7 @@
 
 require "http"
 
-require "down/version"
-require "down/chunked_io"
-require "down/errors"
+require "down/backend"
 
 require "tempfile"
 require "cgi"
@@ -15,18 +13,14 @@ if Gem::Version.new(HTTP::VERSION) < Gem::Version.new("2.1.0")
 end
 
 module Down
-  module_function
+  class Http < Backend
+    def initialize(client_or_options = nil)
+      options = client_or_options
+      options = client_or_options.default_options if client_or_options.is_a?(HTTP::Client)
 
-  def download(url, **options, &block)
-    Http.download(url, **options, &block)
-  end
-
-  def open(url, **options, &block)
-    Http.open(url, **options, &block)
-  end
-
-  module Http
-    module_function
+      @client = HTTP.headers("User-Agent" => "Down/#{VERSION}").follow(max_hops: 2)
+      @client = HTTP::Client.new(@client.default_options.merge(options)) if options
+    end
 
     def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, **options, &block)
       io = open(url, **options, rewindable: false, &block)
@@ -77,10 +71,12 @@ module Down
         size:       response.content_length,
         encoding:   response.content_type.charset,
         rewindable: rewindable,
-        on_close:   (-> { response.connection.close } unless client.persistent?),
+        on_close:   (-> { response.connection.close } unless @client.persistent?),
         data:       { status: response.code, headers: response.headers.to_h, response: response },
       )
     end
+
+    private
 
     def get(url, **options, &block)
       uri = HTTP::URI.parse(url)
@@ -92,17 +88,9 @@ module Down
         uri.user = uri.password = nil
       end
 
-      client = self.client
+      client = @client
       client = block.call(client) if block
       client.get(url, options)
-    end
-
-    def client
-      Thread.current[:down_client] ||= ::HTTP.headers("User-Agent" => "Down/#{VERSION}").follow(max_hops: 2)
-    end
-
-    def client=(value)
-      Thread.current[:down_client] = value
     end
 
     def response_error!(response)

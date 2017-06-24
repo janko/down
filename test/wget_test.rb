@@ -5,10 +5,6 @@ require "json"
 require "uri"
 
 describe Down::Wget do
-  before do
-    Down::Wget.default_arguments = nil
-  end
-
   describe "#download" do
     it "downloads ASCII content from url" do
       tempfile = Down::Wget.open("#{$httpbin}/range/1000?chunk_size=10&seed=0")
@@ -208,8 +204,8 @@ describe Down::Wget do
     end
 
     it "can set default arguments" do
-      Down::Wget.default_arguments.concat [user_agent: "Janko"]
-      io = Down::Wget.open("#{$httpbin}/user-agent")
+      wget = Down::Wget.new(user_agent: "Janko")
+      io = wget.open("#{$httpbin}/user-agent")
       assert_equal "Janko", JSON.parse(io.read)["user-agent"]
     end
 

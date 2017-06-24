@@ -194,24 +194,26 @@ the `Down::Error` subclasses. This is Down's exception hierarchy:
 
 By default Down implements `Down.download` and `Down.open` using the built-in
 [open-uri] + [Net::HTTP] Ruby standard libraries. However, there are other
-backends as well:
+backends as well, see the sections below.
+
+You can use the backend directly:
 
 ```rb
-require "down/net_http" # uses open-uri + Net::HTTP
-require "down/http"     # uses HTTP.rb gem
-```
+require "down/net_http"
 
-When a backend is loaded, is overrides `Down.download` and `Down.open` methods,
-but it's recommended you always use the backends explicitly:
-
-```rb
-# not recommended
-Down.download("...")
-Down.open("...")
-
-# recommended
 Down::NetHttp.download("...")
 Down::NetHttp.open("...")
+```
+
+Or you can set the backend globally (default is `:net_http`):
+
+```rb
+require "down"
+
+Down.backend :http # use the Down::Http backend
+
+Down.download("...")
+Down.open("...")
 ```
 
 ### open-uri + Net::HTTP
@@ -296,6 +298,15 @@ as request headers, like with open-uri.
 Down::NetHttp.open("http://example.com/image.jpg", {"Authorization" => "..."})
 ```
 
+You can also initialize the backend with default options:
+
+```rb
+net_http = Down::NetHttp.new(open_timeout: 3)
+
+net_http.download("http://example.com/image.jpg")
+net_http.open("http://example.com/image.jpg")
+```
+
 ### HTTP.rb
 
 ```rb
@@ -321,41 +332,33 @@ Net::HTTP include:
 * Chaninable HTTP client builder API for setting default options
 * Support for persistent connections
 
-#### Default client
-
-You can change the default `HTTP::Client` to be used in all download requests
-via `Down::Http.client`:
-
-```rb
-# reuse Down's default client
-Down::Http.client = Down::Http.client.timeout(read: 3).feature(:auto_inflate)
-Down::Http.client.default_options.merge!(ssl_context: ctx)
-
-# or set a new client
-Down::Http.client = HTTP.via("proxy-hostname.local", 8080)
-```
-
 #### Additional options
 
-All additional options passed to `Down::Download` and `Down.open` will be
-forwarded to `HTTP::Client#request`:
+All additional options will be forwarded to `HTTP::Client#request`:
 
 ```rb
-Down::Http.download("http://example.org/image.jpg", headers: {"Accept-Encoding" => "gzip"})
+Down::Http.download("http://example.org/image.jpg", timeout: { open: 3 })
+Down::Http.open("http://example.org/image.jpg", follow: { max_hops: 0 })
 ```
 
 If you prefer to add options using the chainable API, you can pass a block:
 
 ```rb
 Down::Http.open("http://example.org/image.jpg") do |client|
-  client.timeout(read: 3)
+  client.timeout(open: 3)
 end
 ```
 
-#### Thread safety
+You can also initialize the backend with default options:
 
-`Down::Http.client` is stored in a thread-local variable, so using the HTTP.rb
-backend is thread safe.
+```rb
+http = Down::Http.new(timeout: { open: 3 })
+# or
+http = Down::Http.new(HTTP.timeout(open: 3))
+
+http.download("http://example.com/image.jpg")
+http.open("http://example.com/image.jpg")
+```
 
 ### Wget (experimental)
 
@@ -383,7 +386,7 @@ However, the Wget backend should still be considered experimental, as it wasn't
 easy to implement a CLI wrapper that streams output, so it's possible that I've
 made mistakes. Let me know how it's working out for you 😉.
 
-#### Passing arguments
+#### Additional arguments
 
 You can pass additional arguments to the underlying `wget` commmand via symbols:
 
@@ -392,12 +395,13 @@ Down::Wget.download("http://nature.com/forest.jpg", :no_proxy, connect_timeout: 
 Down::Wget.open("http://nature.com/forest.jpg", user: "janko", password: "secret")
 ```
 
-#### Default arguments
-
-You can set default arguments that will be passed to the `wget` command:
+You can also initialize the backend with default arguments:
 
 ```rb
-Down::Wget.default_arguments = [:no_proxy, connect_timeout: 3]
+wget = Down::Wget.new(:no_proxy, connect_timeout: 3)
+
+wget.download("http://nature.com/forest.jpg")
+wget.open("http://nature.com/forest.jpg")
 ```
 
 ## Supported Ruby versions

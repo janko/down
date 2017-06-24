@@ -144,6 +144,12 @@ describe Down do
       assert_equal true, JSON.parse(tempfile.read)["authenticated"]
     end
 
+    it "applies default options" do
+      net_http = Down::NetHttp.new("User-Agent" => "Janko")
+      tempfile = net_http.download("#{$httpbin}/user-agent")
+      assert_equal "Janko", JSON.parse(tempfile.read)["user-agent"]
+    end
+
     it "adds #original_filename extracted from Content-Disposition" do
       tempfile = Down::NetHttp.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"my%20filename.ext\"")
       assert_equal "my filename.ext", tempfile.original_filename
@@ -290,6 +296,12 @@ describe Down do
       assert_equal true, JSON.parse(io.read)["authenticated"]
     end
 
+    it "applies default options" do
+      net_http = Down::NetHttp.new("User-Agent" => "Janko")
+      io = net_http.open("#{$httpbin}/user-agent")
+      assert_equal "Janko", JSON.parse(io.read)["user-agent"]
+    end
+
     it "saves response data" do
       io = Down::NetHttp.open("#{$httpbin}/response-headers?Key=Value")
       assert_equal "Value",             io.data[:headers]["Key"]
@@ -324,35 +336,6 @@ describe Down do
 
     it "raises on timeout errors" do
       assert_raises(Down::TimeoutError) { Down::NetHttp.open("#{$httpbin}/delay/0.5", read_timeout: 0, open_timeout: 0).read }
-    end
-  end
-
-  describe "#copy_to_tempfile" do
-    it "returns a tempfile" do
-      tempfile = Down::NetHttp.copy_to_tempfile("foo", StringIO.new("foo"))
-      assert_instance_of Tempfile, tempfile
-    end
-
-    it "rewinds IOs" do
-      io = StringIO.new("foo")
-      tempfile = Down::NetHttp.copy_to_tempfile("foo", io)
-      assert_equal "foo", io.read
-      assert_equal "foo", tempfile.read
-    end
-
-    it "opens in binmode" do
-      tempfile = Down::NetHttp.copy_to_tempfile("foo", StringIO.new("foo"))
-      assert tempfile.binmode?
-    end
-
-    it "accepts basenames to be nested paths" do
-      tempfile = Down::NetHttp.copy_to_tempfile("foo/bar/baz", StringIO.new("foo"))
-      assert File.exist?(tempfile.path)
-    end
-
-    it "preserves extension" do
-      tempfile = Down::NetHttp.copy_to_tempfile("foo.jpg", StringIO.new("foo"))
-      assert_equal ".jpg", File.extname(tempfile.path)
     end
   end
 end
