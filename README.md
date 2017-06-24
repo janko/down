@@ -364,7 +364,7 @@ http.open("http://example.com/image.jpg")
 
 ```rb
 gem "down", ">= 3.0"
-gem "posix-spawn"
+gem "posix-spawn" # omit if on JRuby
 gem "http_parser.rb"
 ```
 ```

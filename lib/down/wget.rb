@@ -1,6 +1,10 @@
 # frozen-string-literal: true
 
-require "posix-spawn"
+if RUBY_ENGINE == "jruby"
+  require "open3"
+else
+  require "posix-spawn"
+end
 require "http_parser"
 
 require "down/backend"
@@ -121,8 +125,12 @@ module Down
       PIPE_BUFFER_SIZE = 64*1024
 
       def self.execute(arguments)
-        pid, stdin_pipe, stdout_pipe, stderr_pipe = POSIX::Spawn.popen4(*arguments)
-        status_reaper = Process.detach(pid)
+        if RUBY_ENGINE == "jruby"
+          stdin_pipe, stdout_pipe, stderr_pipe, status_reaper = Open3.popen3(*arguments)
+        else
+          pid, stdin_pipe, stdout_pipe, stderr_pipe = POSIX::Spawn.popen4(*arguments)
+          status_reaper = Process.detach(pid)
+        end
 
         stdin_pipe.close
         [stdout_pipe, stderr_pipe].each(&:binmode)
