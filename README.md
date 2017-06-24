@@ -367,7 +367,7 @@ gem "down", ">= 3.0"
 gem "posix-spawn" # omit if on JRuby
 gem "http_parser.rb"
 ```
-```
+```rb
 require "down/wget"
 
 tempfile = Down::Wget.download("http://nature.com/forest.jpg")
