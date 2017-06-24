@@ -1,4 +1,4 @@
-## HEAD
+## 4.0.0 (2017-06-24)
 
 * Don't apply `Down.download` and `Down.open` overrides when loading a backend (@janko-m)
 
