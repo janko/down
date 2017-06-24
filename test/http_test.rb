@@ -43,6 +43,19 @@ describe Down::Http do
       assert_equal ".txt", File.extname(tempfile.path)
     end
 
+    it "accepts :content_length_proc" do
+      tempfile = Down::Http.download("#{$httpbin}/stream-bytes/100", content_length_proc: -> (length) { @length = length })
+      refute instance_variable_defined?(:@length)
+
+      tempfile = Down::Http.download("#{$httpbin}/bytes/100", content_length_proc: -> (length) { @length = length })
+      assert_equal 100, @length
+    end
+
+    it "accepts :progress_proc" do
+      tempfile = Down::Http.download("#{$httpbin}/stream-bytes/100?chunk_size=10", progress_proc: -> (progress) { (@progress ||= []) << progress })
+      assert_equal 100, @progress.last
+    end
+
     it "adds #headers and #url" do
       tempfile = Down::Http.download("#{$httpbin}/response-headers?Foo=Bar")
       assert_equal "Bar",                                  tempfile.headers["Foo"]

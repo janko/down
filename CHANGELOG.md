@@ -1,5 +1,7 @@
 ## HEAD
 
+* Add `:content_length_proc` and `:progress_proc` to the HTTP.rb backend (@janko-m)
+
 * Halve string allocations in `Down::ChunkedIO#readpartial` when buffer string is not used (@janko-m)
 
 ## 3.2.0 (2017-06-21)

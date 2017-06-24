@@ -28,8 +28,10 @@ module Down
   module Http
     module_function
 
-    def download(url, max_size: nil, **options, &block)
+    def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, **options, &block)
       io = open(url, **options, rewindable: false, &block)
+
+      content_length_proc.call(io.size) if content_length_proc && io.size
 
       if max_size && io.size && io.size > max_size
         raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
@@ -40,6 +42,8 @@ module Down
 
       until io.eof?
         tempfile.write(io.readpartial)
+
+        progress_proc.call(tempfile.size) if progress_proc
 
         if max_size && tempfile.size > max_size
           raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"

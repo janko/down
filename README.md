@@ -57,6 +57,19 @@ Down.download("http://user:password@example.org")
 Down.open("http://user:password@example.org")
 ```
 
+### Progress
+
+`Down.download` supports `:content_length_proc`, which gets called with the
+value of the `Content-Length` header as soon as it's received, and
+`:progress_proc`, which gets called with current filesize whenever a new chunk
+is downloaded.
+
+```rb
+Down.download "http://example.com/movie.mp4",
+  content_length_proc: -> (content_length) { ... },
+  progress_proc:       -> (progress)       { ... }
+```
+
 ## Streaming
 
 Down has the ability to retrieve content of the remote file *as it is being
