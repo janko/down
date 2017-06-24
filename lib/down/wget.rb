@@ -157,7 +157,7 @@ module Down
              3  # File I/O error
           raise Down::Error, stderr
         when 4  # Network failure
-          raise Down::TimeoutError, stderr if stderr.include?("Operation timed out")
+          raise Down::TimeoutError, stderr if stderr.include?("timed out")
           raise Down::ConnectionError, stderr
         when 5  # SSL verification failure
           raise Down::SSLError, stderr
@@ -182,8 +182,8 @@ module Down
       end
 
       def close
-        @stdout_pipe.close
-        @stderr_pipe.close
+        @stdout_pipe.close unless @stdout_pipe.closed?
+        @stderr_pipe.close unless @stderr_pipe.closed?
       end
     end
 
