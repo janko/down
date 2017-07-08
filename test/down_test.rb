@@ -4,11 +4,13 @@ require "down"
 require "down/http"
 
 describe Down do
-  before do
-    Down.backend = nil
-  end
+  i_suck_and_my_tests_are_order_dependent! # ಠ_ಠ
 
   describe "#backend" do
+    it "returns NetHttp by default" do
+      assert_equal Down::NetHttp, Down.backend
+    end
+
     it "can set the backend via a symbol" do
       Down.backend :http
       assert_equal Down::Http, Down.backend
@@ -17,10 +19,6 @@ describe Down do
     it "can set the backend via a class" do
       Down.backend Down::Http
       assert_equal Down::Http, Down.backend
-    end
-
-    it "returns NetHttp by default" do
-      assert_equal Down::NetHttp, Down.backend
     end
   end
 

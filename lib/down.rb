@@ -1,6 +1,7 @@
 # frozen-string-literal: true
 
 require "down/version"
+require "down/net_http"
 
 module Down
   module_function
@@ -20,7 +21,6 @@ module Down
     elsif value
       @backend = value
     else
-      backend :net_http if @backend.nil?
       @backend
     end
   end
@@ -29,3 +29,5 @@ module Down
     @backend = value
   end
 end
+
+Down.backend Down::NetHttp
