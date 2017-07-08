@@ -24,10 +24,6 @@ module Down
       @backend
     end
   end
-
-  def backend=(value)
-    @backend = value
-  end
 end
 
 Down.backend Down::NetHttp
