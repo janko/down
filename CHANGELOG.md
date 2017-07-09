@@ -1,3 +1,9 @@
+## 4.0.1 (2017-07-08)
+
+* Load and assign the `NetHttp` backend immediately on `require "down"` (@janko-m)
+
+* Remove undocumented `Down::ChunkedIO#backend=` that was added in 4.0.0 to avoid confusion (@janko-m)
+
 ## 4.0.0 (2017-06-24)
 
 * Don't apply `Down.download` and `Down.open` overrides when loading a backend (@janko-m)
