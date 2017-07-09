@@ -447,6 +447,21 @@ describe Down::ChunkedIO do
       assert_equal "b", io.read(1)
     end
 
+    it "updates #pos" do
+      io = chunked_io(chunks: ["ab", "c"].each)
+      assert_equal 0, io.pos
+      io.read(1)
+      assert_equal 1, io.pos
+      io.read
+      assert_equal 3, io.pos
+      io.rewind
+      assert_equal 0, io.pos
+      io.read(1)
+      assert_equal 1, io.pos
+      io.read
+      assert_equal 3, io.pos
+    end
+
     it "calls :on_close once whole content has been read" do
       io = chunked_io(chunks: ["ab", "c"].each, on_close: -> { @on_close_called = true })
       refute @on_close_called

@@ -15,6 +15,7 @@ module Down
       @encoding   = find_encoding(encoding || Encoding::BINARY)
       @rewindable = rewindable
       @buffer     = nil
+      @bytes_read = 0
 
       retrieve_chunk
     end
@@ -85,7 +86,13 @@ module Down
         end
       end
 
+      @bytes_read += data.bytesize
+
       data
+    end
+
+    def pos
+      @bytes_read
     end
 
     def eof?
@@ -100,6 +107,7 @@ module Down
       raise IOError, "this Down::ChunkedIO is not rewindable" if cache.nil?
 
       cache.rewind
+      @bytes_read = 0
     end
 
     def close
