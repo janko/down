@@ -254,6 +254,11 @@ describe Down do
       assert_equal Encoding::UTF_8, io.read.encoding
     end
 
+    it "uses a default User-Agent" do
+      io = Down::NetHttp.open("#{$httpbin}/user-agent")
+      assert_equal "Down/#{Down::VERSION}", JSON.parse(io.read)["user-agent"]
+    end
+
     it "doesn't have to be rewindable" do
       io = Down::NetHttp.open("#{$httpbin}/stream/10", rewindable: false)
       io.read

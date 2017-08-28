@@ -12,7 +12,7 @@ require "cgi"
 module Down
   class NetHttp < Backend
     def initialize(options = {})
-      @options = options
+      @options = { "User-Agent" => "Down/#{Down::VERSION}" }.merge(options)
     end
 
     def download(uri, options = {})
@@ -24,7 +24,6 @@ module Down
       content_length_proc = options.delete(:content_length_proc)
 
       open_uri_options = {
-        "User-Agent" => "Down/#{Down::VERSION}",
         content_length_proc: proc { |size|
           if size && max_size && size > max_size
             raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
