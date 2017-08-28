@@ -125,11 +125,11 @@ module Down
       PIPE_BUFFER_SIZE = 64*1024
 
       def self.execute(arguments)
-        if RUBY_ENGINE == "jruby"
-          stdin_pipe, stdout_pipe, stderr_pipe, status_reaper = Open3.popen3(*arguments)
-        else
+        if defined?(POSIX::Spawn)
           pid, stdin_pipe, stdout_pipe, stderr_pipe = POSIX::Spawn.popen4(*arguments)
           status_reaper = Process.detach(pid)
+        else
+          stdin_pipe, stdout_pipe, stderr_pipe, status_reaper = Open3.popen3(*arguments)
         end
 
         stdin_pipe.close
