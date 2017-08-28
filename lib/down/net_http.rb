@@ -143,6 +143,8 @@ module Down
       http.open_timeout = options[:open_timeout] if options.key?(:open_timeout)
 
       request_headers = options.select { |key, value| key.is_a?(String) }
+      request_headers["Accept-Encoding"] = "" # otherwise FiberError can be raised
+
       get = Net::HTTP::Get.new(uri.request_uri, request_headers)
       get.basic_auth(uri.user, uri.password) if uri.user || uri.password
 
