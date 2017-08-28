@@ -7,7 +7,7 @@ describe Down::ChunkedIO do
     Down::ChunkedIO.new(options)
   end
 
-  describe "initializing" do
+  describe "#initialize" do
     it "requires :chunks" do
       assert_raises(ArgumentError) { chunked_io }
     end
@@ -276,6 +276,69 @@ describe Down::ChunkedIO do
       io = chunked_io(chunks: ["ab", "c"].each)
       io.close
       assert_raises(IOError) { io.read }
+    end
+  end
+
+  describe "#gets" do
+    it "retrieves lines" do
+      io = chunked_io(chunks: ["a\n", "b\nc\nd", "\n"].each)
+      assert_equal "a\n", io.gets
+      assert_equal "b\n", io.gets
+      assert_equal "c\n", io.gets
+      assert_equal "d\n", io.gets
+    end
+
+    it "retrieves lines when non-rewindable" do
+      io = chunked_io(chunks: ["a\n", "b\nc\nd", "\n"].each, rewindable: false)
+      assert_equal "a\n", io.gets
+      assert_equal "b\n", io.gets
+      assert_equal "c\n", io.gets
+      assert_equal "d\n", io.gets
+    end
+
+    it "accepts a different separator" do
+      io = chunked_io(chunks: ["a\r", "b\rc\rd", "\r"].each)
+      assert_equal "a\r", io.gets("\r")
+      assert_equal "b\r", io.gets("\r")
+      assert_equal "c\r", io.gets("\r")
+      assert_equal "d\r", io.gets("\r")
+    end
+
+    it "reads the whole file when separator is nil" do
+      io = chunked_io(chunks: ["a\n", "b\nc\nd", "\n"].each)
+      assert_equal "a\nb\nc\n\d\n", io.gets(nil)
+    end
+
+    it "uses the double-newline separator when separator is empty" do
+      io = chunked_io(chunks: ["a\n", "b\n\n\nd", "\n"].each)
+      assert_equal "a\nb\n\n", io.gets("")
+      assert_equal "\nd\n",    io.gets("")
+    end
+
+    it "accepts a limit" do
+      io = chunked_io(chunks: ["a", "b", "c\n"].each)
+      assert_equal "a",  io.gets(1)
+      assert_equal "bc", io.gets(2)
+      assert_equal "\n", io.gets(3)
+    end
+
+    it "accepts a separator and a limit" do
+      io = chunked_io(chunks: ["a", "bc\r", "d\r"].each)
+      assert_equal "ab",  io.gets("\r", 2)
+      assert_equal "c\r", io.gets("\r", 3)
+      assert_equal "d\r", io.gets("\r", 3)
+    end
+
+    it "returns nil when on EOF" do
+      io = chunked_io(chunks: ["a\n"].each)
+      io.gets
+      assert_nil io.gets
+    end
+
+    it "raises IOError when closed" do
+      io = chunked_io(chunks: ["a\n"])
+      io.close
+      assert_raises(IOError) { io.gets }
     end
   end
 

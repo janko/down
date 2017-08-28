@@ -47,6 +47,43 @@ module Down
       data.to_s unless length && (data.nil? || data.empty?)
     end
 
+    def gets(separator_or_limit = $/, limit = nil)
+      raise IOError, "closed stream" if closed?
+
+      if separator_or_limit.is_a?(Integer)
+        separator = $/
+        limit     = separator_or_limit
+      else
+        separator = separator_or_limit
+      end
+
+      return read if separator.nil?
+
+      separator = "\n\n" if separator.empty?
+
+      begin
+        data = readpartial(limit)
+
+        until data.include?(separator) || data.bytesize == limit || eof?
+          remaining_length = limit - data.bytesize if limit
+          data << readpartial(remaining_length, outbuf ||= String.new)
+        end
+
+        line, extra = data.split(separator, 2)
+        line << separator if data.include?(separator)
+
+        if cache
+          cache.pos -= extra.to_s.bytesize
+        else
+          @buffer = @buffer.to_s.prepend(extra.to_s)
+        end
+      rescue EOFError
+        line = nil
+      end
+
+      line
+    end
+
     def readpartial(length = nil, outbuf = nil)
       raise IOError, "closed stream" if closed?
 
