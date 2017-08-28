@@ -59,21 +59,28 @@ module Down
     end
 
     def open(url, rewindable: true, **options, &block)
-      begin
-        response = get(url, **options, &block)
-        response_error!(response) if !response.status.success?
-      rescue => exception
-        request_error!(exception)
+      response = get(url, **options, &block)
+
+      response_error!(response) if !response.status.success?
+
+      body_chunks = Enumerator.new do |yielder|
+        begin
+          response.body.each { |chunk| yielder << chunk }
+        rescue => exception
+          request_error!(exception)
+        end
       end
 
       Down::ChunkedIO.new(
-        chunks:     response.body.enum_for(:each),
+        chunks:     body_chunks,
         size:       response.content_length,
         encoding:   response.content_type.charset,
         rewindable: rewindable,
         on_close:   (-> { response.connection.close } unless @client.persistent?),
         data:       { status: response.code, headers: response.headers.to_h, response: response },
       )
+    rescue => exception
+      request_error!(exception)
     end
 
     private

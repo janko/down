@@ -335,7 +335,7 @@ describe Down do
     end
 
     it "raises on timeout errors" do
-      assert_raises(Down::TimeoutError) { Down::NetHttp.open("#{$httpbin}/delay/0.5", read_timeout: 0, open_timeout: 0).read }
+      assert_raises(Down::TimeoutError) { Down::NetHttp.open("#{$httpbin}/delay/0.5", read_timeout: 0).read }
     end
   end
 end

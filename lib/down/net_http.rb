@@ -156,16 +156,20 @@ module Down
         end
       end
 
-      begin
-        response = request.resume
+      response = request.resume
 
-        response_error!(response) unless (200..299).cover?(response.code.to_i)
-      rescue => exception
-        request_error!(exception)
+      response_error!(response) unless (200..299).cover?(response.code.to_i)
+
+      body_chunks = Enumerator.new do |yielder|
+        begin
+          response.read_body { |chunk| yielder << chunk }
+        rescue => exception
+          request_error!(exception)
+        end
       end
 
       Down::ChunkedIO.new(
-        chunks:     response.enum_for(:read_body),
+        chunks:     body_chunks,
         size:       response["Content-Length"] && response["Content-Length"].to_i,
         encoding:   response.type_params["charset"],
         rewindable: options.fetch(:rewindable, true),
@@ -179,6 +183,8 @@ module Down
           response: response,
         },
       )
+    rescue => exception
+      request_error!(exception)
     end
 
     private
