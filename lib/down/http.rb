@@ -18,7 +18,7 @@ module Down
       options = client_or_options
       options = client_or_options.default_options if client_or_options.is_a?(HTTP::Client)
 
-      @client = HTTP.headers("User-Agent" => "Down/#{VERSION}").follow(max_hops: 2)
+      @client = HTTP.headers("User-Agent" => "Down/#{Down::VERSION}").follow(max_hops: 2)
       @client = HTTP::Client.new(@client.default_options.merge(options)) if options
     end
 
@@ -46,7 +46,7 @@ module Down
 
       tempfile.open # flush written content
 
-      tempfile.extend DownloadedFile
+      tempfile.extend Down::Http::DownloadedFile
       tempfile.url     = io.data[:response].uri.to_s
       tempfile.headers = io.data[:headers]
 

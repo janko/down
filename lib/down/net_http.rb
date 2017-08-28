@@ -24,7 +24,7 @@ module Down
       content_length_proc = options.delete(:content_length_proc)
 
       open_uri_options = {
-        "User-Agent" => "Down/#{VERSION}",
+        "User-Agent" => "Down/#{Down::VERSION}",
         content_length_proc: proc { |size|
           if size && max_size && size > max_size
             raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
@@ -62,9 +62,7 @@ module Down
       begin
         uri = URI(uri)
 
-        if uri.class != URI::HTTP && uri.class != URI::HTTPS
-          raise Down::InvalidUrl, "URL scheme needs to be http or https"
-        end
+        fail Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
 
         if uri.user || uri.password
           open_uri_options[:http_basic_authentication] ||= [uri.user, uri.password]
@@ -83,7 +81,7 @@ module Down
 
           retry
         else
-          raise Down::TooManyRedirects, "too many redirects"
+          fail Down::TooManyRedirects, "too many redirects"
         end
       rescue OpenURI::HTTPError => exception
         code, message = exception.io.status
@@ -107,21 +105,15 @@ module Down
       downloaded_file = copy_to_tempfile(uri.path, open_uri_file)
       OpenURI::Meta.init downloaded_file, open_uri_file
 
-      downloaded_file.extend DownloadedFile
+      downloaded_file.extend Down::NetHttp::DownloadedFile
       downloaded_file
     end
 
     def open(uri, options = {})
       options = @options.merge(options)
+      uri     = URI(uri)
 
-      begin
-        uri = URI(uri)
-        if uri.class != URI::HTTP && uri.class != URI::HTTPS
-          raise Down::InvalidUrl, "URL scheme needs to be http or https"
-        end
-      rescue URI::InvalidURIError
-        raise Down::InvalidUrl, "URL was invalid"
-      end
+      fail Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
 
       http_class = Net::HTTP
 
@@ -235,9 +227,7 @@ module Down
       when SocketError
         raise Down::ConnectionError, "domain name could not be resolved"
       when Errno::ETIMEDOUT,
-           Timeout::Error,
-           Net::OpenTimeout,
-           Net::ReadTimeout
+           Timeout::Error
         raise Down::TimeoutError, "request timed out"
       when defined?(OpenSSL) && OpenSSL::SSL::SSLError
         raise Down::SSLError, exception.message

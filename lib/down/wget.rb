@@ -16,7 +16,7 @@ require "cgi"
 module Down
   class Wget < Backend
     def initialize(*arguments)
-      @arguments = [max_redirect: 2, user_agent: "Down/#{VERSION}"] + arguments
+      @arguments = [max_redirect: 2, user_agent: "Down/#{Down::VERSION}"] + arguments
     end
 
     def download(url, *args, max_size: nil, content_length_proc: nil, progress_proc: nil, **options)
@@ -43,7 +43,7 @@ module Down
 
       tempfile.open # flush written content
 
-      tempfile.extend DownloadedFile
+      tempfile.extend Down::Wget::DownloadedFile
       tempfile.url     = url
       tempfile.headers = io.data[:headers]
 
@@ -58,7 +58,7 @@ module Down
     def open(url, *args, rewindable: true, **options)
       arguments = generate_command(url, *args, **options)
 
-      command = Command.execute(arguments)
+      command = Down::Wget::Command.execute(arguments)
       output  = Down::ChunkedIO.new(
         chunks:     command.enum_for(:output),
         on_close:   command.method(:terminate),
