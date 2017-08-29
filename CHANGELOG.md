@@ -1,3 +1,17 @@
+## 4.1.0 (2017-08-29)
+
+* Fix `FiberError` occurring on `Down::NetHttp.open` when response is chunked and gzipped (@janko-m)
+
+* Use a default `User-Agent` in `Down::NetHttp.open` (@janko-m)
+
+* Fix raw read timeout error sometimes being raised instead of `Down::TimeoutError` in `Down.open` (@janko-m)
+
+* `Down::ChunkedIO` can now be parsed by the CSV Ruby standard library (@janko-m)
+
+* Implement `Down::ChunkedIO#gets` (@janko-m)
+
+* Implement `Down::ChunkedIO#pos` (@janko-m)
+
 ## 4.0.1 (2017-07-08)
 
 * Load and assign the `NetHttp` backend immediately on `require "down"` (@janko-m)
