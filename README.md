@@ -17,6 +17,7 @@ Tempfile:
 
 ```rb
 require "down"
+
 tempfile = Down.download("http://example.com/nature.jpg")
 tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/20150925-55456-z7vxqz.jpg>
 ```
@@ -141,21 +142,26 @@ status was 4xx or 5xx.
 
 ### `Down::ChunkedIO`
 
-The `Down.open` method uses `Down::ChunkedIO` internally. However,
-`Down::ChunkedIO` is designed to be generic, it can wrap any kind of streaming.
+The `Down.open` performs HTTP logic and returns an instance of
+`Down::ChunkedIO`. However, `Down::ChunkedIO` is a generic class that can wrap
+any kind of streaming. It accepts an `Enumerator` that yields chunks of
+content, and provides IO-like interface over that enumerator, calling it
+whenever more content is needed.
 
 ```rb
+require "down/chunked_io"
+
 Down::ChunkedIO.new(...)
 ```
 
-* `:chunks` – an `Enumerator` which retrieves chunks
+* `:chunks` – `Enumerator` that yields chunks of content
 * `:size` – size of the file if it's known (returned by `#size`)
 * `:on_close` – called when streaming finishes or IO is closed
 * `:data` - custom data that you want to store (returned by `#data`)
 * `:rewindable` - whether to cache retrieved data into a file (defaults to `true`)
 * `:encoding` - force content to be returned in specified encoding (defaults to `Encoding::BINARY`)
 
-Here is an example of wrapping streaming MongoDB files:
+Here is an example of creating a streaming IO of a MongoDB GridFS file:
 
 ```rb
 require "down/chunked_io"
