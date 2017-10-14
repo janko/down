@@ -1,3 +1,11 @@
+## 4.1.1 (2017-10-15)
+
+* Raise all system call exceptions as `Down::ConnectionError` in `Down::NetHttp` (@janko-m)
+
+* Raise `Errno::ETIMEDOUT` as `Down::TimeoutError` in `Down::NetHttp` (@janko-m)
+
+* Raise `Addressable::URI::InvalidURIError` as `Down::InvalidUrl` in `Down::Http` (@janko-m)
+
 ## 4.1.0 (2017-08-29)
 
 * Fix `FiberError` occurring on `Down::NetHttp.open` when response is chunked and gzipped (@janko-m)
