@@ -331,16 +331,24 @@ describe Down do
     it "raises on invalid URLs" do
       assert_raises(Down::InvalidUrl) { Down::NetHttp.open("http:\\example.org") }
       assert_raises(Down::InvalidUrl) { Down::NetHttp.open("foo://example.org") }
-      assert_raises(Down::InvalidUrl) { Down::NetHttp.open("| ls") }
     end
 
     it "raises on connection errors" do
       assert_raises(Down::ConnectionError) { Down::NetHttp.open("http://localhost:99999") }
-      assert_raises(Down::ConnectionError) { Down::NetHttp.open("#{$httpbin}/status/100") }
     end
 
     it "raises on timeout errors" do
       assert_raises(Down::TimeoutError) { Down::NetHttp.open("#{$httpbin}/delay/0.5", read_timeout: 0).read }
+    end
+
+    it "re-raises SSL errors" do
+      TCPSocket.expects(:open).raises(OpenSSL::SSL::SSLError)
+
+      assert_raises(Down::SSLError) { Down::NetHttp.open($httpbin) }
+    end
+
+    it "re-raises other exceptions" do
+      assert_raises(TypeError) { Down::NetHttp.open($httpbin, read_timeout: "foo") }
     end
   end
 end

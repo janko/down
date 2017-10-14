@@ -1,7 +1,7 @@
 # frozen-string-literal: true
 
 require "open-uri"
-require "net/http"
+require "net/https"
 
 require "down/backend"
 
@@ -60,15 +60,18 @@ module Down
 
       begin
         uri = URI(uri)
+        raise Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
+      rescue URI::InvalidURIError => exception
+        raise Down::InvalidUrl, exception.message
+      end
 
-        fail Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
+      if uri.user || uri.password
+        open_uri_options[:http_basic_authentication] ||= [uri.user, uri.password]
+        uri.user = nil
+        uri.password = nil
+      end
 
-        if uri.user || uri.password
-          open_uri_options[:http_basic_authentication] ||= [uri.user, uri.password]
-          uri.user = nil
-          uri.password = nil
-        end
-
+      begin
         downloaded_file = uri.open(open_uri_options)
       rescue OpenURI::HTTPRedirect => exception
         if (tries -= 1) > 0
@@ -80,7 +83,7 @@ module Down
 
           retry
         else
-          fail Down::TooManyRedirects, "too many redirects"
+          raise Down::TooManyRedirects, "too many redirects"
         end
       rescue OpenURI::HTTPError => exception
         code, message = exception.io.status
@@ -110,9 +113,13 @@ module Down
 
     def open(uri, options = {})
       options = @options.merge(options)
-      uri     = URI(uri)
 
-      fail Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
+      begin
+        uri = URI(uri)
+        raise Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
+      rescue URI::InvalidURIError => exception
+        raise Down::InvalidUrl, exception.message
+      end
 
       http_class = Net::HTTP
 
@@ -125,7 +132,6 @@ module Down
 
       # taken from open-uri implementation
       if uri.is_a?(URI::HTTPS)
-        require "net/https"
         http.use_ssl = true
         http.verify_mode = options[:ssl_verify_mode] || OpenSSL::SSL::VERIFY_PEER
         store = OpenSSL::X509::Store.new
@@ -157,7 +163,11 @@ module Down
         end
       end
 
-      response = request.resume
+      begin
+        response = request.resume
+      rescue => exception
+        request_error!(exception)
+      end
 
       response_error!(response) unless (200..299).cover?(response.code.to_i)
 
@@ -184,8 +194,6 @@ module Down
           response: response,
         },
       )
-    rescue => exception
-      request_error!(exception)
     end
 
     private
@@ -219,24 +227,13 @@ module Down
 
     def request_error!(exception)
       case exception
-      when URI::InvalidURIError
-        raise Down::InvalidUrl, "URL was invalid"
-      when Errno::ECONNREFUSED
-        raise Down::ConnectionError, "connection was refused"
-      when EOFError,
-           IOError,
-           Errno::ECONNABORTED,
-           Errno::ECONNRESET,
-           Errno::EPIPE,
-           Errno::EINVAL,
-           Errno::EHOSTUNREACH
+      when Errno::ETIMEDOUT, Net::OpenTimeout
+        raise Down::TimeoutError, "timed out waiting for connection to open"
+      when Net::ReadTimeout
+        raise Down::TimeoutError, "timed out while reading data"
+      when EOFError, IOError, SocketError, SystemCallError
         raise Down::ConnectionError, exception.message
-      when SocketError
-        raise Down::ConnectionError, "domain name could not be resolved"
-      when Errno::ETIMEDOUT,
-           Timeout::Error
-        raise Down::TimeoutError, "request timed out"
-      when defined?(OpenSSL) && OpenSSL::SSL::SSLError
+      when OpenSSL::SSL::SSLError
         raise Down::SSLError, exception.message
       else
         raise exception

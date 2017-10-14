@@ -137,19 +137,19 @@ describe Down::Http do
 
     it "follows redirects" do
       io = Down::Http.open("#{$httpbin}/redirect/1")
-      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
+      assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
       io = Down::Http.open("#{$httpbin}/redirect/2")
-      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
+      assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
       assert_raises(Down::TooManyRedirects) { Down::Http.open("#{$httpbin}/redirect/3") }
 
       io = Down::Http.open("#{$httpbin}/redirect/3", follow: { max_hops: 3 })
-      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
+      assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
       assert_raises(Down::TooManyRedirects) { Down::Http.open("#{$httpbin}/redirect/4", follow: { max_hops: 3 }) }
 
       io = Down::Http.open("#{$httpbin}/absolute-redirect/1")
-      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
+      assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
       io = Down::Http.open("#{$httpbin}/relative-redirect/1")
-      assert_equal "http://#{URI($httpbin).host}/get", JSON.parse(io.read)["url"]
+      assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
     end
 
     it "returns content in encoding specified by charset" do
@@ -246,16 +246,27 @@ describe Down::Http do
       assert_instance_of HTTP::Response, error.response
     end
 
-    it "raises on connection errors" do
+    it "re-raises invalid URL errors" do
+      assert_raises(Down::InvalidUrl) { Down::Http.open("foo://example.org") }
+      assert_raises(Down::InvalidUrl) { Down::Http.open("http://example.org\\foo") }
+    end
+
+    it "re-raises connection errors" do
       assert_raises(Down::ConnectionError) { Down::Http.open("http://localhost:99999") }
     end
 
-    it "raises on timeout errors" do
+    it "re-raises timeout errors" do
       assert_raises(Down::TimeoutError) { Down::Http.open("#{$httpbin}/delay/0.5"){ |c| c.timeout(read: 0)}.read }
     end
 
-    it "raises on invalid URL" do
-      assert_raises(Down::InvalidUrl) { Down::Http.open("foo://example.org") }
+    it "re-raises SSL errors" do
+      TCPSocket.expects(:open).raises(OpenSSL::SSL::SSLError)
+
+      assert_raises(Down::SSLError) { Down::Http.open($httpbin) }
+    end
+
+    it "re-raises other exceptions" do
+      assert_raises(HTTP::RequestError) { Down::Http.open($httpbin, body: IO.pipe[0]) }
     end
   end
 end

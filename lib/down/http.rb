@@ -59,9 +59,13 @@ module Down
     end
 
     def open(url, rewindable: true, **options, &block)
-      response = get(url, **options, &block)
+      begin
+        response = get(url, **options, &block)
+      rescue => exception
+        request_error!(exception)
+      end
 
-      response_error!(response) if !response.status.success?
+      response_error!(response) unless response.status.success?
 
       body_chunks = Enumerator.new do |yielder|
         begin
@@ -79,8 +83,6 @@ module Down
         on_close:   (-> { response.connection.close } unless @client.persistent?),
         data:       { status: response.code, headers: response.headers.to_h, response: response },
       )
-    rescue => exception
-      request_error!(exception)
     end
 
     private
@@ -112,24 +114,15 @@ module Down
 
     def request_error!(exception)
       case exception
-      when HTTP::Request::UnsupportedSchemeError
+      when HTTP::Request::UnsupportedSchemeError, Addressable::URI::InvalidURIError
         raise Down::InvalidUrl, exception.message
-      when Errno::ECONNREFUSED
-        raise Down::ConnectionError, "connection was refused"
-      when HTTP::ConnectionError,
-           Errno::ECONNABORTED,
-           Errno::ECONNRESET,
-           Errno::EPIPE,
-           Errno::EINVAL,
-           Errno::EHOSTUNREACH
+      when HTTP::ConnectionError
         raise Down::ConnectionError, exception.message
-      when SocketError
-        raise Down::ConnectionError, "domain name could not be resolved"
       when HTTP::TimeoutError
         raise Down::TimeoutError, exception.message
       when HTTP::Redirector::TooManyRedirectsError
         raise Down::TooManyRedirects, exception.message
-      when defined?(OpenSSL) && OpenSSL::SSL::SSLError
+      when OpenSSL::SSL::SSLError
         raise Down::SSLError, exception.message
       else
         raise exception
