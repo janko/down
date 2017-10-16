@@ -343,7 +343,7 @@ Net::HTTP include:
 All additional options will be forwarded to `HTTP::Client#request`:
 
 ```rb
-Down::Http.download("http://example.org/image.jpg", timeout: { open: 3 })
+Down::Http.download("http://example.org/image.jpg", timeout: { connect: 3 })
 Down::Http.open("http://example.org/image.jpg", follow: { max_hops: 0 })
 ```
 
@@ -351,16 +351,16 @@ If you prefer to add options using the chainable API, you can pass a block:
 
 ```rb
 Down::Http.open("http://example.org/image.jpg") do |client|
-  client.timeout(open: 3)
+  client.timeout(connect: 3)
 end
 ```
 
 You can also initialize the backend with default options:
 
 ```rb
-http = Down::Http.new(timeout: { open: 3 })
+http = Down::Http.new(timeout: { connect: 3 })
 # or
-http = Down::Http.new(HTTP.timeout(open: 3))
+http = Down::Http.new(HTTP.timeout(connect: 3))
 
 http.download("http://example.com/image.jpg")
 http.open("http://example.com/image.jpg")
