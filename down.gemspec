@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.email        = ["janko.marohnic@gmail.com"]
   spec.license      = "MIT"
 
-  spec.files        = Dir["README.md", "LICENSE.txt", "CHANGELOG.md" "*.gemspec", "lib/**/*.rb"]
+  spec.files        = Dir["README.md", "LICENSE.txt", "CHANGELOG.md", "*.gemspec", "lib/**/*.rb"]
   spec.require_path = "lib"
 
   spec.add_development_dependency "minitest", "~> 5.8"
