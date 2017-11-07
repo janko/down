@@ -9,17 +9,14 @@ require "cgi"
 require "base64"
 
 if Gem::Version.new(HTTP::VERSION) < Gem::Version.new("2.1.0")
-  fail "Down requires HTTP.rb version 2.1.0 or higher"
+  fail "Down::Http requires HTTP.rb version 2.1.0 or higher"
 end
 
 module Down
   class Http < Backend
-    def initialize(client_or_options = nil)
-      options = client_or_options
-      options = client_or_options.default_options if client_or_options.is_a?(HTTP::Client)
-
-      @client = HTTP.headers("User-Agent" => "Down/#{Down::VERSION}").follow(max_hops: 2)
-      @client = HTTP::Client.new(@client.default_options.merge(options)) if options
+    def initialize(client_or_options = {})
+      options  = client_or_options.is_a?(HTTP::Client) ? client_or_options.default_options : client_or_options
+      @options = { headers: { "User-Agent" => "Down/#{Down::VERSION}" }, follow: { max_hops: 2 } }.merge(options)
     end
 
     def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, **options, &block)
@@ -59,47 +56,55 @@ module Down
     end
 
     def open(url, rewindable: true, **options, &block)
-      begin
-        response = get(url, **options, &block)
-      rescue => exception
-        request_error!(exception)
-      end
+      response = get(url, **options, &block)
 
       response_error!(response) unless response.status.success?
 
-      body_chunks = Enumerator.new do |yielder|
-        begin
-          response.body.each { |chunk| yielder << chunk }
-        rescue => exception
-          request_error!(exception)
-        end
-      end
-
       Down::ChunkedIO.new(
-        chunks:     body_chunks,
+        chunks:     enum_for(:stream_body, response),
         size:       response.content_length,
         encoding:   response.content_type.charset,
         rewindable: rewindable,
-        on_close:   (-> { response.connection.close } unless @client.persistent?),
+        on_close:   (-> { response.connection.close } unless default_client.persistent?),
         data:       { status: response.code, headers: response.headers.to_h, response: response },
       )
     end
 
     private
 
+    def default_client
+      @default_client ||= HTTP::Client.new(@options)
+    end
+
     def get(url, **options, &block)
+      url = process_url(url, options)
+
+      client = default_client
+      client = block.call(client) if block
+
+      client.get(url, options)
+    rescue => exception
+      request_error!(exception)
+    end
+
+    def stream_body(response, &block)
+      response.body.each(&block)
+    rescue => exception
+      request_error!(exception)
+    end
+
+    def process_url(url, options)
       uri = HTTP::URI.parse(url)
 
       if uri.user || uri.password
         user, pass = uri.user, uri.password
         authorization = "Basic #{Base64.strict_encode64("#{user}:#{pass}")}"
-        (options[:headers] ||= {}).merge!("Authorization" => authorization)
+        options[:headers] ||= {}
+        options[:headers].merge!("Authorization" => authorization)
         uri.user = uri.password = nil
       end
 
-      client = @client
-      client = block.call(client) if block
-      client.get(url, options)
+      uri.to_s
     end
 
     def response_error!(response)
