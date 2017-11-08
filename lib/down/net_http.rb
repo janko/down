@@ -12,14 +12,14 @@ require "cgi"
 module Down
   class NetHttp < Backend
     def initialize(options = {})
-      @options = { "User-Agent" => "Down/#{Down::VERSION}" }.merge(options)
+      @options = { "User-Agent" => "Down/#{Down::VERSION}", max_redirects: 2 }.merge(options)
     end
 
-    def download(uri, options = {})
+    def download(url, options = {})
       options = @options.merge(options)
 
       max_size            = options.delete(:max_size)
-      max_redirects       = options.delete(:max_redirects) || 2
+      max_redirects       = options.delete(:max_redirects)
       progress_proc       = options.delete(:progress_proc)
       content_length_proc = options.delete(:content_length_proc)
 
@@ -56,14 +56,7 @@ module Down
 
       open_uri_options.merge!(options)
 
-      tries = max_redirects + 1
-
-      begin
-        uri = URI(uri)
-        raise Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
-      rescue URI::InvalidURIError => exception
-        raise Down::InvalidUrl, exception.message
-      end
+      uri = ensure_uri(url)
 
       if uri.user || uri.password
         open_uri_options[:http_basic_authentication] ||= [uri.user, uri.password]
@@ -71,56 +64,112 @@ module Down
         uri.password = nil
       end
 
+      open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects)
+
+      tempfile = ensure_tempfile(open_uri_file)
+      tempfile.extend Down::NetHttp::DownloadedFile
+
+      tempfile
+    end
+
+    def open(url, options = {})
+      options = @options.merge(options)
+
+      uri = ensure_uri(url)
+
+      request = Fiber.new do
+        net_http_request(uri, options) do |response|
+          Fiber.yield response
+        end
+      end
+
+      response = request.resume
+
+      response_error!(response) unless response.is_a?(Net::HTTPSuccess)
+
+      Down::ChunkedIO.new(
+        chunks:     enum_for(:stream_body, response),
+        size:       response["Content-Length"] && response["Content-Length"].to_i,
+        encoding:   response.type_params["charset"],
+        rewindable: options.fetch(:rewindable, true),
+        on_close:   -> { request.resume }, # close HTTP connnection
+        data: {
+          status:   response.code.to_i,
+          headers:  response.each_header.inject({}) { |headers, (downcased_name, value)|
+                      name = downcased_name.split("-").map(&:capitalize).join("-")
+                      headers.merge!(name => value)
+                    },
+          response: response,
+        },
+      )
+    end
+
+    private
+
+    def open_uri(uri, options, follows_remaining: 0)
+      downloaded_file = uri.open(options)
+    rescue OpenURI::HTTPRedirect => exception
+      raise Down::TooManyRedirects, "too many redirects" if follows_remaining == 0
+
+      uri = exception.uri
+
+      if !exception.io.meta["set-cookie"].to_s.empty?
+        options["Cookie"] = exception.io.meta["set-cookie"]
+      end
+
+      follows_remaining -= 1
+      retry
+    rescue OpenURI::HTTPError => exception
+      code, message = exception.io.status
+      response_class = Net::HTTPResponse::CODE_TO_OBJ.fetch(code)
+      response = response_class.new(nil, code, message)
+      exception.io.metas.each do |name, values|
+        values.each { |value| response.add_field(name, value) }
+      end
+
+      response_error!(response)
+    rescue => exception
+      request_error!(exception)
+    end
+
+    # Converts the open-uri result file into a Tempfile if it isn't already,
+    # and makes sure the Tempfile has the correct file extension.
+    def ensure_tempfile(open_uri_file)
+      extension = File.extname(open_uri_file.base_uri.path)
+      tempfile  = Tempfile.new(["down-net_http", extension], binmode: true)
+
+      if open_uri_file.is_a?(Tempfile)
+        # Windows requires file descriptors to be closed before files are moved
+        open_uri_file.close
+        tempfile.close
+        FileUtils.mv open_uri_file.path, tempfile.path
+      else # open-uri returns a StringIO when there is less than 10KB of content
+        IO.copy_stream(open_uri_file, tempfile)
+        open_uri_file.close
+      end
+
+      tempfile.open
+      OpenURI::Meta.init tempfile, open_uri_file # adds open-uri methods
+
+      tempfile
+    end
+
+    def net_http_request(uri, options)
+      http, request = create_net_http(uri, options)
+
       begin
-        downloaded_file = uri.open(open_uri_options)
-      rescue OpenURI::HTTPRedirect => exception
-        if (tries -= 1) > 0
-          uri = exception.uri
-
-          if !exception.io.meta["set-cookie"].to_s.empty?
-            open_uri_options["Cookie"] = exception.io.meta["set-cookie"]
+        http.start do
+          http.request(request) do |response|
+            yield response
+            response.instance_variable_set("@read", true) # mark response as read
           end
-
-          retry
-        else
-          raise Down::TooManyRedirects, "too many redirects"
         end
-      rescue OpenURI::HTTPError => exception
-        code, message = exception.io.status
-        response_class = Net::HTTPResponse::CODE_TO_OBJ.fetch(code)
-        response = response_class.new(nil, code, message)
-        exception.io.metas.each do |name, values|
-          values.each { |value| response.add_field(name, value) }
-        end
-
-        response_error!(response)
       rescue => exception
         request_error!(exception)
       end
-
-      # open-uri will return a StringIO instead of a Tempfile if the filesize is
-      # less than 10 KB, so if it happens we convert it back to Tempfile. We want
-      # to do this with a Tempfile as well, because open-uri doesn't preserve the
-      # file extension, so we want to run it against #copy_to_tempfile which
-      # does.
-      open_uri_file = downloaded_file
-      downloaded_file = copy_to_tempfile(uri.path, open_uri_file)
-      OpenURI::Meta.init downloaded_file, open_uri_file
-
-      downloaded_file.extend Down::NetHttp::DownloadedFile
-      downloaded_file
     end
 
-    def open(uri, options = {})
-      options = @options.merge(options)
-
-      begin
-        uri = URI(uri)
-        raise Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
-      rescue URI::InvalidURIError => exception
-        raise Down::InvalidUrl, exception.message
-      end
-
+    def create_net_http(uri, options)
       http_class = Net::HTTP
 
       if options[:proxy]
@@ -154,62 +203,21 @@ module Down
       get = Net::HTTP::Get.new(uri.request_uri, request_headers)
       get.basic_auth(uri.user, uri.password) if uri.user || uri.password
 
-      request = Fiber.new do
-        http.start do
-          http.request(get) do |response|
-            Fiber.yield response
-            response.instance_variable_set("@read", true)
-          end
-        end
-      end
-
-      begin
-        response = request.resume
-      rescue => exception
-        request_error!(exception)
-      end
-
-      response_error!(response) unless (200..299).cover?(response.code.to_i)
-
-      body_chunks = Enumerator.new do |yielder|
-        begin
-          response.read_body { |chunk| yielder << chunk }
-        rescue => exception
-          request_error!(exception)
-        end
-      end
-
-      Down::ChunkedIO.new(
-        chunks:     body_chunks,
-        size:       response["Content-Length"] && response["Content-Length"].to_i,
-        encoding:   response.type_params["charset"],
-        rewindable: options.fetch(:rewindable, true),
-        on_close:   -> { request.resume }, # close HTTP connnection
-        data: {
-          status:   response.code.to_i,
-          headers:  response.each_header.inject({}) { |headers, (downcased_name, value)|
-                      name = downcased_name.split("-").map(&:capitalize).join("-")
-                      headers.merge!(name => value)
-                    },
-          response: response,
-        },
-      )
+      [http, get]
     end
 
-    private
+    def stream_body(response, &block)
+      response.read_body(&block)
+    rescue => exception
+      request_error!(exception)
+    end
 
-    def copy_to_tempfile(basename, io)
-      tempfile = Tempfile.new(["down-net_http", File.extname(basename)], binmode: true)
-      if io.is_a?(OpenURI::Meta) && io.is_a?(Tempfile)
-        io.close
-        tempfile.close
-        FileUtils.mv io.path, tempfile.path
-      else
-        IO.copy_stream(io, tempfile)
-        io.rewind
-      end
-      tempfile.open
-      tempfile
+    def ensure_uri(url)
+      uri = URI(url)
+      raise Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
+      uri
+    rescue URI::InvalidURIError => exception
+      raise Down::InvalidUrl, exception.message
     end
 
     def response_error!(response)
@@ -227,7 +235,7 @@ module Down
 
     def request_error!(exception)
       case exception
-      when Errno::ETIMEDOUT, Net::OpenTimeout
+      when Net::OpenTimeout
         raise Down::TimeoutError, "timed out waiting for connection to open"
       when Net::ReadTimeout
         raise Down::TimeoutError, "timed out while reading data"
