@@ -1,4 +1,4 @@
-## HEAD
+## 4.2.0 (2017-12-22)
 
 * Handle `:max_redirects` in `Down::NetHttp#open` and follow up to 2 redirects by default (@janko-m)
 
