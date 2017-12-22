@@ -1,3 +1,7 @@
+## HEAD
+
+* Handle `:max_redirects` in `Down::NetHttp#open` and follow up to 2 redirects by default (@janko-m)
+
 ## 4.1.1 (2017-10-15)
 
 * Raise all system call exceptions as `Down::ConnectionError` in `Down::NetHttp` (@janko-m)

@@ -154,18 +154,29 @@ module Down
       tempfile
     end
 
-    def net_http_request(uri, options)
+    def net_http_request(uri, options, follows_remaining: options.fetch(:max_redirects, 2), &block)
       http, request = create_net_http(uri, options)
 
       begin
-        http.start do
+        response = http.start do
           http.request(request) do |response|
-            yield response
-            response.instance_variable_set("@read", true) # mark response as read
+            unless response.is_a?(Net::HTTPRedirection)
+              yield response
+              response.instance_variable_set("@read", true) # mark response as read
+            end
           end
         end
       rescue => exception
         request_error!(exception)
+      end
+
+      if response.is_a?(Net::HTTPRedirection)
+        raise Down::TooManyRedirects if follows_remaining == 0
+
+        location = URI.parse(response["Location"])
+        location = uri + location if location.relative?
+
+        net_http_request(location, options, follows_remaining: follows_remaining - 1, &block)
       end
     end
 

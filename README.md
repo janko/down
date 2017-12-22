@@ -263,6 +263,10 @@ default maximum of 2 redirects will be followed, but you can change it via the
 Down::NetHttp.download("http://example.com/image.jpg")                   # 2 redirects allowed
 Down::NetHttp.download("http://example.com/image.jpg", max_redirects: 5) # 5 redirects allowed
 Down::NetHttp.download("http://example.com/image.jpg", max_redirects: 0) # 0 redirects allowed
+
+Down::NetHttp.open("http://example.com/image.jpg")                       # 2 redirects allowed
+Down::NetHttp.open("http://example.com/image.jpg", max_redirects: 5)     # 5 redirects allowed
+Down::NetHttp.open("http://example.com/image.jpg", max_redirects: 0)     # 0 redirects allowed
 ```
 
 #### Proxy

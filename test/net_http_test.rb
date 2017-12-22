@@ -243,6 +243,23 @@ describe Down do
       assert_operator Time.now - start, :<, 0.5
     end
 
+    it "follows redirects" do
+      io = Down::NetHttp.open("#{$httpbin}/redirect/1")
+      assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
+      io = Down::NetHttp.open("#{$httpbin}/redirect/2")
+      assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
+      assert_raises(Down::TooManyRedirects) { Down::NetHttp.open("#{$httpbin}/redirect/3") }
+
+      io = Down::NetHttp.open("#{$httpbin}/redirect/3", max_redirects: 3)
+      assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
+      assert_raises(Down::TooManyRedirects) { Down::NetHttp.open("#{$httpbin}/redirect/4", max_redirects: 3) }
+
+      io = Down::NetHttp.open("#{$httpbin}/absolute-redirect/1")
+      assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
+      io = Down::NetHttp.open("#{$httpbin}/relative-redirect/1")
+      assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
+    end
+
     it "returns content in encoding specified by charset" do
       io = Down::NetHttp.open("#{$httpbin}/stream/10")
       assert_equal Encoding::BINARY, io.read.encoding
@@ -321,10 +338,6 @@ describe Down do
 
       error = assert_raises(Down::ServerError) { Down::NetHttp.open("#{$httpbin}/status/500") }
       assert_equal "500 Internal Server Error", error.message
-      assert_kind_of Net::HTTPResponse, error.response
-
-      error = assert_raises(Down::ResponseError) { Down::NetHttp.open("#{$httpbin}/status/301") }
-      assert_equal "301 Moved Permanently", error.message
       assert_kind_of Net::HTTPResponse, error.response
     end
 
