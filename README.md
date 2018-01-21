@@ -247,10 +247,7 @@ some of open-uri's undesired behaviours:
 * allows you to limit maximum number of redirects
 
 On the other hand `Down::NetHttp.open` is implemented using Net::HTTP directly,
-as open-uri
-
-Since open-uri doesn't expose support for partial downloads,
-`Down::NetHttp.open` is implemented using `Net::HTTP` directly.
+as open-uri doesn't support downloading on-demand.
 
 #### Redirects
 
