@@ -66,7 +66,8 @@ module Down
 
       open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects)
 
-      tempfile = ensure_tempfile(open_uri_file)
+      tempfile = ensure_tempfile(open_uri_file, File.extname(open_uri_file.base_uri.path))
+      OpenURI::Meta.init tempfile, open_uri_file # add back open-uri methods
       tempfile.extend Down::NetHttp::DownloadedFile
 
       tempfile
@@ -132,25 +133,23 @@ module Down
       request_error!(exception)
     end
 
-    # Converts the open-uri result file into a Tempfile if it isn't already,
-    # and makes sure the Tempfile has the correct file extension.
-    def ensure_tempfile(open_uri_file)
-      extension = File.extname(open_uri_file.base_uri.path)
-      tempfile  = Tempfile.new(["down-net_http", extension], binmode: true)
+    # Converts the given IO into a Tempfile if it isn't one already (open-uri
+    # returns a StringIO when there is less than 10KB of content), and gives
+    # it the specified file extension.
+    def ensure_tempfile(io, extension)
+      tempfile = Tempfile.new(["down-net_http", extension], binmode: true)
 
-      if open_uri_file.is_a?(Tempfile)
+      if io.is_a?(Tempfile)
         # Windows requires file descriptors to be closed before files are moved
-        open_uri_file.close
+        io.close
         tempfile.close
-        FileUtils.mv open_uri_file.path, tempfile.path
-      else # open-uri returns a StringIO when there is less than 10KB of content
-        IO.copy_stream(open_uri_file, tempfile)
-        open_uri_file.close
+        FileUtils.mv io.path, tempfile.path
+      else
+        IO.copy_stream(io, tempfile)
+        io.close
       end
 
       tempfile.open
-      OpenURI::Meta.init tempfile, open_uri_file # adds open-uri methods
-
       tempfile
     end
 
