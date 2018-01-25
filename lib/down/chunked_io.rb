@@ -148,7 +148,7 @@ module Down
     def readpartial(length = nil, outbuf = nil)
       fail IOError, "closed stream" if closed?
 
-      data = outbuf.replace("").force_encoding(@encoding) if outbuf
+      data = outbuf.clear.force_encoding(@encoding) if outbuf
 
       if cache && !cache.eof?
         data = cache.read(length, outbuf)
