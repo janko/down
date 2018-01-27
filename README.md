@@ -423,7 +423,7 @@ wget.open("http://nature.com/forest.jpg")
 You can run tests with
 
 ```
-$ rake test
+$ bundle exec rake test
 ```
 
 The test suite pulls and runs [kennethreitz/httpbin] as a Docker container, so

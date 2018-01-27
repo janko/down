@@ -21,4 +21,4 @@ matrix:
 
 cache: bundler
 
-script: rake test
+script: bundle exec rake test
