@@ -1,3 +1,9 @@
+## 4.2.1 (2018-01-29)
+
+* Reduce memory allocation in `Down::ChunkedIO` by 10x when buffer string is used (@janko-m)
+
+* Reduce memory allocation in `Down::Http.download` by 10x.
+
 ## 4.2.0 (2017-12-22)
 
 * Handle `:max_redirects` in `Down::NetHttp#open` and follow up to 2 redirects by default (@janko-m)
