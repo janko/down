@@ -95,14 +95,6 @@ describe Down::ChunkedIO do
         io.rewind
         assert_equal Encoding::UTF_8, io.read.encoding
       end
-
-      it "doesn't modify chunks" do
-        chunks = ["ab", "c"]
-        io = chunked_io(chunks: chunks.each)
-        io.read
-        assert_equal "ab", chunks[0]
-        assert_equal "c",  chunks[1]
-      end
     end
 
     describe "with length" do
@@ -166,14 +158,6 @@ describe Down::ChunkedIO do
         assert_equal Encoding::UTF_8, io.read(1).encoding
         io.rewind
         assert_equal Encoding::UTF_8, io.read(1).encoding
-      end
-
-      it "doesn't modify chunks" do
-        chunks = ["ab", "c"]
-        io = chunked_io(chunks: chunks.each)
-        io.read(5)
-        assert_equal "ab", chunks[0]
-        assert_equal "c",  chunks[1]
       end
     end
 
@@ -261,14 +245,6 @@ describe Down::ChunkedIO do
         assert_equal Encoding::UTF_8, io.read(1, "").encoding
         io.rewind
         assert_equal Encoding::UTF_8, io.read(1, "").encoding
-      end
-
-      it "doesn't modify chunks" do
-        chunks = ["ab", "c"]
-        io = chunked_io(chunks: chunks.each)
-        io.read(5, "")
-        assert_equal "ab", chunks[0]
-        assert_equal "c",  chunks[1]
       end
     end
 

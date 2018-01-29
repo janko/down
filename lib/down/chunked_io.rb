@@ -182,6 +182,8 @@ module Down
         else
           @buffer = nil
         end
+
+        buffered_data.clear unless buffered_data.equal?(data)
       end
 
       @position += data.bytesize
