@@ -276,8 +276,8 @@ module Down
 
     # Creates a Fiber wrapper around the underlying enumerator. The advantage
     # of using a Fiber here is that we can terminate the chunk retrieval, in a
-    # way that executes any cleanup code that the enumerator carries. At the
-    # end of iteration the :on_close callback is executed if one was specified.
+    # way that executes any cleanup code that the enumerator potentially
+    # carries. At the end of iteration the :on_close callback is executed.
     def chunks_fiber
       @chunks_fiber ||= Fiber.new do
         begin
