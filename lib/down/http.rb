@@ -154,7 +154,7 @@ module Down
       private
 
       def content_type_header
-        ::HTTP::ContentType.parse(headers["Content-Type"])
+        HTTP::ContentType.parse(headers["Content-Type"])
       end
 
       def filename_from_content_disposition
@@ -165,7 +165,7 @@ module Down
       end
 
       def filename_from_url
-        path = URI(url).path
+        path = HTTP::URI.parse(url).path
         filename = path.split("/").last
         CGI.unescape(filename) if filename
       end
