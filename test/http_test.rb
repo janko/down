@@ -52,6 +52,11 @@ describe Down::Http do
       assert_equal 100, @progress.last
     end
 
+    it "accepts HTTP.rb options" do
+      tempfile = Down::Http.download("#{$httpbin}/user-agent", headers: {"User-Agent" => "Janko"})
+      assert_equal "Janko", JSON.parse(tempfile.read)["user-agent"]
+    end
+
     it "adds #headers and #url" do
       tempfile = Down::Http.download("#{$httpbin}/response-headers?Foo=Bar")
       assert_equal "Bar",                                  tempfile.headers["Foo"]

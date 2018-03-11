@@ -47,6 +47,14 @@ describe Down::Wget do
       assert_equal 100, @progress.last
     end
 
+    it "accepts wget options" do
+      tempfile = Down::Wget.download("#{$httpbin}/user-agent", user_agent: "Janko")
+      assert_equal "Janko", JSON.parse(tempfile.read)["user-agent"]
+
+      tempfile = Down::Wget.download("#{$httpbin}/anything", :method, "POST")
+      assert_equal "POST", JSON.parse(tempfile.read)["method"]
+    end
+
     it "infers file extension from url" do
       tempfile = Down::Wget.download("#{$httpbin}/robots.txt")
       assert_equal ".txt", File.extname(tempfile.path)
@@ -208,12 +216,19 @@ describe Down::Wget do
     it "accepts command-line arguments" do
       io = Down::Wget.open("#{$httpbin}/user-agent", user_agent: "Janko")
       assert_equal "Janko", JSON.parse(io.read)["user-agent"]
+
+      tempfile = Down::Wget.open("#{$httpbin}/anything", :method, "POST")
+      assert_equal "POST", JSON.parse(tempfile.read)["method"]
     end
 
     it "can set default arguments" do
       wget = Down::Wget.new(user_agent: "Janko")
       io = wget.open("#{$httpbin}/user-agent")
       assert_equal "Janko", JSON.parse(io.read)["user-agent"]
+
+      wget = Down::Wget.new(:method, "POST")
+      io = wget.open("#{$httpbin}/anything")
+      assert_equal "POST", JSON.parse(io.read)["method"]
     end
 
     it "raises on timeout errors" do

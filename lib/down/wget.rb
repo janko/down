@@ -20,7 +20,7 @@ module Down
     end
 
     def download(url, *args, max_size: nil, content_length_proc: nil, progress_proc: nil, destination: nil, **options)
-      io = open(url, **options, rewindable: false)
+      io = open(url, *args, **options, rewindable: false)
 
       content_length_proc.call(io.size) if content_length_proc && io.size
 
@@ -107,10 +107,12 @@ module Down
       command = %W[wget --no-verbose --save-headers -O -]
 
       options = @arguments.grep(Hash).inject({}, :merge).merge(options)
-      args    = @arguments.grep(Symbol) + args
+      args    = @arguments.grep(->(o){!o.is_a?(Hash)}) + args
 
       (args + options.to_a).each do |option, value|
-        if option.length == 1
+        if option.is_a?(String)
+          command << option
+        elsif option.length == 1
           command << "-#{option}"
         else
           command << "--#{option.to_s.gsub("_", "-")}"
