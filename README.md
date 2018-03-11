@@ -49,6 +49,17 @@ terminates the download very early, as soon as it gets the `Content-Length`
 header. And if the `Content-Length` header is missing, Down will terminate the
 download as soon as the downloaded content surpasses the maximum size.
 
+### Destination
+
+By default the remote file will be downloaded into a temporary location and
+returned as a `Tempfile`. If you would like the file to be downloaded to a
+specific location on disk, you can specify the `:destination` option:
+
+```rb
+Down.download("http://example.com/image.jpg", destination: "/path/to/destination")
+#=> nil
+```
+
 ### Basic authentication
 
 `Down.download` and `Down.open` will automatically detect and apply HTTP basic

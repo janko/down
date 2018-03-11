@@ -19,7 +19,7 @@ module Down
       @arguments = [max_redirect: 2, user_agent: "Down/#{Down::VERSION}"] + arguments
     end
 
-    def download(url, *args, max_size: nil, content_length_proc: nil, progress_proc: nil, **options)
+    def download(url, *args, max_size: nil, content_length_proc: nil, progress_proc: nil, destination: nil, **options)
       io = open(url, **options, rewindable: false)
 
       content_length_proc.call(io.size) if content_length_proc && io.size
@@ -47,7 +47,7 @@ module Down
       tempfile.url     = url
       tempfile.headers = io.data[:headers]
 
-      tempfile
+      download_result(tempfile, destination)
     rescue
       tempfile.close! if tempfile
       raise

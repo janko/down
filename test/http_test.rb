@@ -127,6 +127,13 @@ describe Down::Http do
       tempfile.headers["Content-Type"] = ""
       assert_nil tempfile.charset
     end
+
+    it "accepts download destination" do
+      tempfile = Tempfile.new
+      result = Down::Http.download("#{$httpbin}/bytes/#{20*1024}?seed=0", destination: tempfile.path)
+      assert_equal HTTP.get("#{$httpbin}/bytes/#{20*1024}?seed=0").to_s, File.binread(tempfile.path)
+      assert_nil result
+    end
   end
 
   describe "#open" do

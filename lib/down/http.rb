@@ -19,7 +19,7 @@ module Down
       @options = { headers: { "User-Agent" => "Down/#{Down::VERSION}" }, follow: { max_hops: 2 } }.merge(options)
     end
 
-    def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, **options, &block)
+    def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, **options, &block)
       io = open(url, **options, rewindable: false, &block)
 
       content_length_proc.call(io.size) if content_length_proc && io.size
@@ -47,7 +47,7 @@ module Down
       tempfile.url     = io.data[:response].uri.to_s
       tempfile.headers = io.data[:headers]
 
-      tempfile
+      download_result(tempfile, destination)
     rescue
       tempfile.close! if tempfile
       raise

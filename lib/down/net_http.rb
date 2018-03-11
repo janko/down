@@ -22,6 +22,7 @@ module Down
       max_redirects       = options.delete(:max_redirects)
       progress_proc       = options.delete(:progress_proc)
       content_length_proc = options.delete(:content_length_proc)
+      destination         = options.delete(:destination)
 
       open_uri_options = {
         content_length_proc: proc { |size|
@@ -70,7 +71,7 @@ module Down
       OpenURI::Meta.init tempfile, open_uri_file # add back open-uri methods
       tempfile.extend Down::NetHttp::DownloadedFile
 
-      tempfile
+      download_result(tempfile, destination)
     end
 
     def open(url, options = {})
