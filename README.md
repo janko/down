@@ -41,7 +41,7 @@ Down allows you to pass a `:max_size` option:
 
 ```rb
 Down.download("http://example.com/image.jpg", max_size: 5 * 1024 * 1024) # 5 MB
-# raises Down::TooLarge
+# !~> Down::TooLarge
 ```
 
 What is the advantage over simply checking size after downloading? Well, Down
