@@ -224,7 +224,6 @@ describe Down do
 
     it "raises on connection errors" do
       assert_raises(Down::ConnectionError) { Down::NetHttp.download("http://localhost:99999") }
-      assert_raises(Down::ConnectionError) { Down::NetHttp.download("#{$httpbin}/status/100") }
     end
 
     it "raises on timeout errors" do
