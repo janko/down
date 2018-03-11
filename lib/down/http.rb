@@ -32,7 +32,9 @@ module Down
       tempfile = Tempfile.new(["down-http", extname], binmode: true)
 
       until io.eof?
-        tempfile.write(io.readpartial(nil, buffer ||= String.new))
+        chunk = io.readpartial(nil, buffer ||= String.new)
+
+        tempfile.write(chunk)
 
         progress_proc.call(tempfile.size) if progress_proc
 
