@@ -1,3 +1,13 @@
+## 4.3.0 (2018-03-11)
+
+* Accept CLI arguments as a list of symbols in `Down::Wget#download` (@janko-m)
+
+* Avoid potential URL parsing errors in `Down::Http::DownloadedFile#filename_from_url` (@janko-m)
+
+* Make memory usage of `Down::Wget#download` constant (@janko-m)
+
+* Add `:destination` option to `Down.download` for specifying download destination (@janko-m)
+
 ## 4.2.1 (2018-01-29)
 
 * Reduce memory allocation in `Down::ChunkedIO` by 10x when buffer string is used (@janko-m)
