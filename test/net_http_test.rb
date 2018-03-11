@@ -200,7 +200,7 @@ describe Down do
     end
 
     it "accepts download destination" do
-      tempfile = Tempfile.new
+      tempfile = Tempfile.new("destination")
       result = Down::NetHttp.download("#{$httpbin}/bytes/#{20*1024}?seed=0", destination: tempfile.path)
       assert_equal HTTP.get("#{$httpbin}/bytes/#{20*1024}?seed=0").to_s, File.binread(tempfile.path)
       assert_nil result
