@@ -41,7 +41,7 @@ Down allows you to pass a `:max_size` option:
 
 ```rb
 Down.download("http://example.com/image.jpg", max_size: 5 * 1024 * 1024) # 5 MB
-# !~> Down::TooLarge
+# Down::TooLarge: file is too large (max is 5MB)
 ```
 
 What is the advantage over simply checking size after downloading? Well, Down
@@ -57,7 +57,6 @@ specific location on disk, you can specify the `:destination` option:
 
 ```rb
 Down.download("http://example.com/image.jpg", destination: "/path/to/destination")
-#=> nil
 ```
 
 ### Basic authentication
