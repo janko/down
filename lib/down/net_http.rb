@@ -12,7 +12,12 @@ require "cgi"
 module Down
   class NetHttp < Backend
     def initialize(options = {})
-      @options = { "User-Agent" => "Down/#{Down::VERSION}", max_redirects: 2 }.merge(options)
+      @options = {
+        "User-Agent" => "Down/#{Down::VERSION}",
+        max_redirects: 2,
+        open_timeout:  30,
+        read_timeout:  30,
+      }.merge(options)
     end
 
     def download(url, options = {})

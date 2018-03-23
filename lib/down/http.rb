@@ -15,8 +15,14 @@ end
 module Down
   class Http < Backend
     def initialize(client_or_options = {})
-      options  = client_or_options.is_a?(HTTP::Client) ? client_or_options.default_options : client_or_options
-      @options = { headers: { "User-Agent" => "Down/#{Down::VERSION}" }, follow: { max_hops: 2 } }.merge(options)
+      options = client_or_options.is_a?(HTTP::Client) ? client_or_options.default_options : client_or_options
+
+      @options = {
+        headers:         { "User-Agent" => "Down/#{Down::VERSION}" },
+        follow:          { max_hops: 2 },
+        timeout_class:   HTTP::Timeout::PerOperation,
+        timeout_options: { write: 30, connect: 30, read: 30 }
+      }.merge(options)
     end
 
     def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, **options, &block)

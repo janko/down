@@ -1,3 +1,7 @@
+## HEAD
+
+* Set default timeout of 30 for each operation to all backends (@janko-m)
+
 ## 4.3.0 (2018-03-11)
 
 * Accept CLI arguments as a list of symbols in `Down::Wget#download` (@janko-m)

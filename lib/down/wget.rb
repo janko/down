@@ -16,7 +16,13 @@ require "cgi"
 module Down
   class Wget < Backend
     def initialize(*arguments)
-      @arguments = [max_redirect: 2, user_agent: "Down/#{Down::VERSION}"] + arguments
+      @arguments = [
+        user_agent:      "Down/#{Down::VERSION}",
+        max_redirect:    2,
+        dns_timeout:     30,
+        connect_timeout: 30,
+        read_timeout:    30,
+      ] + arguments
     end
 
     def download(url, *args, max_size: nil, content_length_proc: nil, progress_proc: nil, destination: nil, **options)
