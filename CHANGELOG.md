@@ -1,4 +1,4 @@
-## HEAD
+## 4.4.0 (2018-04-12)
 
 * Add `:method` option to `Down::Http` for specifying the request method (@janko-m)
 
