@@ -21,7 +21,7 @@ module Down
         headers:         { "User-Agent" => "Down/#{Down::VERSION}" },
         follow:          { max_hops: 2 },
         timeout_class:   HTTP::Timeout::PerOperation,
-        timeout_options: { write: 30, connect: 30, read: 30 }
+        timeout_options: { write_timeout: 30, connect_timeout: 30, read_timeout: 30 }
       }.merge(options)
     end
 

@@ -354,7 +354,7 @@ Net::HTTP include:
 All additional options will be forwarded to `HTTP::Client#request`:
 
 ```rb
-Down::Http.download("http://example.org/image.jpg", timeout: { connect: 3 })
+Down::Http.download("http://example.org/image.jpg", headers: { "Foo" => "Bar" })
 Down::Http.open("http://example.org/image.jpg", follow: { max_hops: 0 })
 ```
 
@@ -369,7 +369,7 @@ end
 You can also initialize the backend with default options:
 
 ```rb
-http = Down::Http.new(timeout: { connect: 3 })
+http = Down::Http.new(headers: { "Foo" => "Bar" })
 # or
 http = Down::Http.new(HTTP.timeout(connect: 3))
 
