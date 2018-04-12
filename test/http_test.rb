@@ -4,6 +4,20 @@ require "http"
 require "json"
 
 describe Down::Http do
+  describe "#initialize" do
+    it "accepts request method" do
+      [:post, "POST"].each do |method|
+        down = Down::Http.new(method: method)
+
+        tempfile = down.download("#{$httpbin}/post")
+        assert_equal "Down/#{Down::VERSION}", JSON.parse(tempfile.read)["headers"]["User-Agent"]
+
+        io = down.open("#{$httpbin}/post")
+        assert_equal "Down/#{Down::VERSION}", JSON.parse(io.read)["headers"]["User-Agent"]
+      end
+    end
+  end
+
   describe "#download" do
     it "downloads content from url" do
       tempfile = Down::Http.download("#{$httpbin}/bytes/100?seed=0")
@@ -139,6 +153,13 @@ describe Down::Http do
       assert_equal HTTP.get("#{$httpbin}/bytes/#{20*1024}?seed=0").to_s, File.binread(tempfile.path)
       assert_nil result
     end
+
+    it "accepts request method" do
+      [:post, "POST"].each do |method|
+        tempfile = Down::Http.download("#{$httpbin}/post", method: method)
+        assert_equal "Down/#{Down::VERSION}", JSON.parse(tempfile.read)["headers"]["User-Agent"]
+      end
+    end
   end
 
   describe "#open" do
@@ -242,6 +263,13 @@ describe Down::Http do
       io = http.open("#{$httpbin}/stream-bytes/1000?chunk_size=10")
       HTTP::Connection.any_instance.expects(:close).never
       io.close
+    end
+
+    it "accepts request method" do
+      [:post, "POST"].each do |method|
+        io = Down::Http.open("#{$httpbin}/post", method: method)
+        assert_equal "Down/#{Down::VERSION}", JSON.parse(io.read)["headers"]["User-Agent"]
+      end
     end
 
     it "raises on HTTP error responses" do

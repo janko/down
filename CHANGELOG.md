@@ -1,5 +1,7 @@
 ## HEAD
 
+* Add `:method` option to `Down::Http` for specifying the request method (@janko-m)
+
 * Set default timeout of 30 for each operation to all backends (@janko-m)
 
 ## 4.3.0 (2018-03-11)

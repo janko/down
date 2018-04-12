@@ -377,6 +377,19 @@ http.download("http://example.com/image.jpg")
 http.open("http://example.com/image.jpg")
 ```
 
+#### Request method
+
+By default `Down::Http` makes a `GET` request to the specified endpoint, but you
+can specify a different request method using the `:method` option:
+
+```rb
+Down::Http.download("http://example.org/image.jpg", method: :post)
+Down::Http.open("http://example.org/image.jpg", method: :post)
+
+down = Down::Http.new(method: :post)
+down.download("http://example.org/image.jpg")
+```
+
 ### Wget (experimental)
 
 ```rb

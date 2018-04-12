@@ -15,8 +15,9 @@ end
 module Down
   class Http < Backend
     def initialize(client_or_options = {})
-      options = client_or_options.is_a?(HTTP::Client) ? client_or_options.default_options : client_or_options
+      options = client_or_options.is_a?(HTTP::Client) ? client_or_options.default_options.to_hash : client_or_options
 
+      @method  = options.delete(:method) || :get
       @options = {
         headers:         { "User-Agent" => "Down/#{Down::VERSION}" },
         follow:          { max_hops: 2 },
@@ -64,7 +65,7 @@ module Down
     end
 
     def open(url, rewindable: true, **options, &block)
-      response = get(url, **options, &block)
+      response = request(url, **options, &block)
 
       response_error!(response) unless response.status.success?
 
@@ -84,13 +85,13 @@ module Down
       @default_client ||= HTTP::Client.new(@options)
     end
 
-    def get(url, **options, &block)
+    def request(url, method: @method, **options, &block)
       url = process_url(url, options)
 
       client = default_client
       client = block.call(client) if block
 
-      client.get(url, options)
+      client.send(method.to_s.downcase, url, options)
     rescue => exception
       request_error!(exception)
     end
