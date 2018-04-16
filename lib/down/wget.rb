@@ -209,7 +209,8 @@ module Down
       attr_accessor :url, :headers
 
       def original_filename
-        filename_from_content_disposition || filename_from_url
+        Utils.filename_from_content_disposition(headers["Content-Disposition"]) ||
+        Utils.filename_from_path(URI.parse(url).path)
       end
 
       def content_type
@@ -218,21 +219,6 @@ module Down
 
       def charset
         headers["Content-Type"].to_s[/;\s*charset=([^;]+)/i, 1]
-      end
-
-      private
-
-      def filename_from_content_disposition
-        content_disposition = headers["Content-Disposition"].to_s
-        filename = content_disposition[/filename="([^"]*)"/, 1] || content_disposition[/filename=(.+)/, 1]
-        filename = CGI.unescape(filename.to_s.strip)
-        filename unless filename.empty?
-      end
-
-      def filename_from_url
-        path = URI(url).path
-        filename = path.split("/").last
-        CGI.unescape(filename) if filename
       end
     end
   end

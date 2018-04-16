@@ -3,6 +3,7 @@
 require "down/version"
 require "down/chunked_io"
 require "down/errors"
+require "down/utils"
 
 require "fileutils"
 

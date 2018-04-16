@@ -147,34 +147,16 @@ module Down
       attr_accessor :url, :headers
 
       def original_filename
-        filename_from_content_disposition || filename_from_url
+        Utils.filename_from_content_disposition(headers["Content-Disposition"]) ||
+        Utils.filename_from_path(HTTP::URI.parse(url).path)
       end
 
       def content_type
-        content_type_header.mime_type
+        HTTP::ContentType.parse(headers["Content-Type"]).mime_type
       end
 
       def charset
-        content_type_header.charset
-      end
-
-      private
-
-      def content_type_header
-        HTTP::ContentType.parse(headers["Content-Type"])
-      end
-
-      def filename_from_content_disposition
-        content_disposition = headers["Content-Disposition"].to_s
-        filename = content_disposition[/filename="([^"]*)"/, 1] || content_disposition[/filename=(.+)/, 1]
-        filename = CGI.unescape(filename.to_s.strip)
-        filename unless filename.empty?
-      end
-
-      def filename_from_url
-        path = HTTP::URI.parse(url).path
-        filename = path.split("/").last
-        CGI.unescape(filename) if filename
+        HTTP::ContentType.parse(headers["Content-Type"]).charset
       end
     end
   end

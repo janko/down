@@ -266,26 +266,12 @@ module Down
 
     module DownloadedFile
       def original_filename
-        filename_from_content_disposition || filename_from_uri
+        Utils.filename_from_content_disposition(meta["content-disposition"]) ||
+        Utils.filename_from_path(base_uri.path)
       end
 
       def content_type
         super unless meta["content-type"].to_s.empty?
-      end
-
-      private
-
-      def filename_from_content_disposition
-        content_disposition = meta["content-disposition"].to_s
-        filename = content_disposition[/filename="([^"]*)"/, 1] || content_disposition[/filename=(.+)/, 1]
-        filename = CGI.unescape(filename.to_s.strip)
-        filename unless filename.empty?
-      end
-
-      def filename_from_uri
-        path = base_uri.path
-        filename = path.split("/").last
-        CGI.unescape(filename) if filename
       end
     end
   end
