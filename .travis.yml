@@ -19,6 +19,7 @@ matrix:
     - rvm: ruby-head
     - rvm: jruby-head
 
-cache: bundler
+# Doesn't currently work with MRI 2.5.1: https://github.com/travis-ci/travis-ci/issues/8978
+# cache: bundler
 
 script: bundle exec rake test
