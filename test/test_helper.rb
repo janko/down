@@ -4,7 +4,7 @@ require "minitest"
 require "minitest/spec"
 require "minitest/pride"
 
-require "mocha/mini_test"
+require "mocha/minitest"
 
 require "docker-api"
 require "http"
