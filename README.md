@@ -7,7 +7,7 @@ HTTP library.
 ## Installation
 
 ```rb
-gem "down"
+gem "down", "~> 4.4"
 ```
 
 ## Downloading
@@ -235,7 +235,7 @@ Down.open("...")
 ### open-uri + Net::HTTP
 
 ```rb
-gem "down", ">= 3.0"
+gem "down", "~> 4.4"
 ```
 ```rb
 require "down/net_http"
@@ -327,8 +327,8 @@ net_http.open("http://example.com/image.jpg")
 ### HTTP.rb
 
 ```rb
-gem "down", ">= 3.0"
-gem "http", "~> 2.1"
+gem "down", "~> 4.4"
+gem "http", "~> 3.2"
 ```
 ```rb
 require "down/http"
@@ -340,9 +340,10 @@ io = Down::Http.open("http://nature.com/forest.jpg")
 io #=> #<Down::ChunkedIO ...>
 ```
 
-Some features that give the HTTP.rb backend an advantage over open-uri +
-Net::HTTP include:
+Some features that give the HTTP.rb backend an advantage over `open-uri` +
+`Net::HTTP` include:
 
+* Low memory usage (**10x less** than `open-uri`/`Net::HTTP`)
 * Correct URI parsing with [Addressable::URI]
 * Proper support for streaming downloads (`#download` and now reuse `#open`)
 * Proper support for SSL
@@ -393,7 +394,7 @@ down.download("http://example.org/image.jpg")
 ### Wget (experimental)
 
 ```rb
-gem "down", ">= 3.0"
+gem "down", "~> 4.4"
 gem "posix-spawn" # omit if on JRuby
 gem "http_parser.rb"
 ```
