@@ -1,5 +1,7 @@
 # frozen-string-literal: true
 
+gem "http", ">= 2.1.0", "< 4"
+
 require "http"
 
 require "down/backend"
@@ -7,10 +9,6 @@ require "down/backend"
 require "tempfile"
 require "cgi"
 require "base64"
-
-if Gem::Version.new(HTTP::VERSION) < Gem::Version.new("2.1.0")
-  fail "Down::Http requires HTTP.rb version 2.1.0 or higher"
-end
 
 module Down
   class Http < Backend
