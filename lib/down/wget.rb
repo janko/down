@@ -1,9 +1,9 @@
 # frozen-string-literal: true
 
-if RUBY_ENGINE == "jruby"
-  require "open3"
-else
+begin
   require "posix-spawn"
+rescue LoadError
+  require "open3"
 end
 require "http_parser"
 
