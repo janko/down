@@ -116,6 +116,12 @@ describe Down::ChunkedIO do
         assert_equal "abc", io.read(4)
       end
 
+      it "returns empty string when length is zero" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        assert_equal "",    io.read(0)
+        assert_equal "abc", io.read
+      end
+
       it "reads from cache" do
         io = chunked_io(chunks: ["ab", "c"].each)
         io.read(1)
@@ -197,6 +203,14 @@ describe Down::ChunkedIO do
       it "reads as much as it can read" do
         io = chunked_io(chunks: ["ab", "c"].each)
         assert_equal "abc", io.read(4, "")
+      end
+
+      it "returns empty string when length is zero" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        buffer = ""
+        assert_equal "",               io.read(0, buffer)
+        assert_equal buffer.object_id, io.read(0, buffer).object_id
+        assert_equal "abc", io.read
       end
 
       it "reads from cache" do
@@ -377,6 +391,12 @@ describe Down::ChunkedIO do
         assert_equal "b", io.readpartial(3)
       end
 
+      it "returns empty string when length is zero" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        assert_equal "",    io.readpartial(0)
+        assert_equal "abc", io.read
+      end
+
       it "reads available data from cache" do
         io = chunked_io(chunks: ["abc"].each)
         io.readpartial(3)
@@ -434,6 +454,14 @@ describe Down::ChunkedIO do
         io.rewind
         assert_equal buffer.object_id, io.readpartial(1, buffer).object_id
         assert_equal buffer.object_id, io.readpartial(2, buffer).object_id
+      end
+
+      it "returns empty string when length is zero" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        buffer = ""
+        assert_equal "",               io.readpartial(0, buffer)
+        assert_equal buffer.object_id, io.readpartial(0, buffer).object_id
+        assert_equal "abc", io.read
       end
 
       it "reads available data from cache" do

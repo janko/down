@@ -1,5 +1,7 @@
 ## HEAD
 
+* Return empty string when length is zero in `ChunkedIO#read` and `ChunkedIO#readpartial` (@janko-m)
+
 * Make `posix-spawn` optional (@janko-m)
 
 ## 4.4.0 (2018-04-12)

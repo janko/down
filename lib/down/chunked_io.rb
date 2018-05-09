@@ -77,7 +77,7 @@ module Down
         remaining_length = length - data.bytesize if length
       end
 
-      data.to_s unless length && (data.nil? || data.empty?)
+      data.to_s unless length && length > 0 && (data.nil? || data.empty?)
     end
 
     # Implements IO#gets semantics. Without arguments it retrieves lines of
@@ -149,6 +149,8 @@ module Down
       fail IOError, "closed stream" if closed?
 
       data = outbuf.clear.force_encoding(@encoding) if outbuf
+
+      return data.to_s if length == 0
 
       if cache && !cache.eof?
         data = cache.read(length, outbuf)
