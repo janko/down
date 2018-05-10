@@ -25,21 +25,20 @@ module Down
     end
 
     def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, **options, &block)
-      io = open(url, **options, rewindable: false, &block)
+      response = request(url, **options, &block)
 
-      content_length_proc.call(io.size) if content_length_proc && io.size
+      content_length_proc.call(response.content_length) if content_length_proc && response.content_length
 
-      if max_size && io.size && io.size > max_size
+      if max_size && response.content_length && response.content_length > max_size
         raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
       end
 
-      extname  = File.extname(io.data[:response].uri.path)
+      extname  = File.extname(response.uri.path)
       tempfile = Tempfile.new(["down-http", extname], binmode: true)
 
-      until io.eof?
-        chunk = io.readpartial(nil, buffer ||= String.new)
-
+      stream_body(response) do |chunk|
         tempfile.write(chunk)
+        chunk.clear # deallocate string
 
         progress_proc.call(tempfile.size) if progress_proc
 
@@ -51,28 +50,23 @@ module Down
       tempfile.open # flush written content
 
       tempfile.extend Down::Http::DownloadedFile
-      tempfile.url     = io.data[:response].uri.to_s
-      tempfile.headers = io.data[:headers]
+      tempfile.url     = response.uri.to_s
+      tempfile.headers = response.headers.to_h
 
       download_result(tempfile, destination)
     rescue
       tempfile.close! if tempfile
       raise
-    ensure
-      io.close if io
     end
 
     def open(url, rewindable: true, **options, &block)
       response = request(url, **options, &block)
-
-      response_error!(response) unless response.status.success?
 
       Down::ChunkedIO.new(
         chunks:     enum_for(:stream_body, response),
         size:       response.content_length,
         encoding:   response.content_type.charset,
         rewindable: rewindable,
-        on_close:   (-> { response.connection.close } unless default_client.persistent?),
         data:       { status: response.code, headers: response.headers.to_h, response: response },
       )
     end
@@ -84,12 +78,18 @@ module Down
     end
 
     def request(url, method: @method, **options, &block)
+      response = send_request(method, url, **options, &block)
+      response_error!(response) unless response.status.success?
+      response
+    end
+
+    def send_request(method, url, **options, &block)
       url = process_url(url, options)
 
       client = default_client
       client = block.call(client) if block
 
-      client.send(method.to_s.downcase, url, options)
+      client.request(method, url, options)
     rescue => exception
       request_error!(exception)
     end
@@ -98,6 +98,8 @@ module Down
       response.body.each(&block)
     rescue => exception
       request_error!(exception)
+    ensure
+      response.connection.close unless default_client.persistent?
     end
 
     def process_url(url, options)
