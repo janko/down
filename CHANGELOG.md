@@ -1,4 +1,4 @@
-## HEAD
+## 4.5.0 (2018-05-11)
 
 * Deprecate passing an `HTTP::Client` object to `Down::Http#initialize` (@janko-m)
 
