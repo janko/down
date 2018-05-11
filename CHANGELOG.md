@@ -1,5 +1,9 @@
 ## HEAD
 
+* Deprecate passing an `HTTP::Client` object to `Down::Http#initialize` (@janko-m)
+
+* Add ability to pass a block to `Down::Http#initialize` for extending default options (@janko-m)
+
 * Return empty string when length is zero in `ChunkedIO#read` and `ChunkedIO#readpartial` (@janko-m)
 
 * Make `posix-spawn` optional (@janko-m)

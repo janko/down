@@ -5,6 +5,22 @@ require "json"
 
 describe Down::Http do
   describe "#initialize" do
+    it "accepts a hash for overriding options" do
+      down = Down::Http.new(headers: { "Foo" => "Bar" })
+      tempfile = down.download("#{$httpbin}/headers")
+      headers = JSON.parse(tempfile.read)["headers"]
+      assert_equal "Bar",                   headers["Foo"]
+      assert_equal "Down/#{Down::VERSION}", headers["User-Agent"]
+    end
+
+    it "accepts a block for overriding options" do
+      down = Down::Http.new { |client| client.headers("Foo" => "Bar") }
+      tempfile = down.download("#{$httpbin}/headers")
+      headers = JSON.parse(tempfile.read)["headers"]
+      assert_equal "Bar",                   headers["Foo"]
+      assert_equal "Down/#{Down::VERSION}", headers["User-Agent"]
+    end
+
     it "accepts request method" do
       [:post, "POST"].each do |method|
         down = Down::Http.new(method: method)
@@ -236,16 +252,6 @@ describe Down::Http do
       assert_equal "Janko", JSON.parse(io.read)["user-agent"]
     end
 
-    it "can set default options" do
-      http = Down::Http.new(headers: {"User-Agent" => "Janko"})
-      io = http.open("#{$httpbin}/user-agent")
-      assert_equal "Janko", JSON.parse(io.read)["user-agent"]
-
-      http = Down::Http.new(HTTP.headers("User-Agent" => "Janko"))
-      io = http.open("#{$httpbin}/user-agent")
-      assert_equal "Janko", JSON.parse(io.read)["user-agent"]
-    end
-
     it "closes the connection when content has been read" do
       io = Down::Http.open("#{$httpbin}/stream-bytes/1000?chunk_size=10")
       HTTP::Connection.any_instance.expects(:close)
@@ -259,7 +265,7 @@ describe Down::Http do
     end
 
     it "doesn't close a persistent connection" do
-      http = Down::Http.new(HTTP.persistent($httpbin))
+      http = Down::Http.new { |client| client.persistent($httpbin) }
       io = http.open("#{$httpbin}/stream-bytes/1000?chunk_size=10")
       HTTP::Connection.any_instance.expects(:close).never
       io.close

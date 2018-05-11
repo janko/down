@@ -12,16 +12,20 @@ require "base64"
 
 module Down
   class Http < Backend
-    def initialize(client_or_options = {})
-      options = client_or_options.is_a?(HTTP::Client) ? client_or_options.default_options.to_hash : client_or_options
+    def initialize(options = {}, &block)
+      if options.is_a?(HTTP::Client)
+        warn "[Down] Passing an HTTP::Client object to Down::Http#initialize is deprecated and won't be supported in Down 5. Use the block initialization instead."
+        options = options.default_options.to_hash
+      end
 
-      @method  = options.delete(:method) || :get
-      @options = {
-        headers:         { "User-Agent" => "Down/#{Down::VERSION}" },
-        follow:          { max_hops: 2 },
-        timeout_class:   HTTP::Timeout::PerOperation,
-        timeout_options: { write_timeout: 30, connect_timeout: 30, read_timeout: 30 }
-      }.merge(options)
+      @method = options.delete(:method) || :get
+      @client = HTTP
+        .headers("User-Agent" => "Down/#{Down::VERSION}")
+        .follow(max_hops: 2)
+        .timeout(connect: 30, write: 30, read: 30)
+
+      @client = HTTP::Client.new(@client.default_options.merge(options)) if options.any?
+      @client = block.call(@client) if block
     end
 
     def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, **options, &block)
@@ -73,10 +77,6 @@ module Down
 
     private
 
-    def default_client
-      @default_client ||= HTTP::Client.new(@options)
-    end
-
     def request(url, method: @method, **options, &block)
       response = send_request(method, url, **options, &block)
       response_error!(response) unless response.status.success?
@@ -86,7 +86,7 @@ module Down
     def send_request(method, url, **options, &block)
       url = process_url(url, options)
 
-      client = default_client
+      client = @client
       client = block.call(client) if block
 
       client.request(method, url, options)
@@ -99,7 +99,7 @@ module Down
     rescue => exception
       request_error!(exception)
     ensure
-      response.connection.close unless default_client.persistent?
+      response.connection.close unless @client.persistent?
     end
 
     def process_url(url, options)

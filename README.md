@@ -372,7 +372,7 @@ You can also initialize the backend with default options:
 ```rb
 http = Down::Http.new(headers: { "Foo" => "Bar" })
 # or
-http = Down::Http.new(HTTP.timeout(connect: 3))
+http = Down::Http.new { |client| client.timeout(connect: 3) }
 
 http.download("http://example.com/image.jpg")
 http.open("http://example.com/image.jpg")
