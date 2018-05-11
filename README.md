@@ -345,9 +345,8 @@ Some features that give the HTTP.rb backend an advantage over `open-uri` +
 
 * Low memory usage (**10x less** than `open-uri`/`Net::HTTP`)
 * Correct URI parsing with [Addressable::URI]
-* Proper support for streaming downloads (`#download` and now reuse `#open`)
-* Proper support for SSL
-* Chaninable HTTP client builder API for setting default options
+* Proper SSL support
+* Chaninable builder API for setting default options
 * Support for persistent connections
 
 #### Additional options
