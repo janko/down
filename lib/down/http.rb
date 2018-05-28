@@ -8,7 +8,6 @@ require "down/backend"
 
 require "tempfile"
 require "cgi"
-require "base64"
 
 module Down
   class Http < Backend
@@ -84,9 +83,10 @@ module Down
     end
 
     def send_request(method, url, **options, &block)
-      url = process_url(url, options)
+      uri = HTTP::URI.parse(url)
 
       client = @client
+      client = client.basic_auth(user: uri.user, pass: uri.password) if uri.user || uri.password
       client = block.call(client) if block
 
       client.request(method, url, options)
@@ -100,20 +100,6 @@ module Down
       request_error!(exception)
     ensure
       response.connection.close unless @client.persistent?
-    end
-
-    def process_url(url, options)
-      uri = HTTP::URI.parse(url)
-
-      if uri.user || uri.password
-        user, pass = uri.user, uri.password
-        authorization = "Basic #{Base64.strict_encode64("#{user}:#{pass}")}"
-        options[:headers] ||= {}
-        options[:headers].merge!("Authorization" => authorization)
-        uri.user = uri.password = nil
-      end
-
-      uri.to_s
     end
 
     def response_error!(response)
