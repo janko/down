@@ -11,7 +11,6 @@ require "down/backend"
 
 require "tempfile"
 require "uri"
-require "cgi"
 
 module Down
   class Wget < Backend

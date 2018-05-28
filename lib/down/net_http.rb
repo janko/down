@@ -7,7 +7,6 @@ require "down/backend"
 
 require "tempfile"
 require "fileutils"
-require "cgi"
 
 module Down
   class NetHttp < Backend

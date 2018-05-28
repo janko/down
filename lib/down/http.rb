@@ -7,7 +7,6 @@ require "http"
 require "down/backend"
 
 require "tempfile"
-require "cgi"
 
 module Down
   class Http < Backend
