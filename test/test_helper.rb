@@ -32,7 +32,7 @@ rescue Docker::Error::NotFoundError
     "Image" => image,
     "HostConfig" => {
       "PortBindings" => {
-        "#{port}/tcp" => [{ "HostPort" => port.to_s }]
+        "80/tcp" => [{ "HostPort" => port.to_s }]
       }
     }
   )
