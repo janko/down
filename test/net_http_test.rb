@@ -67,28 +67,25 @@ describe Down do
 
     it "accepts max size" do
       assert_raises(Down::TooLarge) do
-        Down::NetHttp.download("#{$httpbin}/response-headers?Content-Length=5", max_size: 4)
-      end
-      assert_raises(Down::TooLarge) do
-        Down::NetHttp.download("#{$httpbin}/response-headers?Content-Length=5", max_size: 4, content_length_proc: ->(n){})
+        Down::NetHttp.download("#{$httpbin}/bytes/10", max_size: 5)
       end
 
       assert_raises(Down::TooLarge) do
-        Down::NetHttp.download("#{$httpbin}/stream-bytes/100", max_size: 50)
-      end
-      assert_raises(Down::TooLarge) do
-        Down::NetHttp.download("#{$httpbin}/stream-bytes/100", max_size: 50, progress_proc: ->(n){})
+        Down::NetHttp.download("#{$httpbin}/stream-bytes/10", max_size: 5)
       end
 
-      tempfile = Down::NetHttp.download("#{$httpbin}/response-headers?Content-Length=5", max_size: 6)
+      tempfile = Down::NetHttp.download("#{$httpbin}/bytes/10", max_size: 10)
+      assert File.exist?(tempfile.path)
+
+      tempfile = Down::NetHttp.download("#{$httpbin}/stream-bytes/10", max_size: 15)
       assert File.exist?(tempfile.path)
     end
 
     it "accepts content length proc" do
-      Down::NetHttp.download "#{$httpbin}/response-headers?Content-Length=10",
+      Down::NetHttp.download "#{$httpbin}/bytes/100",
         content_length_proc: ->(n) { @content_length = n }
 
-      assert_equal 10, @content_length
+      assert_equal 100, @content_length
     end
 
     it "accepts progress proc" do

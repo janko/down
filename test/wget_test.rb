@@ -23,14 +23,17 @@ describe Down::Wget do
 
     it "accepts maximum size" do
       assert_raises(Down::TooLarge) do
-        Down::Wget.download("#{$httpbin}/response-headers?Content-Length=5", max_size: 4)
+        Down::Wget.download("#{$httpbin}/bytes/10", max_size: 5)
       end
 
       assert_raises(Down::TooLarge) do
-        Down::Wget.download("#{$httpbin}/stream-bytes/100", max_size: 50)
+        Down::Wget.download("#{$httpbin}/stream-bytes/10", max_size: 5)
       end
 
-      tempfile = Down::Wget.download("#{$httpbin}/response-headers?Content-Length=5", max_size: 6)
+      tempfile = Down::Wget.download("#{$httpbin}/bytes/10", max_size: 10)
+      assert File.exist?(tempfile.path)
+
+      tempfile = Down::Wget.download("#{$httpbin}/stream-bytes/10", max_size: 15)
       assert File.exist?(tempfile.path)
     end
 

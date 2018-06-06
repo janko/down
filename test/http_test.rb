@@ -47,14 +47,17 @@ describe Down::Http do
 
     it "accepts maximum size" do
       assert_raises(Down::TooLarge) do
-        Down::Http.download("#{$httpbin}/response-headers?Content-Length=5", max_size: 4)
+        Down::Http.download("#{$httpbin}/bytes/10", max_size: 5)
       end
 
       assert_raises(Down::TooLarge) do
-        Down::Http.download("#{$httpbin}/stream-bytes/100", max_size: 50)
+        Down::Http.download("#{$httpbin}/stream-bytes/10", max_size: 5)
       end
 
-      tempfile = Down::Http.download("#{$httpbin}/response-headers?Content-Length=5", max_size: 6)
+      tempfile = Down::Http.download("#{$httpbin}/bytes/10", max_size: 10)
+      assert File.exist?(tempfile.path)
+
+      tempfile = Down::Http.download("#{$httpbin}/stream-bytes/10", max_size: 15)
       assert File.exist?(tempfile.path)
     end
 
