@@ -358,11 +358,12 @@ Down::Http.download("http://example.org/image.jpg", headers: { "Foo" => "Bar" })
 Down::Http.open("http://example.org/image.jpg", follow: { max_hops: 0 })
 ```
 
-If you prefer to add options using the chainable API, you can pass a block:
+However, it's recommended to configure request options using http.rb's
+chainable API, as it's more convenient than passing raw options.
 
 ```rb
 Down::Http.open("http://example.org/image.jpg") do |client|
-  client.timeout(connect: 3)
+  client.timeout(connect: 3, read: 3)
 end
 ```
 
