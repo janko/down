@@ -1,3 +1,7 @@
+## HEAD
+
+* Raise `ResponseError` with clear message when redirect URI was invalid in Down::NetHttp (@janko-m)
+
 ## 4.5.0 (2018-05-11)
 
 * Deprecate passing an `HTTP::Client` object to `Down::Http#initialize` (@janko-m)

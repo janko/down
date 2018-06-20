@@ -133,6 +133,10 @@ module Down
         values.each { |value| response.add_field(name, value) }
       end
 
+      if exception.message.include?("(Invalid Location URI)")
+        raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response: response)
+      end
+
       response_error!(response)
     rescue => exception
       request_error!(exception)
@@ -177,7 +181,12 @@ module Down
       if response.is_a?(Net::HTTPRedirection)
         raise Down::TooManyRedirects if follows_remaining == 0
 
-        location = URI.parse(response["Location"])
+        begin
+          location = URI.parse(response["Location"])
+        rescue URI::InvalidURIError
+          raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response: response)
+        end
+
         location = uri + location if location.relative?
 
         net_http_request(location, options, follows_remaining: follows_remaining - 1, &block)
