@@ -364,7 +364,9 @@ describe Down do
     end
 
     it "re-raises other exceptions" do
-      assert_raises(TypeError) { Down::NetHttp.open($httpbin, read_timeout: "foo") }
+      TCPSocket.expects(:open).raises(ArgumentError)
+
+      assert_raises(ArgumentError) { Down::NetHttp.open($httpbin) }
     end
   end
 end
