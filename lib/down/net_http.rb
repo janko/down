@@ -27,6 +27,7 @@ module Down
       progress_proc       = options.delete(:progress_proc)
       content_length_proc = options.delete(:content_length_proc)
       destination         = options.delete(:destination)
+      tmpdir              = options.delete(:tmpdir)
 
       open_uri_options = {
         content_length_proc: proc { |size|
@@ -71,7 +72,7 @@ module Down
 
       open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects)
 
-      tempfile = ensure_tempfile(open_uri_file, File.extname(open_uri_file.base_uri.path))
+      tempfile = ensure_tempfile(open_uri_file, File.extname(open_uri_file.base_uri.path), tmpdir)
       OpenURI::Meta.init tempfile, open_uri_file # add back open-uri methods
       tempfile.extend Down::NetHttp::DownloadedFile
 
@@ -145,8 +146,10 @@ module Down
     # Converts the given IO into a Tempfile if it isn't one already (open-uri
     # returns a StringIO when there is less than 10KB of content), and gives
     # it the specified file extension.
-    def ensure_tempfile(io, extension)
-      tempfile = Tempfile.new(["down-net_http", extension], binmode: true)
+    def ensure_tempfile(io, extension, tmpdir = nil)
+      init_tempfile_args = [["down-net_http", extension]]
+      init_tempfile_args << Dir.mktmpdir(tmpdir) unless tmpdir.nil?
+      tempfile = Tempfile.new(*init_tempfile_args, binmode: true)
 
       if io.is_a?(Tempfile)
         # Windows requires file descriptors to be closed before files are moved
