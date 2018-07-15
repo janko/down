@@ -113,7 +113,7 @@ module Down
     private
 
     def open_uri(uri, options, follows_remaining: 0)
-      downloaded_file = uri.open(options)
+      uri.open(options)
     rescue OpenURI::HTTPRedirect => exception
       raise Down::TooManyRedirects, "too many redirects" if follows_remaining == 0
 
