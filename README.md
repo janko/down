@@ -24,8 +24,8 @@ tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/2015092
 
 ### Metadata
 
-The returned Tempfile has `#content_type` and `#original_filename` attributes
-determined from the response headers:
+The returned Tempfile has some additional attributes extracted from the
+response data:
 
 ```rb
 tempfile.content_type      #=> "text/plain"
