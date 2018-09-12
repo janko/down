@@ -219,6 +219,10 @@ describe Down do
       assert_raises(Down::InvalidUrl) { Down::NetHttp.download("| ls") }
     end
 
+    it "raises on invalid redirect url" do
+      assert_raises(Down::InvalidUrl) { Down::NetHttp.download("#{$httpbin}/redirect-to?url=#{CGI.escape("ftp://localhost/file.txt")}") }
+    end
+
     it "raises on connection errors" do
       assert_raises(Down::ConnectionError) { Down::NetHttp.download("http://localhost:99999") }
     end
@@ -347,6 +351,10 @@ describe Down do
     it "raises on invalid URLs" do
       assert_raises(Down::InvalidUrl) { Down::NetHttp.open("http:\\example.org") }
       assert_raises(Down::InvalidUrl) { Down::NetHttp.open("foo://example.org") }
+    end
+
+    it "raises on invalid redirect url" do
+      assert_raises(Down::InvalidUrl) { Down::NetHttp.open("#{$httpbin}/redirect-to?url=#{CGI.escape("ftp://localhost/file.txt")}") }
     end
 
     it "raises on connection errors" do

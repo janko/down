@@ -117,7 +117,7 @@ module Down
     rescue OpenURI::HTTPRedirect => exception
       raise Down::TooManyRedirects, "too many redirects" if follows_remaining == 0
 
-      uri = exception.uri
+      uri = ensure_uri(exception.uri)
 
       if !exception.io.meta["set-cookie"].to_s.empty?
         options["Cookie"] = exception.io.meta["set-cookie"]
@@ -189,7 +189,7 @@ module Down
 
         location = uri + location if location.relative?
 
-        net_http_request(location, options, follows_remaining: follows_remaining - 1, &block)
+        net_http_request(ensure_uri(location), options, follows_remaining: follows_remaining - 1, &block)
       end
     end
 
