@@ -117,8 +117,16 @@ module Down
     rescue OpenURI::HTTPRedirect => exception
       raise Down::TooManyRedirects, "too many redirects" if follows_remaining == 0
 
-      uri = ensure_uri(exception.uri)
+      # fail if redirect URI scheme is not http or https
+      begin
+        uri = ensure_uri(exception.uri)
+      rescue Down::InvalidUrl
+        response = rebuild_response_from_open_uri_exception(exception)
 
+        raise ResponseError.new("Invalid Redirect URI: #{exception.uri}", response: response)
+      end
+
+      # forward cookies on the redirect
       if !exception.io.meta["set-cookie"].to_s.empty?
         options["Cookie"] = exception.io.meta["set-cookie"]
       end
@@ -126,13 +134,9 @@ module Down
       follows_remaining -= 1
       retry
     rescue OpenURI::HTTPError => exception
-      code, message = exception.io.status
-      response_class = Net::HTTPResponse::CODE_TO_OBJ.fetch(code)
-      response = response_class.new(nil, code, message)
-      exception.io.metas.each do |name, values|
-        values.each { |value| response.add_field(name, value) }
-      end
+      response = rebuild_response_from_open_uri_exception(exception)
 
+      # open-uri attempts to parse the redirect URI, so we re-raise that exception
       if exception.message.include?("(Invalid Location URI)")
         raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response: response)
       end
@@ -181,15 +185,17 @@ module Down
       if response.is_a?(Net::HTTPRedirection)
         raise Down::TooManyRedirects if follows_remaining == 0
 
+        # fail if redirect URI is not a valid http or https URL
         begin
-          location = URI.parse(response["Location"])
-        rescue URI::InvalidURIError
+          location = ensure_uri(response["Location"], allow_relative: true)
+        rescue Down::InvalidUrl
           raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response: response)
         end
 
+        # handle relative redirects
         location = uri + location if location.relative?
 
-        net_http_request(ensure_uri(location), options, follows_remaining: follows_remaining - 1, &block)
+        net_http_request(location, options, follows_remaining: follows_remaining - 1, &block)
       end
     end
 
@@ -236,12 +242,35 @@ module Down
       request_error!(exception)
     end
 
-    def ensure_uri(url)
-      uri = URI(url)
-      raise Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
+    # Checks that the url is a valid URI and that it's http or https.
+    def ensure_uri(url, allow_relative: false)
+      begin
+        uri = URI(url)
+      rescue URI::InvalidURIError => exception
+        raise Down::InvalidUrl, exception.message
+      end
+
+      unless allow_relative && uri.relative?
+        raise Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
+      end
+
       uri
-    rescue URI::InvalidURIError => exception
-      raise Down::InvalidUrl, exception.message
+    end
+
+    # When open-uri raises an exception, it doesn't expose the response object.
+    # Fortunately, the exception object holds response data that can be used to
+    # rebuild the Net::HTTP response object.
+    def rebuild_response_from_open_uri_exception(exception)
+      code, message = exception.io.status
+
+      response_class = Net::HTTPResponse::CODE_TO_OBJ.fetch(code)
+      response       = response_class.new(nil, code, message)
+
+      exception.io.metas.each do |name, values|
+        values.each { |value| response.add_field(name, value) }
+      end
+
+      response
     end
 
     def response_error!(response)
