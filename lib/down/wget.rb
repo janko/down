@@ -187,7 +187,7 @@ module Down
       def terminate
         begin
           Process.kill("TERM", @status_reaper[:pid])
-          # TODO: wait for the status
+          Process.waitpid(@status_reaper[:pid])
         rescue Errno::ESRCH
           # process has already terminated
         end
