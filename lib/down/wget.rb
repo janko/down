@@ -13,7 +13,10 @@ require "tempfile"
 require "uri"
 
 module Down
+  # Provides streaming downloads implemented with the wget command-line tool.
+  # The design is very similar to Down::Http.
   class Wget < Backend
+    # Initializes the backend with common defaults.
     def initialize(*arguments)
       @arguments = [
         user_agent:      "Down/#{Down::VERSION}",
@@ -24,6 +27,8 @@ module Down
       ] + arguments
     end
 
+    # Downlods the remote file to disk. Accepts wget command-line options and
+    # some additional options as well.
     def download(url, *args, max_size: nil, content_length_proc: nil, progress_proc: nil, destination: nil, **options)
       io = open(url, *args, **options, rewindable: false)
 
@@ -62,10 +67,13 @@ module Down
       io.close if io
     end
 
+    # Starts retrieving the remote file and returns an IO-like object which
+    # downloads the response body on-demand. Accepts wget command-line options.
     def open(url, *args, rewindable: true, **options)
       arguments = generate_command(url, *args, **options)
 
       command = Down::Wget::Command.execute(arguments)
+      # Wrap the wget command output in an IO-like object.
       output  = Down::ChunkedIO.new(
         chunks:     command.enum_for(:output),
         on_close:   command.method(:terminate),
@@ -77,6 +85,7 @@ module Down
       header_string << output.readpartial until header_string.include?("\r\n\r\n")
       header_string, first_chunk = header_string.split("\r\n\r\n", 2)
 
+      # Use an HTTP parser to parse out the response headers.
       parser = HTTP::Parser.new
       parser << header_string
 
@@ -91,6 +100,7 @@ module Down
       content_length = headers["Content-Length"].to_i if headers["Content-Length"]
       charset        = headers["Content-Type"][/;\s*charset=([^;]+)/i, 1] if headers["Content-Type"]
 
+      # Create an Enumerator which will lazily retrieve chunks of response body.
       chunks = Enumerator.new do |yielder|
         yielder << first_chunk if first_chunk
         yielder << output.readpartial until output.eof?
@@ -108,6 +118,7 @@ module Down
 
     private
 
+    # Generates the wget command.
     def generate_command(url, *args, **options)
       command = %W[wget --no-verbose --save-headers -O -]
 
@@ -130,10 +141,12 @@ module Down
       command
     end
 
+    # Handles executing the wget command.
     class Command
       PIPE_BUFFER_SIZE = 64*1024
 
       def self.execute(arguments)
+        # posix-spawn gem has better performance, so we use it if it's available
         if defined?(POSIX::Spawn)
           pid, stdin_pipe, stdout_pipe, stderr_pipe = POSIX::Spawn.popen4(*arguments)
           status_reaper = Process.detach(pid)
@@ -155,6 +168,7 @@ module Down
         @stderr_pipe   = stderr_pipe
       end
 
+      # Yields chunks of stdout. At the end handles the exit status.
       def output
         # Keep emptying the stderr buffer, to allow the subprocess to send more
         # than 64KB if it wants to.
@@ -164,8 +178,32 @@ module Down
 
         status = @status_reaper.value
         stderr = stderr_reader.value
+
         close
 
+        handle_status(status, stderr)
+      end
+
+      def terminate
+        begin
+          Process.kill("TERM", @status_reaper[:pid])
+          # TODO: wait for the status
+        rescue Errno::ESRCH
+          # process has already terminated
+        end
+
+        close
+      end
+
+      def close
+        @stdout_pipe.close unless @stdout_pipe.closed?
+        @stderr_pipe.close unless @stderr_pipe.closed?
+      end
+
+      private
+
+      # Translates nonzero wget exit statuses into exceptions.
+      def handle_status(status, stderr)
         case status.exitstatus
         when 0  # No problems occurred
           # success
@@ -187,23 +225,9 @@ module Down
           raise Down::ResponseError, stderr
         end
       end
-
-      def terminate
-        begin
-          Process.kill("TERM", @status_reaper[:pid])
-        rescue Errno::ESRCH
-          # process has already terminated
-        end
-
-        close
-      end
-
-      def close
-        @stdout_pipe.close unless @stdout_pipe.closed?
-        @stderr_pipe.close unless @stderr_pipe.closed?
-      end
     end
 
+    # Adds additional attributes to the Tempfile returned in #download.
     module DownloadedFile
       attr_accessor :url, :headers
 

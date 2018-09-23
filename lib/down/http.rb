@@ -9,7 +9,9 @@ require "down/backend"
 require "tempfile"
 
 module Down
+  # Provides streaming downloads implemented with HTTP.rb.
   class Http < Backend
+    # Initializes the backend with common defaults.
     def initialize(options = {}, &block)
       if options.is_a?(HTTP::Client)
         warn "[Down] Passing an HTTP::Client object to Down::Http#initialize is deprecated and won't be supported in Down 5. Use the block initialization instead."
@@ -26,6 +28,8 @@ module Down
       @client = block.call(@client) if block
     end
 
+    # Downlods the remote file to disk. Accepts HTTP.rb options via a hash or a
+    # block, and some additional options as well.
     def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, **options, &block)
       response = request(url, **options, &block)
 
@@ -61,6 +65,9 @@ module Down
       raise
     end
 
+    # Starts retrieving the remote file and returns an IO-like object which
+    # downloads the response body on-demand. Accepts HTTP.rb options via a hash
+    # or a block.
     def open(url, rewindable: true, **options, &block)
       response = request(url, **options, &block)
 
@@ -93,6 +100,7 @@ module Down
       request_error!(exception)
     end
 
+    # Yields chunks of the response body to the block.
     def stream_body(response, &block)
       response.body.each(&block)
     rescue => exception
@@ -101,6 +109,7 @@ module Down
       response.connection.close unless @client.persistent?
     end
 
+    # Raises non-sucessful response as a Down::ResponseError.
     def response_error!(response)
       args = [response.status.to_s, response: response]
 
@@ -111,6 +120,7 @@ module Down
       end
     end
 
+    # Re-raise HTTP.rb exceptions as Down::Error exceptions.
     def request_error!(exception)
       case exception
       when HTTP::Request::UnsupportedSchemeError, Addressable::URI::InvalidURIError
@@ -128,6 +138,7 @@ module Down
       end
     end
 
+    # Defines some additional attributes for the returned Tempfile.
     module DownloadedFile
       attr_accessor :url, :headers
 

@@ -4,6 +4,7 @@ module Down
   module Utils
     module_function
 
+    # Retrieves potential filename from the "Content-Disposition" header.
     def filename_from_content_disposition(content_disposition)
       content_disposition = content_disposition.to_s
 
@@ -13,6 +14,7 @@ module Down
       filename unless filename.empty?
     end
 
+    # Retrieves potential filename from the URL path.
     def filename_from_path(path)
       filename = path.split("/").last
       CGI.unescape(filename) if filename
