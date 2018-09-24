@@ -249,7 +249,7 @@ describe Down::Wget do
     end
 
     it "raises on connection errors" do
-      assert_raises(Down::ConnectionError) { Down::Wget.open("localhost:9999") }
+      assert_raises(Down::ConnectionError) { Down::Wget.open("http://localhost:9999") }
     end
 
     it "raises on authentication failures" do
