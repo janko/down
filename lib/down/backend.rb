@@ -6,6 +6,7 @@ require "down/errors"
 require "down/utils"
 
 require "fileutils"
+require "addressable/uri"
 
 module Down
   class Backend
@@ -18,6 +19,14 @@ module Down
     end
 
     private
+
+    def normalize(url)
+      uri = Addressable::URI.parse(url).normalize
+      raise if uri.host.nil?
+      uri.to_s
+    rescue
+      raise Down::InvalidUrl
+    end
 
     # If destination path is defined, move tempfile to the destination,
     # otherwise return the tempfile unchanged.
