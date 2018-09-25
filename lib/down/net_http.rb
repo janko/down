@@ -9,7 +9,9 @@ require "tempfile"
 require "fileutils"
 
 module Down
+  # Provides streaming downloads implemented with Net::HTTP and open-uri.
   class NetHttp < Backend
+    # Initializes the backend with common defaults.
     def initialize(options = {})
       @options = {
         "User-Agent" => "Down/#{Down::VERSION}",
@@ -19,6 +21,8 @@ module Down
       }.merge(options)
     end
 
+    # Downloads a remote file to disk using open-uri. Accepts any open-uri
+    # options, and a few more.
     def download(url, options = {})
       options = @options.merge(options)
 
@@ -28,6 +32,11 @@ module Down
       content_length_proc = options.delete(:content_length_proc)
       destination         = options.delete(:destination)
 
+      # Use open-uri's :content_lenth_proc or :progress_proc to raise an
+      # exception early if the file is too large.
+      #
+      # Also disable following redirects, as we'll provide our own
+      # implementation that has the ability to limit the number of redirects.
       open_uri_options = {
         content_length_proc: proc { |size|
           if size && max_size && size > max_size
@@ -44,6 +53,7 @@ module Down
         redirect: false,
       }
 
+      # Handle basic authentication in the :proxy option.
       if options[:proxy]
         proxy    = URI(options.delete(:proxy))
         user     = proxy.user
@@ -63,6 +73,7 @@ module Down
 
       uri = ensure_uri(url)
 
+      # Handle basic authentication in the remote URL.
       if uri.user || uri.password
         open_uri_options[:http_basic_authentication] ||= [uri.user, uri.password]
         uri.user = nil
@@ -71,6 +82,7 @@ module Down
 
       open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects)
 
+      # Handle the fact that open-uri returns StringIOs for small files.
       tempfile = ensure_tempfile(open_uri_file, File.extname(open_uri_file.base_uri.path))
       OpenURI::Meta.init tempfile, open_uri_file # add back open-uri methods
       tempfile.extend Down::NetHttp::DownloadedFile
@@ -78,11 +90,14 @@ module Down
       download_result(tempfile, destination)
     end
 
+    # Starts retrieving the remote file using Net::HTTP and returns an IO-like
+    # object which downloads the response body on-demand.
     def open(url, options = {})
       options = @options.merge(options)
 
       uri = ensure_uri(url)
 
+      # Create a Fiber that halts when response headers are received.
       request = Fiber.new do
         net_http_request(uri, options) do |response|
           Fiber.yield response
@@ -93,6 +108,7 @@ module Down
 
       response_error!(response) unless response.is_a?(Net::HTTPSuccess)
 
+      # Build an IO-like object that will retrieve response body on-demand.
       Down::ChunkedIO.new(
         chunks:     enum_for(:stream_body, response),
         size:       response["Content-Length"] && response["Content-Length"].to_i,
@@ -112,6 +128,7 @@ module Down
 
     private
 
+    # Calls open-uri's URI::HTTP#open method. Additionally handles redirects.
     def open_uri(uri, options, follows_remaining: 0)
       uri.open(options)
     rescue OpenURI::HTTPRedirect => exception
@@ -166,6 +183,7 @@ module Down
       tempfile
     end
 
+    # Makes a Net::HTTP request and follows redirects.
     def net_http_request(uri, options, follows_remaining: options.fetch(:max_redirects, 2), &block)
       http, request = create_net_http(uri, options)
 
@@ -174,7 +192,10 @@ module Down
           http.request(request) do |response|
             unless response.is_a?(Net::HTTPRedirection)
               yield response
-              response.instance_variable_set("@read", true) # mark response as read
+              # In certain cases the caller wants to download only one portion
+              # of the file and close the connection, so we tell Net::HTTP that
+              # it shouldn't continue retrieving it.
+              response.instance_variable_set("@read", true)
             end
           end
         end
@@ -199,6 +220,7 @@ module Down
       end
     end
 
+    # Build a Net::HTTP object for making a request.
     def create_net_http(uri, options)
       http_class = Net::HTTP
 
@@ -209,7 +231,7 @@ module Down
 
       http = http_class.new(uri.host, uri.port)
 
-      # taken from open-uri implementation
+      # Handle SSL parameters (taken from the open-uri implementation).
       if uri.is_a?(URI::HTTPS)
         http.use_ssl = true
         http.verify_mode = options[:ssl_verify_mode] || OpenSSL::SSL::VERIFY_PEER
@@ -228,7 +250,7 @@ module Down
       http.open_timeout = options[:open_timeout] if options.key?(:open_timeout)
 
       request_headers = options.select { |key, value| key.is_a?(String) }
-      request_headers["Accept-Encoding"] = "" # otherwise FiberError can be raised
+      request_headers["Accept-Encoding"] = "" # Net::HTTP's inflater causes FiberErrors
 
       get = Net::HTTP::Get.new(uri.request_uri, request_headers)
       get.basic_auth(uri.user, uri.password) if uri.user || uri.password
@@ -236,13 +258,14 @@ module Down
       [http, get]
     end
 
+    # Yields chunks of the response body to the block.
     def stream_body(response, &block)
       response.read_body(&block)
     rescue => exception
       request_error!(exception)
     end
 
-    # Checks that the url is a valid URI and that it's http or https.
+    # Checks that the url is a valid URI and that its scheme is http or https.
     def ensure_uri(url, allow_relative: false, is_redirect: false)
       begin
         url = normalize(url) unless is_redirect
@@ -274,6 +297,7 @@ module Down
       response
     end
 
+    # Raises non-sucessful response as a Down::ResponseError.
     def response_error!(response)
       code    = response.code.to_i
       message = response.message.split(" ").map(&:capitalize).join(" ")
@@ -287,6 +311,7 @@ module Down
       end
     end
 
+    # Re-raise Net::HTTP exceptions as Down::Error exceptions.
     def request_error!(exception)
       case exception
       when Net::OpenTimeout
@@ -302,6 +327,8 @@ module Down
       end
     end
 
+    # Defines some additional attributes for the returned Tempfile (on top of what
+    # OpenURI::Meta already defines).
     module DownloadedFile
       def original_filename
         Utils.filename_from_content_disposition(meta["content-disposition"]) ||

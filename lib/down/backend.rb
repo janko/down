@@ -28,14 +28,15 @@ module Down
       raise Down::InvalidUrl
     end
 
+    # If destination path is defined, move tempfile to the destination,
+    # otherwise return the tempfile unchanged.
     def download_result(tempfile, destination)
-      if destination
-        tempfile.close
-        FileUtils.mv tempfile.path, destination
-        nil
-      else
-        tempfile
-      end
+      return tempfile unless destination
+
+      tempfile.close # required for Windows
+      FileUtils.mv tempfile.path, destination
+
+      nil
     end
   end
 end

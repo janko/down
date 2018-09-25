@@ -14,6 +14,7 @@ module Down
     backend.open(*args, &block)
   end
 
+  # Allows setting a backend via a symbol or a downloader object.
   def backend(value = nil)
     if value.is_a?(Symbol)
       require "down/#{value}"
@@ -26,4 +27,5 @@ module Down
   end
 end
 
+# Set Net::HTTP as the default backend
 Down.backend Down::NetHttp
