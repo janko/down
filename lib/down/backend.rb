@@ -11,18 +11,16 @@ require "addressable/uri"
 module Down
   class Backend
     def self.download(*args, &block)
-      args[0] = normalize(args[0])
       new.download(*args, &block)
     end
 
     def self.open(*args, &block)
-      args[0] = normalize(args[0])
       new.open(*args, &block)
     end
 
     private
 
-    def self.normalize(url)
+    def normalize(url)
       uri = Addressable::URI.parse(url).normalize
       raise if uri.host.nil?
       uri.to_s

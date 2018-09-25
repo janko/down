@@ -187,7 +187,7 @@ module Down
 
         # fail if redirect URI is not a valid http or https URL
         begin
-          location = ensure_uri(response["Location"], allow_relative: true)
+          location = ensure_uri(response["Location"], allow_relative: true, is_redirect: true)
         rescue Down::InvalidUrl
           raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response: response)
         end
@@ -243,8 +243,9 @@ module Down
     end
 
     # Checks that the url is a valid URI and that it's http or https.
-    def ensure_uri(url, allow_relative: false)
+    def ensure_uri(url, allow_relative: false, is_redirect: false)
       begin
+        url = normalize(url) unless is_redirect
         uri = URI(url)
       rescue URI::InvalidURIError => exception
         raise Down::InvalidUrl, exception.message

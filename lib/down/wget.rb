@@ -25,6 +25,7 @@ module Down
     end
 
     def download(url, *args, max_size: nil, content_length_proc: nil, progress_proc: nil, destination: nil, **options)
+      url = normalize(url)
       io = open(url, *args, **options, rewindable: false)
 
       content_length_proc.call(io.size) if content_length_proc && io.size
@@ -63,6 +64,7 @@ module Down
     end
 
     def open(url, *args, rewindable: true, **options)
+      url = normalize(url)
       arguments = generate_command(url, *args, **options)
 
       command = Down::Wget::Command.execute(arguments)
