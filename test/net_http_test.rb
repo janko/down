@@ -213,8 +213,12 @@ describe Down do
       assert_kind_of Net::HTTPResponse, error.response
     end
 
+    it "accepts non-escaped URLs" do
+      tempfile = Down::NetHttp.download("#{$httpbin}/etag/foo bar")
+      assert_equal "foo bar", tempfile.meta["etag"]
+    end
+
     it "raises on invalid URLs" do
-      assert_raises(Down::InvalidUrl) { Down::NetHttp.download("http:\\example.org") }
       assert_raises(Down::InvalidUrl) { Down::NetHttp.download("foo://example.org") }
       assert_raises(Down::InvalidUrl) { Down::NetHttp.download("| ls") }
     end
@@ -348,8 +352,12 @@ describe Down do
       assert_kind_of Net::HTTPResponse, error.response
     end
 
+    it "accepts non-escaped URLs" do
+      io = Down::NetHttp.open("#{$httpbin}/etag/foo bar")
+      assert_equal "foo bar", io.data[:headers]["Etag"]
+    end
+
     it "raises on invalid URLs" do
-      assert_raises(Down::InvalidUrl) { Down::NetHttp.open("http:\\example.org") }
       assert_raises(Down::InvalidUrl) { Down::NetHttp.open("foo://example.org") }
     end
 

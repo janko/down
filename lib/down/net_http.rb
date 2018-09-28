@@ -2,6 +2,7 @@
 
 require "open-uri"
 require "net/https"
+require "addressable/uri"
 
 require "down/backend"
 
@@ -71,7 +72,7 @@ module Down
 
       open_uri_options.merge!(options)
 
-      uri = ensure_uri(url)
+      uri = ensure_uri(addressable_normalize(url))
 
       # Handle basic authentication in the remote URL.
       if uri.user || uri.password
@@ -93,9 +94,8 @@ module Down
     # Starts retrieving the remote file using Net::HTTP and returns an IO-like
     # object which downloads the response body on-demand.
     def open(url, options = {})
+      uri     = ensure_uri(addressable_normalize(url))
       options = @options.merge(options)
-
-      uri = ensure_uri(url)
 
       # Create a Fiber that halts when response headers are received.
       request = Fiber.new do
@@ -274,10 +274,16 @@ module Down
       end
 
       unless allow_relative && uri.relative?
-        raise Down::InvalidUrl, "URL scheme needs to be http or https" unless uri.is_a?(URI::HTTP)
+        raise Down::InvalidUrl, "URL scheme needs to be http or https: #{uri}" unless uri.is_a?(URI::HTTP)
       end
 
       uri
+    end
+
+    # Makes sure that the URL is properly encoded.
+    def addressable_normalize(url)
+      addressable_uri = Addressable::URI.parse(url)
+      addressable_uri.normalize.to_s
     end
 
     # When open-uri raises an exception, it doesn't expose the response object.
