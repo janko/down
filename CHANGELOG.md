@@ -1,3 +1,7 @@
+## HEAD
+
+* Release HTTP.rb version constraint to allow HTTP.rb 4.x (@janko-m)
+
 ## 4.6.0 (2018-09-29)
 
 * Ensure URLs are properly encoded in `NetHttp#download` and `#open` using Addressable (@linyaoli)

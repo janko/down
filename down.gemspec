@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "minitest", "~> 5.8"
   spec.add_development_dependency "mocha", "~> 1.5"
   spec.add_development_dependency "rake"
-  spec.add_development_dependency "http", "~> 3.0"
+  spec.add_development_dependency "http", "~> 4.0"
   spec.add_development_dependency "posix-spawn" unless RUBY_ENGINE == "jruby"
   spec.add_development_dependency "http_parser.rb"
   spec.add_development_dependency "docker-api"
