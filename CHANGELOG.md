@@ -1,4 +1,4 @@
-## HEAD
+## 4.6.1 (2018-10-24)
 
 * Release HTTP.rb version constraint to allow HTTP.rb 4.x (@janko-m)
 
