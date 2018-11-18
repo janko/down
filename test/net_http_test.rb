@@ -133,6 +133,14 @@ describe Down do
       assert_equal 100, tempfile.size
     end
 
+    it "accepts request headers" do
+      tempfile = Down::NetHttp.download("#{$httpbin}/headers", {"Key" => "Value"})
+      assert_equal "Value", JSON.parse(tempfile.read)["headers"]["Key"]
+
+      tempfile = Down::NetHttp.download("#{$httpbin}/headers", headers: {"Key" => "Value"})
+      assert_equal "Value", JSON.parse(tempfile.read)["headers"]["Key"]
+    end
+
     it "forwards other options to open-uri" do
       tempfile = Down::NetHttp.download("#{$httpbin}/user-agent", {"User-Agent" => "Custom/Agent"})
       assert_equal "Custom/Agent", JSON.parse(tempfile.read)["user-agent"]
@@ -309,6 +317,9 @@ describe Down do
 
     it "accepts request headers" do
       io = Down::NetHttp.open("#{$httpbin}/headers", {"Key" => "Value"})
+      assert_equal "Value", JSON.parse(io.read)["headers"]["Key"]
+
+      io = Down::NetHttp.open("#{$httpbin}/headers", headers: {"Key" => "Value"})
       assert_equal "Value", JSON.parse(io.read)["headers"]["Key"]
     end
 

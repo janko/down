@@ -1,3 +1,7 @@
+## HEAD
+
+* Allow request headers to be passed via `:headers` to `Down::NetHttp#download` and `#open` (@janko-m)
+
 ## 4.6.1 (2018-10-24)
 
 * Release HTTP.rb version constraint to allow HTTP.rb 4.x (@janko-m)

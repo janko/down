@@ -32,6 +32,7 @@ module Down
       progress_proc       = options.delete(:progress_proc)
       content_length_proc = options.delete(:content_length_proc)
       destination         = options.delete(:destination)
+      headers             = options.delete(:headers) || {}
 
       # Use open-uri's :content_lenth_proc or :progress_proc to raise an
       # exception early if the file is too large.
@@ -71,6 +72,7 @@ module Down
       end
 
       open_uri_options.merge!(options)
+      open_uri_options.merge!(headers)
 
       uri = ensure_uri(addressable_normalize(url))
 
@@ -249,10 +251,11 @@ module Down
       http.read_timeout = options[:read_timeout] if options.key?(:read_timeout)
       http.open_timeout = options[:open_timeout] if options.key?(:open_timeout)
 
-      request_headers = options.select { |key, value| key.is_a?(String) }
-      request_headers["Accept-Encoding"] = "" # Net::HTTP's inflater causes FiberErrors
+      headers = options.select { |key, value| key.is_a?(String) }
+      headers.merge!(options[:headers]) if options[:headers]
+      headers["Accept-Encoding"] = "" # Net::HTTP's inflater causes FiberErrors
 
-      get = Net::HTTP::Get.new(uri.request_uri, request_headers)
+      get = Net::HTTP::Get.new(uri.request_uri, headers)
       get.basic_auth(uri.user, uri.password) if uri.user || uri.password
 
       [http, get]

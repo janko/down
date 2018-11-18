@@ -261,10 +261,10 @@ as open-uri doesn't support downloading on-demand.
 
 #### Redirects
 
-`Down.download` turns off open-uri's following redirects, as open-uri doesn't
-have a way to limit the maximum number of hops, and implements its own. By
-default maximum of 2 redirects will be followed, but you can change it via the
-`:max_redirects` option:
+`Down::NetHttp#download` turns off open-uri's following redirects, as open-uri
+doesn't have a way to limit the maximum number of hops, and implements its own.
+By default maximum of 2 redirects will be followed, but you can change it via
+the `:max_redirects` option:
 
 ```rb
 Down::NetHttp.download("http://example.com/image.jpg")                   # 2 redirects allowed
@@ -278,22 +278,40 @@ Down::NetHttp.open("http://example.com/image.jpg", max_redirects: 0)     # 0 red
 
 #### Proxy
 
-Both `Down.download` and `Down.open` support a `:proxy` option, where you can
-specify a URL to an HTTP proxy which should be used when downloading.
+An HTTP proxy can be specified via the `:proxy` option:
 
 ```rb
 Down::NetHttp.download("http://example.com/image.jpg", proxy: "http://proxy.org")
-Down::NetHttp.open("http://example.com/image.jpg",     proxy: "http://user:password@proxy.org")
+Down::NetHttp.open("http://example.com/image.jpg", proxy: "http://user:password@proxy.org")
 ```
 
 #### Timeouts
 
-Both `Down.download` and `Down.open` support `:read_timeout` and `:open_timeout`
-options, which are forwarded to `Net::HTTP`:
+Timeouts can be configured via the `:open_timeout` and `:read_timeout` options:
 
 ```rb
 Down::NetHttp.download("http://example.com/image.jpg", open_timeout: 5)
 Down::NetHttp.open("http://example.com/image.jpg", read_timeout: 10)
+```
+
+#### Headers
+
+Request headers can be added via the `:headers` option:
+
+```rb
+Down::NetHttp.download("http://example.com/image.jpg", headers: { "Header" => "Value" })
+Down::NetHttp.open("http://example.com/image.jpg", headers: { "Header" => "Value" })
+```
+
+#### SSL options
+
+The `:ssl_ca_cert` and `:ssl_verify_mode` options are supported, and they have
+the same semantics as in `open-uri`:
+
+```rb
+Down::NetHttp.open("http://example.com/image.jpg",
+  ssl_ca_cert:     "/path/to/cert",
+  ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER)
 ```
 
 #### Additional options
@@ -305,14 +323,6 @@ Any additional options passed to `Down.download` will be forwarded to
 Down::NetHttp.download "http://example.com/image.jpg",
   http_basic_authentication: ['john', 'secret'],
   read_timeout: 5
-```
-
-`Down.open` accepts `:ssl_verify_mode` and `:ssl_ca_cert` options with the same
-semantics as in open-uri, and any options with String keys will be interpreted
-as request headers, like with open-uri.
-
-```rb
-Down::NetHttp.open("http://example.com/image.jpg", {"Authorization" => "..."})
 ```
 
 You can also initialize the backend with default options:
