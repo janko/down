@@ -338,7 +338,7 @@ net_http.open("http://example.com/image.jpg")
 
 ```rb
 gem "down", "~> 4.4"
-gem "http", "~> 3.2"
+gem "http", "~> 4.0"
 ```
 ```rb
 require "down/http"
