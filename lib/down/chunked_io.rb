@@ -256,7 +256,14 @@ module Down
     # If Down::ChunkedIO is specified as rewindable, returns a new Tempfile for
     # writing read content to. This allows the Down::ChunkedIO to be rewinded.
     def cache
-      @cache ||= Tempfile.new("down-chunked_io", binmode: true) if @rewindable
+      return if !rewindable?
+
+      @cache ||= (
+        tempfile = Tempfile.new("down-chunked_io", binmode: true)
+        tempfile.chmod(0000)      # make sure nobody else can read or write to it
+        tempfile.unlink if posix? # remove entry from filesystem if it's POSIX
+        tempfile
+      )
     end
 
     # Returns current chunk and retrieves the next chunk. If next chunk is nil,
@@ -295,6 +302,11 @@ module Down
       Encoding.find(encoding)
     rescue ArgumentError
       Encoding::BINARY
+    end
+
+    # Returns whether the filesystem has POSIX semantics.
+    def posix?
+      RUBY_PLATFORM !~ /(mswin|mingw|cygwin|java)/
     end
   end
 end

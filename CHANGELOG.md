@@ -1,3 +1,7 @@
+## HEAD
+
+* Make the internal Tempfile of `Down::ChunkedIO` inaccessible to outside programs (@janko-m)
+
 ## 4.7.0 (2018-11-18)
 
 * Allow request headers to be passed via `:headers` to `Down::NetHttp#download` and `#open` (@janko-m)
