@@ -8,8 +8,12 @@ module Down
     def filename_from_content_disposition(content_disposition)
       content_disposition = content_disposition.to_s
 
-      filename = content_disposition[/filename="([^"]*)"/, 1] || content_disposition[/filename=(.+)/, 1]
-      filename = CGI.unescape(filename.to_s.strip)
+      escaped_filename =
+        content_disposition[/filename\*=UTF-8''(\S+)/, 1] ||
+        content_disposition[/filename="([^"]*)"/, 1] ||
+        content_disposition[/filename=(\S+)/, 1]
+
+      filename = CGI.unescape(escaped_filename.to_s)
 
       filename unless filename.empty?
     end

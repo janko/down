@@ -68,7 +68,7 @@ describe Down::Http do
       tempfile = Down::Http.download("#{$httpbin}/robots.txt?foo=bar")
       assert_equal ".txt", File.extname(tempfile.path)
 
-      tempfile = Down::Http.download("#{$httpbin}/redirect-to?url=#{$httpbin}/robots.txt")
+      tempfile = Down::Http.download("#{$httpbin}/redirect-to", params: { url: "#{$httpbin}/robots.txt" })
       assert_equal ".txt", File.extname(tempfile.path)
     end
 
@@ -86,7 +86,7 @@ describe Down::Http do
     end
 
     it "accepts HTTP.rb options" do
-      tempfile = Down::Http.download("#{$httpbin}/user-agent", headers: {"User-Agent" => "Janko"})
+      tempfile = Down::Http.download("#{$httpbin}/user-agent", headers: { "User-Agent": "Janko" })
       assert_equal "Janko", JSON.parse(tempfile.read)["user-agent"]
     end
 
@@ -95,20 +95,23 @@ describe Down::Http do
       assert_equal "Bar",                                  tempfile.headers["Foo"]
       assert_equal "#{$httpbin}/response-headers?Foo=Bar", tempfile.url
 
-      tempfile = Down::Http.download("#{$httpbin}/redirect-to?url=#{$httpbin}/response-headers?Foo=Bar")
+      tempfile = Down::Http.download("#{$httpbin}/redirect-to", params: { url: "#{$httpbin}/response-headers?Foo=Bar" })
       assert_equal "Bar",                                  tempfile.headers["Foo"]
       assert_equal "#{$httpbin}/response-headers?Foo=Bar", tempfile.url
     end
 
     it "adds #original_filename extracted from Content-Disposition" do
-      tempfile = Down::Http.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"my%20filename.ext\"")
+      tempfile = Down::Http.download("#{$httpbin}/response-headers", params: { "Content-Disposition": "inline; filename=\"my filename.ext\"" })
       assert_equal "my filename.ext", tempfile.original_filename
 
-      tempfile = Down::Http.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"my%2520filename.ext\"")
+      tempfile = Down::Http.download("#{$httpbin}/response-headers", params: { "Content-Disposition": "inline; filename=\"my%20filename.ext\"" })
       assert_equal "my filename.ext", tempfile.original_filename
 
-      tempfile = Down::Http.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=myfilename.ext%20")
-      assert_equal "myfilename.ext", tempfile.original_filename
+      tempfile = Down::Http.download("#{$httpbin}/response-headers", params: { "Content-Disposition": "inline; filename=my%20filename.ext" })
+      assert_equal "my filename.ext", tempfile.original_filename
+
+      tempfile = Down::Http.download("#{$httpbin}/response-headers", params: { "Content-Disposition": "inline; filename=\"ascii%20filename.ext\"; filename*=UTF-8''utf8%20filename.ext" })
+      assert_equal "utf8 filename.ext", tempfile.original_filename
     end
 
     it "adds #original_filename extracted from URI path if Content-Disposition is blank" do
@@ -120,10 +123,10 @@ describe Down::Http do
       end
       assert_equal "pass word", tempfile.original_filename
 
-      tempfile = Down::Http.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=")
+      tempfile = Down::Http.download("#{$httpbin}/response-headers", params: { "Content-Disposition": "inline; filename=" })
       assert_equal "response-headers", tempfile.original_filename
 
-      tempfile = Down::Http.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"\"")
+      tempfile = Down::Http.download("#{$httpbin}/response-headers", params: { "Content-Disposition": "inline; filename=\"\"" })
       assert_equal "response-headers", tempfile.original_filename
 
       tempfile = Down::Http.download("#{$httpbin}/")

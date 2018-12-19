@@ -1,5 +1,7 @@
 ## HEAD
 
+* Prefer UTF-8 filenames in `Content-Disposition` header for `Tempfile#original_filename` (@janko-m)
+
 * Make the internal Tempfile of `Down::ChunkedIO` inaccessible to outside programs (@janko-m)
 
 ## 4.7.0 (2018-11-18)
