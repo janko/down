@@ -1,4 +1,4 @@
-## HEAD
+## 4.8.0 (2018-12-19)
 
 * Prefer UTF-8 filenames in `Content-Disposition` header for `Tempfile#original_filename` (@janko-m)
 
