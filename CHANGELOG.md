@@ -1,170 +1,170 @@
 ## 4.8.0 (2018-12-19)
 
-* Prefer UTF-8 filenames in `Content-Disposition` header for `Tempfile#original_filename` (@janko-m)
+* Prefer UTF-8 filenames in `Content-Disposition` header for `Tempfile#original_filename` (@janko)
 
-* Make the internal Tempfile of `Down::ChunkedIO` inaccessible to outside programs (@janko-m)
+* Make the internal Tempfile of `Down::ChunkedIO` inaccessible to outside programs (@janko)
 
 ## 4.7.0 (2018-11-18)
 
-* Allow request headers to be passed via `:headers` to `Down::NetHttp#download` and `#open` (@janko-m)
+* Allow request headers to be passed via `:headers` to `Down::NetHttp#download` and `#open` (@janko)
 
 ## 4.6.1 (2018-10-24)
 
-* Release HTTP.rb version constraint to allow HTTP.rb 4.x (@janko-m)
+* Release HTTP.rb version constraint to allow HTTP.rb 4.x (@janko)
 
 ## 4.6.0 (2018-09-29)
 
 * Ensure URLs are properly encoded in `NetHttp#download` and `#open` using Addressable (@linyaoli)
 
-* Raise `ResponseError` with clear message when redirect URI was invalid in Down::NetHttp (@janko-m)
+* Raise `ResponseError` with clear message when redirect URI was invalid in Down::NetHttp (@janko)
 
 ## 4.5.0 (2018-05-11)
 
-* Deprecate passing an `HTTP::Client` object to `Down::Http#initialize` (@janko-m)
+* Deprecate passing an `HTTP::Client` object to `Down::Http#initialize` (@janko)
 
-* Add ability to pass a block to `Down::Http#initialize` for extending default options (@janko-m)
+* Add ability to pass a block to `Down::Http#initialize` for extending default options (@janko)
 
-* Return empty string when length is zero in `ChunkedIO#read` and `ChunkedIO#readpartial` (@janko-m)
+* Return empty string when length is zero in `ChunkedIO#read` and `ChunkedIO#readpartial` (@janko)
 
-* Make `posix-spawn` optional (@janko-m)
+* Make `posix-spawn` optional (@janko)
 
 ## 4.4.0 (2018-04-12)
 
-* Add `:method` option to `Down::Http` for specifying the request method (@janko-m)
+* Add `:method` option to `Down::Http` for specifying the request method (@janko)
 
-* Set default timeout of 30 for each operation to all backends (@janko-m)
+* Set default timeout of 30 for each operation to all backends (@janko)
 
 ## 4.3.0 (2018-03-11)
 
-* Accept CLI arguments as a list of symbols in `Down::Wget#download` (@janko-m)
+* Accept CLI arguments as a list of symbols in `Down::Wget#download` (@janko)
 
-* Avoid potential URL parsing errors in `Down::Http::DownloadedFile#filename_from_url` (@janko-m)
+* Avoid potential URL parsing errors in `Down::Http::DownloadedFile#filename_from_url` (@janko)
 
-* Make memory usage of `Down::Wget#download` constant (@janko-m)
+* Make memory usage of `Down::Wget#download` constant (@janko)
 
-* Add `:destination` option to `Down.download` for specifying download destination (@janko-m)
+* Add `:destination` option to `Down.download` for specifying download destination (@janko)
 
 ## 4.2.1 (2018-01-29)
 
-* Reduce memory allocation in `Down::ChunkedIO` by 10x when buffer string is used (@janko-m)
+* Reduce memory allocation in `Down::ChunkedIO` by 10x when buffer string is used (@janko)
 
 * Reduce memory allocation in `Down::Http.download` by 10x.
 
 ## 4.2.0 (2017-12-22)
 
-* Handle `:max_redirects` in `Down::NetHttp#open` and follow up to 2 redirects by default (@janko-m)
+* Handle `:max_redirects` in `Down::NetHttp#open` and follow up to 2 redirects by default (@janko)
 
 ## 4.1.1 (2017-10-15)
 
-* Raise all system call exceptions as `Down::ConnectionError` in `Down::NetHttp` (@janko-m)
+* Raise all system call exceptions as `Down::ConnectionError` in `Down::NetHttp` (@janko)
 
-* Raise `Errno::ETIMEDOUT` as `Down::TimeoutError` in `Down::NetHttp` (@janko-m)
+* Raise `Errno::ETIMEDOUT` as `Down::TimeoutError` in `Down::NetHttp` (@janko)
 
-* Raise `Addressable::URI::InvalidURIError` as `Down::InvalidUrl` in `Down::Http` (@janko-m)
+* Raise `Addressable::URI::InvalidURIError` as `Down::InvalidUrl` in `Down::Http` (@janko)
 
 ## 4.1.0 (2017-08-29)
 
-* Fix `FiberError` occurring on `Down::NetHttp.open` when response is chunked and gzipped (@janko-m)
+* Fix `FiberError` occurring on `Down::NetHttp.open` when response is chunked and gzipped (@janko)
 
-* Use a default `User-Agent` in `Down::NetHttp.open` (@janko-m)
+* Use a default `User-Agent` in `Down::NetHttp.open` (@janko)
 
-* Fix raw read timeout error sometimes being raised instead of `Down::TimeoutError` in `Down.open` (@janko-m)
+* Fix raw read timeout error sometimes being raised instead of `Down::TimeoutError` in `Down.open` (@janko)
 
-* `Down::ChunkedIO` can now be parsed by the CSV Ruby standard library (@janko-m)
+* `Down::ChunkedIO` can now be parsed by the CSV Ruby standard library (@janko)
 
-* Implement `Down::ChunkedIO#gets` (@janko-m)
+* Implement `Down::ChunkedIO#gets` (@janko)
 
-* Implement `Down::ChunkedIO#pos` (@janko-m)
+* Implement `Down::ChunkedIO#pos` (@janko)
 
 ## 4.0.1 (2017-07-08)
 
-* Load and assign the `NetHttp` backend immediately on `require "down"` (@janko-m)
+* Load and assign the `NetHttp` backend immediately on `require "down"` (@janko)
 
-* Remove undocumented `Down::ChunkedIO#backend=` that was added in 4.0.0 to avoid confusion (@janko-m)
+* Remove undocumented `Down::ChunkedIO#backend=` that was added in 4.0.0 to avoid confusion (@janko)
 
 ## 4.0.0 (2017-06-24)
 
-* Don't apply `Down.download` and `Down.open` overrides when loading a backend (@janko-m)
+* Don't apply `Down.download` and `Down.open` overrides when loading a backend (@janko)
 
-* Remove `Down::Http.client` attribute accessor (@janko-m)
+* Remove `Down::Http.client` attribute accessor (@janko)
 
-* Make `Down::NetHttp`, `Down::Http`, and `Down::Wget` classes instead of modules (@janko-m)
+* Make `Down::NetHttp`, `Down::Http`, and `Down::Wget` classes instead of modules (@janko)
 
-* Remove `Down.copy_to_tempfile` (@janko-m)
+* Remove `Down.copy_to_tempfile` (@janko)
 
-* Add Wget backend (@janko-m)
+* Add Wget backend (@janko)
 
-* Add `:content_length_proc` and `:progress_proc` to the HTTP.rb backend (@janko-m)
+* Add `:content_length_proc` and `:progress_proc` to the HTTP.rb backend (@janko)
 
-* Halve string allocations in `Down::ChunkedIO#readpartial` when buffer string is not used (@janko-m)
+* Halve string allocations in `Down::ChunkedIO#readpartial` when buffer string is not used (@janko)
 
 ## 3.2.0 (2017-06-21)
 
-* Add `Down::ChunkedIO#readpartial` for more memory efficient reading (@janko-m)
+* Add `Down::ChunkedIO#readpartial` for more memory efficient reading (@janko)
 
-* Fix `Down::ChunkedIO` not returning second part of the last chunk if it was previously partially read (@janko-m)
+* Fix `Down::ChunkedIO` not returning second part of the last chunk if it was previously partially read (@janko)
 
-* Strip internal variables from `Down::ChunkedIO#inspect` and show only the important ones (@janko-m)
+* Strip internal variables from `Down::ChunkedIO#inspect` and show only the important ones (@janko)
 
-* Add `Down::ChunkedIO#closed?` (@janko-m)
+* Add `Down::ChunkedIO#closed?` (@janko)
 
-* Add `Down::ChunkedIO#rewindable?` (@janko-m)
+* Add `Down::ChunkedIO#rewindable?` (@janko)
 
-* In `Down::ChunkedIO` only create the Tempfile if it's going to be used (@janko-m)
+* In `Down::ChunkedIO` only create the Tempfile if it's going to be used (@janko)
 
 ## 3.1.0 (2017-06-16)
 
-* Split `Down::NotFound` into explanatory exceptions (@janko-m)
+* Split `Down::NotFound` into explanatory exceptions (@janko)
 
-* Add `:read_timeout` and `:open_timeout` options to `Down::NetHttp.open` (@janko-m)
+* Add `:read_timeout` and `:open_timeout` options to `Down::NetHttp.open` (@janko)
 
-* Return an `Integer` in `data[:status]` on a result of `Down.open` when using the HTTP.rb strategy (@janko-m)
+* Return an `Integer` in `data[:status]` on a result of `Down.open` when using the HTTP.rb strategy (@janko)
 
 ## 3.0.0 (2017-05-24)
 
-* Make `Down.open` pass encoding from content type charset to `Down::ChunkedIO` (@janko-m)
+* Make `Down.open` pass encoding from content type charset to `Down::ChunkedIO` (@janko)
 
-* Add `:encoding` option to `Down::ChunkedIO.new` for specifying the encoding of returned content (@janko-m)
+* Add `:encoding` option to `Down::ChunkedIO.new` for specifying the encoding of returned content (@janko)
 
-* Add HTTP.rb backend as an alternative to Net::HTTP (@janko-m)
+* Add HTTP.rb backend as an alternative to Net::HTTP (@janko)
 
-* Stop testing on MRI 2.1 (@janko-m)
+* Stop testing on MRI 2.1 (@janko)
 
-* Forward cookies from the `Set-Cookie` response header when redirecting (@janko-m)
+* Forward cookies from the `Set-Cookie` response header when redirecting (@janko)
 
-* Add `frozen-string-literal: true` comments for less string allocations on Ruby 2.3+ (@janko-m)
+* Add `frozen-string-literal: true` comments for less string allocations on Ruby 2.3+ (@janko)
 
-* Modify `#content_type` to return nil instead of `application/octet-stream` when `Content-Type` is blank in `Down.download` (@janko-m)
+* Modify `#content_type` to return nil instead of `application/octet-stream` when `Content-Type` is blank in `Down.download` (@janko)
 
-* `Down::ChunkedIO#read`, `#each_chunk`, `#eof?`, `rewind` now raise an `IOError` when `Down::ChunkedIO` has been closed (@janko-m)
+* `Down::ChunkedIO#read`, `#each_chunk`, `#eof?`, `rewind` now raise an `IOError` when `Down::ChunkedIO` has been closed (@janko)
 
-* `Down::ChunkedIO` now caches only the content that has been read (@janko-m)
+* `Down::ChunkedIO` now caches only the content that has been read (@janko)
 
-* Add `Down::ChunkedIO#size=` to allow assigning size after the `Down::ChunkedIO` has been instantiated (@janko-m)
+* Add `Down::ChunkedIO#size=` to allow assigning size after the `Down::ChunkedIO` has been instantiated (@janko)
 
-* Make `:size` an optional argument in `Down::ChunkedIO` (@janko-m)
+* Make `:size` an optional argument in `Down::ChunkedIO` (@janko)
 
-* Call enumerator's `ensure` block when `Down::ChunkedIO#close` is called (@janko-m)
+* Call enumerator's `ensure` block when `Down::ChunkedIO#close` is called (@janko)
 
-* Add `:rewindable` option to `Down::ChunkedIO` and `Down.open` for disabling caching read content into a file (@janko-m)
+* Add `:rewindable` option to `Down::ChunkedIO` and `Down.open` for disabling caching read content into a file (@janko)
 
-* Drop support for MRI 2.0 (@janko-m)
+* Drop support for MRI 2.0 (@janko)
 
-* Drop support for MRI 1.9.3 (@janko-m)
+* Drop support for MRI 1.9.3 (@janko)
 
-* Remove deprecated `:progress` option (@janko-m)
+* Remove deprecated `:progress` option (@janko)
 
-* Remove deprecated `:timeout` option (@janko-m)
+* Remove deprecated `:timeout` option (@janko)
 
-* Reraise only a subset of exceptions as `Down::NotFound` in `Down.download` (@janko-m)
+* Reraise only a subset of exceptions as `Down::NotFound` in `Down.download` (@janko)
 
-* Support streaming of "Transfer-Encoding: chunked" responses in `Down.open` again (@janko-m)
+* Support streaming of "Transfer-Encoding: chunked" responses in `Down.open` again (@janko)
 
-* Remove deprecated `Down.stream` (@janko-m)
+* Remove deprecated `Down.stream` (@janko)
 
 ## 2.5.1 (2017-05-13)
 
-* Remove URL from the error messages (@janko-m)
+* Remove URL from the error messages (@janko)
 
 ## 2.5.0 (2017-05-03)
 

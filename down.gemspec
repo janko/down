@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 2.1"
 
   spec.summary      = "Robust streaming downloads using Net::HTTP, HTTP.rb or wget."
-  spec.homepage     = "https://github.com/janko-m/down"
+  spec.homepage     = "https://github.com/janko/down"
   spec.authors      = ["Janko Marohnić"]
   spec.email        = ["janko.marohnic@gmail.com"]
   spec.license      = "MIT"
