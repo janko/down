@@ -189,11 +189,42 @@ module Down
       data
     end
 
+    # Implements IO#seek semantics.
+    def seek(amount, whence = IO::SEEK_SET)
+      fail Errno::ESPIPE, "Illegal seek" if cache.nil?
+
+      case whence
+      when IO::SEEK_SET, :SET
+        target_pos = amount
+      when IO::SEEK_CUR, :CUR
+        target_pos = @position + amount
+      when IO::SEEK_END, :END
+        unless chunks_depleted?
+          cache.seek(0, IO::SEEK_END)
+          IO.copy_stream(self, File::NULL)
+        end
+
+        target_pos = cache.size + amount
+      else
+        fail ArgumentError, "invalid whence: #{whence.inspect}"
+      end
+
+      if target_pos <= cache.size
+        cache.seek(target_pos)
+      else
+        cache.seek(0, IO::SEEK_END)
+        IO.copy_stream(self, File::NULL, target_pos - cache.size)
+      end
+
+      @position = cache.pos
+    end
+
     # Implements IO#pos semantics. Returns the current position of the
     # Down::ChunkedIO.
     def pos
       @position
     end
+    alias tell pos
 
     # Implements IO#eof? semantics. Returns whether we've reached end of file.
     # It returns true if cache is at the end and there is no more content to

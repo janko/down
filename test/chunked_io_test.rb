@@ -610,6 +610,79 @@ describe Down::ChunkedIO do
     end
   end
 
+  describe "#seek" do
+    describe "default" do
+      it "moves to absolute position" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        io.seek(1)
+        assert_equal 1,    io.tell
+        assert_equal "bc", io.read
+      end
+    end
+
+    describe "SET" do
+      it "moves to absolute position" do
+        io = chunked_io(chunks: ["ab", "c"].each)
+        io.seek(2)
+        assert_equal 2,   io.tell
+        assert_equal "c", io.read
+      end
+    end
+
+    describe "CUR" do
+      it "moves to relative position" do
+        io = chunked_io(chunks: ["ab", "cd"].each)
+        io.seek(1, IO::SEEK_CUR)
+        assert_equal 1, io.tell
+        io.seek(2, IO::SEEK_CUR)
+        assert_equal 3,   io.tell
+        assert_equal "d", io.read
+      end
+    end
+
+    describe "END" do
+      it "moves to position from end" do
+        io = chunked_io(chunks: ["ab", "cd"].each)
+        io.seek(-2, IO::SEEK_END)
+        assert_equal 2,    io.tell
+        assert_equal "cd", io.read
+      end
+    end
+
+    it "seeks uncached content" do
+      io = chunked_io(chunks: ["ab", "c"].each)
+      io.seek(1)
+      assert_equal 1, io.tell
+      assert_equal "bc", io.read
+    end
+
+    it "seeks cached content" do
+      io = chunked_io(chunks: ["ab", "c"].each)
+      io.read(1)
+      io.rewind
+      io.seek(1)
+      assert_equal 1, io.tell
+      assert_equal "bc", io.read
+    end
+
+    it "seeks cached and uncached content" do
+      io = chunked_io(chunks: ["ab", "c"].each)
+      io.read(1)
+      io.rewind
+      io.seek(2)
+      assert_equal 2, io.tell
+      assert_equal "c", io.read
+    end
+
+    it "raises error on invalid whence" do
+      io = chunked_io(chunks: ["ab", "c"].each)
+      io.read(1)
+      assert_raises ArgumentError do
+        io.seek(2, :invalid)
+      end
+    end
+  end
+
   describe "#eof?" do
     it "returns false on nonzero chunks" do
       io = chunked_io(chunks: ["ab", "c"].each)
