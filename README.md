@@ -13,7 +13,7 @@ gem "down", "~> 4.4"
 ## Downloading
 
 The primary method is `Down.download`, which downloads the remote file into a
-Tempfile:
+`Tempfile`:
 
 ```rb
 require "down"
@@ -24,7 +24,7 @@ tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/2015092
 
 ### Metadata
 
-The returned Tempfile has some additional attributes extracted from the
+The returned `Tempfile` has some additional attributes extracted from the
 response data:
 
 ```rb
@@ -357,7 +357,7 @@ Some features that give the HTTP.rb backend an advantage over `open-uri` +
 * Proper SSL support
 * Support for persistent connections
 * Global timeouts (limiting how long the whole request can take)
-* Chaninable builder API for setting default options
+* Chainable builder API for setting default options
 
 #### Additional options
 
