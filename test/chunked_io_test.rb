@@ -294,7 +294,7 @@ describe Down::ChunkedIO do
       assert_equal "d\r", io.gets("\r")
     end
 
-    it "reads the whole file when separator is nil" do
+    it "reads the whole file when separator and limit are nil" do
       io = chunked_io(chunks: ["a\n", "b\nc\nd", "\n"].each)
       assert_equal "a\nb\nc\n\d\n", io.gets(nil)
     end
@@ -317,6 +317,13 @@ describe Down::ChunkedIO do
       assert_equal "ab",  io.gets("\r", 2)
       assert_equal "c\r", io.gets("\r", 3)
       assert_equal "d\r", io.gets("\r", 3)
+    end
+
+    it "accepts a nil separator and a limit" do
+      io = chunked_io(chunks: ["a", "bc\r", "d\r"].each)
+      assert_equal "ab",   io.gets(nil, 2)
+      assert_equal "c\rd", io.gets(nil, 3)
+      assert_equal "\r",   io.gets(nil, 3)
     end
 
     it "returns nil when on EOF" do

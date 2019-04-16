@@ -89,7 +89,7 @@ module Down
     #   surrounded with that sequence of bytes
     # * if `separator` is an empty string returns paragraphs of content
     #   (content delimited by two newlines)
-    # * if `separator` is nil returns all content
+    # * if `separator` is nil and `limit` is nil returns all content
     #
     # With `limit` argument returns maximum of that amount of bytes.
     #
@@ -104,25 +104,29 @@ module Down
         separator = separator_or_limit
       end
 
-      return read if separator.nil?
+      return read if separator.nil? && limit.nil?
 
-      separator = "\n\n" if separator.empty?
+      separator = "\n\n" if separator && separator.empty?
 
       begin
         data = readpartial(limit)
 
-        until data.include?(separator) || data.bytesize == limit || eof?
+        until (separator && data.include?(separator)) || data.bytesize == limit || eof?
           remaining_length = limit - data.bytesize if limit
           data << readpartial(remaining_length, outbuf ||= String.new)
         end
 
-        line, extra = data.split(separator, 2)
-        line << separator if data.include?(separator)
+        if separator
+          line, extra = data.split(separator, 2)
+          line << separator if data.include?(separator)
 
-        if cache
-          cache.pos -= extra.to_s.bytesize
+          if cache
+            cache.pos -= extra.to_s.bytesize
+          else
+            @buffer = @buffer.to_s.prepend(extra.to_s)
+          end
         else
-          @buffer = @buffer.to_s.prepend(extra.to_s)
+          line = data
         end
       rescue EOFError
         line = nil
