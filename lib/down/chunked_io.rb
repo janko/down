@@ -186,6 +186,7 @@ module Down
 
       @position += data.bytesize
 
+      data.force_encoding(Encoding::BINARY) if length
       data
     end
 

@@ -1,3 +1,7 @@
+## HEAD
+
+* Make `ChunkedIO#read`/`#readpartial` with length always return strings in binary encoding (@janko)
+
 ## 4.8.0 (2018-12-19)
 
 * Prefer UTF-8 filenames in `Content-Disposition` header for `Tempfile#original_filename` (@janko)

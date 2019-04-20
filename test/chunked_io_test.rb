@@ -84,7 +84,7 @@ describe Down::ChunkedIO do
         assert_equal "bc", io.read
       end
 
-      it "returns content in correct encoding" do
+      it "returns content in specified encoding" do
         io = chunked_io(chunks: ["ab", "c"].each)
         assert_equal Encoding::BINARY, io.read.encoding
         io.rewind
@@ -154,16 +154,16 @@ describe Down::ChunkedIO do
         assert_equal "bc", io.read(2)
       end
 
-      it "returns content in correct encoding" do
+      it "returns content in binary encoding" do
         io = chunked_io(chunks: ["ab", "c"].each)
         assert_equal Encoding::BINARY, io.read(1).encoding
         io.rewind
         assert_equal Encoding::BINARY, io.read(1).encoding
 
         io = chunked_io(chunks: ["ab", "c"].each, encoding: "utf-8")
-        assert_equal Encoding::UTF_8, io.read(1).encoding
+        assert_equal Encoding::BINARY, io.read(1).encoding
         io.rewind
-        assert_equal Encoding::UTF_8, io.read(1).encoding
+        assert_equal Encoding::BINARY, io.read(1).encoding
       end
     end
 
@@ -249,16 +249,16 @@ describe Down::ChunkedIO do
         assert_equal "bc", io.read(2, "")
       end
 
-      it "returns content in correct encoding" do
+      it "returns content in binary encoding" do
         io = chunked_io(chunks: ["ab", "c"].each)
         assert_equal Encoding::BINARY, io.read(1, "").encoding
         io.rewind
         assert_equal Encoding::BINARY, io.read(1, "").encoding
 
         io = chunked_io(chunks: ["ab", "c"].each, encoding: "utf-8")
-        assert_equal Encoding::UTF_8, io.read(1, "").encoding
+        assert_equal Encoding::BINARY, io.read(1, "").encoding
         io.rewind
-        assert_equal Encoding::UTF_8, io.read(1, "").encoding
+        assert_equal Encoding::BINARY, io.read(1, "").encoding
       end
     end
 
