@@ -2,6 +2,8 @@
 
 * Make `ChunkedIO#read`/`#readpartial` with length always return strings in binary encoding (@janko)
 
+* In `ChunkedIO#gets` respect the limit argument when separator is nil (@edlebert)
+
 ## 4.8.0 (2018-12-19)
 
 * Prefer UTF-8 filenames in `Content-Disposition` header for `Tempfile#original_filename` (@janko)
