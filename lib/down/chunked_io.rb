@@ -104,29 +104,25 @@ module Down
         separator = separator_or_limit
       end
 
-      return read if separator.nil? && limit.nil?
+      return read(limit) if separator.nil?
 
-      separator = "\n\n" if separator && separator.empty?
+      separator = "\n\n" if separator.empty?
 
       begin
         data = readpartial(limit)
 
-        until (separator && data.include?(separator)) || data.bytesize == limit || eof?
+        until data.include?(separator) || data.bytesize == limit || eof?
           remaining_length = limit - data.bytesize if limit
           data << readpartial(remaining_length, outbuf ||= String.new)
         end
 
-        if separator
-          line, extra = data.split(separator, 2)
-          line << separator if data.include?(separator)
+        line, extra = data.split(separator, 2)
+        line << separator if data.include?(separator)
 
-          if cache
-            cache.pos -= extra.to_s.bytesize
-          else
-            @buffer = @buffer.to_s.prepend(extra.to_s)
-          end
+        if cache
+          cache.pos -= extra.to_s.bytesize
         else
-          line = data
+          @buffer = @buffer.to_s.prepend(extra.to_s)
         end
       rescue EOFError
         line = nil

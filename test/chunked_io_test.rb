@@ -786,9 +786,7 @@ describe Down::ChunkedIO do
   it "can be parsed by the CSV standard library" do
     require "csv"
     io = chunked_io(chunks: ["h1,h2,h3\na", ",b,c\nd,", "e,f\ng,h,i"])
-    csv = CSV.new(io, headers: true)
-    rows = []
-    rows << csv.shift until csv.eof?
+    rows = CSV.parse(io, headers: true)
     assert_equal Hash["h1"=>"a", "h2"=>"b", "h3"=>"c"], rows[0].to_h
     assert_equal Hash["h1"=>"d", "h2"=>"e", "h3"=>"f"], rows[1].to_h
     assert_equal Hash["h1"=>"g", "h2"=>"h", "h3"=>"i"], rows[2].to_h
