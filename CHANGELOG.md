@@ -1,4 +1,4 @@
-## HEAD
+## 4.8.1 (2019-05-01)
 
 * Make `ChunkedIO#read`/`#readpartial` with length always return strings in binary encoding (@janko)
 
