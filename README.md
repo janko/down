@@ -57,7 +57,11 @@ specific location on disk, you can specify the `:destination` option:
 
 ```rb
 Down.download("http://example.com/image.jpg", destination: "/path/to/destination")
+#=> nil
 ```
+
+In this case `Down.download` won't have any return value, so if you need a File
+object you'll have to create it manually.
 
 ### Basic authentication
 
