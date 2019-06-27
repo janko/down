@@ -1,4 +1,4 @@
-## HEAD
+## 4.8.2 (2019-06-27)
 
 * Make `ChunkedIO#read`/`#readpartial` work with frozen chunk strings (@janko)
 
