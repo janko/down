@@ -186,7 +186,10 @@ module Down
 
       @position += data.bytesize
 
-      data.force_encoding(Encoding::BINARY) if length
+      if length
+        data = data.dup.force_encoding(Encoding::BINARY) if data.encoding != Encoding::BINARY
+      end
+
       data
     end
 
@@ -272,7 +275,11 @@ module Down
     def retrieve_chunk
       chunk = @next_chunk
       @next_chunk = chunks_fiber.resume
-      chunk.force_encoding(@encoding) if chunk
+
+      return nil unless chunk
+
+      chunk = chunk.dup.force_encoding(@encoding) if chunk.encoding != @encoding
+      chunk
     end
 
     # Returns whether there is any content left to retrieve.
