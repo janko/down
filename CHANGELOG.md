@@ -1,7 +1,3 @@
-## 4.8.2 (2019-06-27)
-
-* Make `ChunkedIO#read`/`#readpartial` work with frozen chunk strings (@janko)
-
 ## 4.8.1 (2019-05-01)
 
 * Make `ChunkedIO#read`/`#readpartial` with length always return strings in binary encoding (@janko)
