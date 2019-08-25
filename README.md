@@ -1,7 +1,7 @@
 # Down
 
 Down is a utility tool for streaming, flexible and safe downloading of remote
-files. It can use [open-uri] + `Net::HTTP`, [HTTP.rb] or `wget` as the backend
+files. It can use [open-uri] + `Net::HTTP`, [http.rb] or `wget` as the backend
 HTTP library.
 
 ## Installation
@@ -154,7 +154,7 @@ remote_file.data[:response] # returns the response object
 Note that `Down::NotFound` error will automatically be raised if response
 status was 4xx or 5xx.
 
-### `Down::ChunkedIO`
+### Down::ChunkedIO
 
 The `Down.open` performs HTTP logic and returns an instance of
 `Down::ChunkedIO`. However, `Down::ChunkedIO` is a generic class that can wrap
@@ -212,9 +212,11 @@ the `Down::Error` subclasses. This is Down's exception hierarchy:
 
 ## Backends
 
-By default Down implements `Down.download` and `Down.open` using the built-in
-[open-uri] + [Net::HTTP] Ruby standard libraries. However, there are other
-backends as well, see the sections below.
+The following backends are available:
+
+* [Down::NetHttp](#downnethttp) (default)
+* [Down::Http](#downhttp)
+* [Down::Wget](#downwget)
 
 You can use the backend directly:
 
@@ -236,7 +238,10 @@ Down.download("...")
 Down.open("...")
 ```
 
-### open-uri + Net::HTTP
+### Down::NetHttp
+
+The `Down::NetHttp` backend implements downloads using [open-uri] and
+[Net::HTTP].
 
 ```rb
 gem "down", "~> 4.4"
@@ -338,7 +343,9 @@ net_http.download("http://example.com/image.jpg")
 net_http.open("http://example.com/image.jpg")
 ```
 
-### HTTP.rb
+### Down::Http
+
+The `Down::Http` backend implements downloads using the [http.rb] gem.
 
 ```rb
 gem "down", "~> 4.4"
@@ -354,7 +361,7 @@ io = Down::Http.open("http://nature.com/forest.jpg")
 io #=> #<Down::ChunkedIO ...>
 ```
 
-Some features that give the HTTP.rb backend an advantage over `open-uri` +
+Some features that give the http.rb backend an advantage over `open-uri` and
 `Net::HTTP` include:
 
 * Low memory usage (**10x less** than `open-uri`/`Net::HTTP`)
@@ -405,7 +412,10 @@ down = Down::Http.new(method: :post)
 down.download("http://example.org/image.jpg")
 ```
 
-### Wget (experimental)
+### Down::Wget (experimental)
+
+The `Down::Wget` backend implements downloads using the `wget` command line
+utility.
 
 ```rb
 gem "down", "~> 4.4"
@@ -422,9 +432,8 @@ io = Down::Wget.open("http://nature.com/forest.jpg")
 io #=> #<Down::ChunkedIO ...>
 ```
 
-The Wget backend uses the `wget` command line utility for downloading. One
-major advantage of `wget` is that it automatically resumes downloads that were
-interrupted due to network failures, which is very useful when you're
+One major advantage of `wget` is that it automatically resumes downloads that
+were interrupted due to network failures, which is very useful when you're
 downloading large files.
 
 However, the Wget backend should still be considered experimental, as it wasn't
@@ -454,6 +463,8 @@ wget.open("http://nature.com/forest.jpg")
 * MRI 2.2
 * MRI 2.3
 * MRI 2.4
+* MRI 2.5
+* MRI 2.6
 * JRuby
 
 ## Development
@@ -473,6 +484,6 @@ you'll need to have Docker installed and running.
 
 [open-uri]: http://ruby-doc.org/stdlib-2.3.0/libdoc/open-uri/rdoc/OpenURI.html
 [Net::HTTP]: https://ruby-doc.org/stdlib-2.4.1/libdoc/net/http/rdoc/Net/HTTP.html
-[HTTP.rb]: https://github.com/httprb/http
+[http.rb]: https://github.com/httprb/http
 [Addressable::URI]: https://github.com/sporkmonger/addressable
 [kennethreitz/httpbin]: https://github.com/kennethreitz/httpbin
