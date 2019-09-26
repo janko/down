@@ -12,6 +12,8 @@
 
 * Halve memory allocation for `ChunkedIO#read` without arguments (@janko)
 
+* Drop support for `HTTP::Client` argument in `Down::HTTP.new` (@janko)
+
 ## 4.8.1 (2019-05-01)
 
 * Make `ChunkedIO#read`/`#readpartial` with length always return strings in binary encoding (@janko)

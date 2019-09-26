@@ -13,11 +13,6 @@ module Down
   class Http < Backend
     # Initializes the backend with common defaults.
     def initialize(options = {}, &block)
-      if options.is_a?(HTTP::Client)
-        warn "[Down] Passing an HTTP::Client object to Down::Http#initialize is deprecated and won't be supported in Down 5. Use the block initialization instead."
-        options = options.default_options.to_hash
-      end
-
       @method = options.delete(:method) || :get
       @client = HTTP
         .headers("User-Agent" => "Down/#{Down::VERSION}")
