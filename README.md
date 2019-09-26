@@ -7,7 +7,7 @@ HTTP library.
 ## Installation
 
 ```rb
-gem "down", "~> 4.4"
+gem "down", "~> 5.0"
 ```
 
 ## Downloading
