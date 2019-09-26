@@ -285,8 +285,12 @@ describe Down::Http do
     end
 
     it "raises on HTTP error responses" do
-      error = assert_raises(Down::ClientError) { Down::Http.open("#{$httpbin}/status/404") }
+      error = assert_raises(Down::NotFound) { Down::Http.open("#{$httpbin}/status/404") }
       assert_equal "404 Not Found", error.message
+      assert_instance_of HTTP::Response, error.response
+
+      error = assert_raises(Down::ClientError) { Down::Http.open("#{$httpbin}/status/403") }
+      assert_equal "403 Forbidden", error.message
       assert_instance_of HTTP::Response, error.response
 
       error = assert_raises(Down::ServerError) { Down::Http.open("#{$httpbin}/status/500") }

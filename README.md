@@ -161,8 +161,8 @@ remote_file.data[:headers]  #=> { ... }
 remote_file.data[:response] # returns the response object
 ```
 
-Note that `Down::NotFound` error will automatically be raised if response
-status was 4xx or 5xx.
+Note that a `Down::ResponseError` exception will automatically be raised if
+response status was 4xx or 5xx.
 
 ### Down::ChunkedIO
 
@@ -210,15 +210,15 @@ the `Down::Error` subclasses. This is Down's exception hierarchy:
 
 * `Down::Error`
   * `Down::TooLarge`
-  * `Down::NotFound`
-    * `Down::InvalidUrl`
-    * `Down::TooManyRedirects`
-    * `Down::ResponseError`
-      * `Down::ClientError`
-      * `Down::ServerError`
-    * `Down::ConnectionError`
-    * `Down::TimeoutError`
-    * `Down::SSLError`
+  * `Down::InvalidUrl`
+  * `Down::TooManyRedirects`
+  * `Down::ResponseError`
+    * `Down::ClientError`
+      * `Down::NotFound`
+    * `Down::ServerError`
+  * `Down::ConnectionError`
+  * `Down::TimeoutError`
+  * `Down::SSLError`
 
 ## Backends
 

@@ -109,6 +109,7 @@ module Down
       args = [response.status.to_s, response: response]
 
       case response.code
+      when 404      then raise Down::NotFound.new(*args)
       when 400..499 then raise Down::ClientError.new(*args)
       when 500..599 then raise Down::ServerError.new(*args)
       else               raise Down::ResponseError.new(*args)

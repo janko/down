@@ -215,8 +215,12 @@ describe Down do
     end
 
     it "raises on HTTP error responses" do
-      error = assert_raises(Down::ClientError) { Down::NetHttp.download("#{$httpbin}/status/404") }
+      error = assert_raises(Down::NotFound) { Down::NetHttp.download("#{$httpbin}/status/404") }
       assert_equal "404 Not Found", error.message
+      assert_kind_of Net::HTTPResponse, error.response
+
+      error = assert_raises(Down::ClientError) { Down::NetHttp.download("#{$httpbin}/status/403") }
+      assert_equal "403 Forbidden", error.message
       assert_kind_of Net::HTTPResponse, error.response
 
       error = assert_raises(Down::ServerError) { Down::NetHttp.download("#{$httpbin}/status/500") }

@@ -14,6 +14,8 @@
 
 * Drop support for `HTTP::Client` argument in `Down::HTTP.new` (@janko)
 
+* Repurpose `Down::NotFound` to be raised on `404 Not Found` response (@janko)
+
 ## 4.8.1 (2019-05-01)
 
 * Make `ChunkedIO#read`/`#readpartial` with length always return strings in binary encoding (@janko)
