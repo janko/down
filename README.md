@@ -107,6 +107,16 @@ remote_file.eof? #=> true
 remote_file.close # closes the HTTP connection and deletes the internal Tempfile
 ```
 
+The following IO methods are implemented:
+
+* `#read` & `#readpartial`
+* `#gets`
+* `#seek`
+* `#pos` & `#tell`
+* `#eof?`
+* `#rewind`
+* `#close`
+
 ### Caching
 
 By default the downloaded content is internally cached into a `Tempfile`, so
