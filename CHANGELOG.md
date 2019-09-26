@@ -1,4 +1,4 @@
-## HEAD
+## 5.0.0 (2019-09-26)
 
 * Change `ChunkedIO#each_chunk` to return chunks in original encoding (@janko)
 
