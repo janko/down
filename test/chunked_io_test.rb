@@ -286,6 +286,14 @@ describe Down::ChunkedIO do
       assert_equal "d\n", io.gets
     end
 
+    it "retrieves lines when non-rewindable with limit" do
+      io = chunked_io(chunks: ["a\n", "b\nc\nd", "\n"].each, rewindable: false)
+      assert_equal "a\n", io.gets(3)
+      assert_equal "b\n", io.gets(3)
+      assert_equal "c\n", io.gets(3)
+      assert_equal "d\n", io.gets(3)
+    end
+
     it "accepts a different separator" do
       io = chunked_io(chunks: ["a\r", "b\rc\rd", "\r"].each)
       assert_equal "a\r", io.gets("\r")
@@ -326,6 +334,14 @@ describe Down::ChunkedIO do
       assert_equal "\r",   io.gets(nil, 3)
     end
 
+    it "returns lines in sepecified encoding" do
+      io = chunked_io(chunks: ["ab", "c"], encoding: Encoding::UTF_8)
+      assert_equal Encoding::UTF_8, io.gets.encoding
+
+      io = chunked_io(chunks: ["ab", "c"])
+      assert_equal Encoding::BINARY, io.gets.encoding
+    end
+
     it "returns nil when on EOF" do
       io = chunked_io(chunks: ["a\n"].each)
       io.gets
@@ -340,48 +356,7 @@ describe Down::ChunkedIO do
   end
 
   describe "#readpartial" do
-    describe "without arguments" do
-      it "reads the next chunk" do
-        io = chunked_io(chunks: ["ab", "c"].each)
-        assert_equal "ab", io.readpartial
-        assert_equal "c",  io.readpartial
-      end
-
-      it "reads the remainder of a chunk" do
-        io = chunked_io(chunks: ["ab", "c"].each)
-        io.readpartial(1)
-        assert_equal "b", io.readpartial
-        assert_equal "c", io.readpartial
-      end
-
-      it "reads available data from cache" do
-        io = chunked_io(chunks: ["ab", "c"].each)
-        io.readpartial
-        io.rewind
-        assert_equal "ab", io.readpartial
-        assert_equal "c",  io.readpartial
-      end
-
-      it "reads available data from cache and buffer" do
-        io = chunked_io(chunks: ["ab", "c"].each)
-        io.readpartial(1)
-        io.rewind
-        assert_equal "ab", io.readpartial
-      end
-
-      it "raises EOFError on eof" do
-        io = chunked_io(chunks: ["ab", "c"].each)
-        io.read
-        assert_raises(EOFError) { io.readpartial }
-      end
-
-      it "raises EOFError on zero chunks" do
-        io = chunked_io(chunks: [].each)
-        assert_raises(EOFError) { io.readpartial }
-      end
-    end
-
-    describe "with length" do
+    describe "with maxlen" do
       it "reads specified number of bytes" do
         io = chunked_io(chunks: ["ab", "c"].each)
         assert_equal "a", io.readpartial(1)
@@ -417,6 +392,16 @@ describe Down::ChunkedIO do
         io.readpartial(1)
         io.rewind
         assert_equal "ab", io.readpartial(4)
+      end
+
+      it "returns data in binary encoding" do
+        io = chunked_io(chunks: ["ab", "c"])
+        assert_equal Encoding::BINARY, io.readpartial(1).encoding
+      end
+
+      it "works with frozen chunks" do
+        io = chunked_io(chunks: ["ab".freeze, "c".freeze])
+        assert_equal Encoding::BINARY, io.readpartial(2).encoding
       end
 
       it "raises EOFError on eof" do
@@ -486,6 +471,16 @@ describe Down::ChunkedIO do
         assert_equal "ab", io.readpartial(4, "")
       end
 
+      it "returns data in binary encoding" do
+        io = chunked_io(chunks: ["ab", "c"])
+        assert_equal Encoding::BINARY, io.readpartial(1, "").encoding
+      end
+
+      it "works with frozen chunks" do
+        io = chunked_io(chunks: ["ab".freeze, "c".freeze])
+        assert_equal Encoding::BINARY, io.readpartial(2, "").encoding
+      end
+
       it "raises EOFError on eof" do
         io = chunked_io(chunks: ["ab", "c"].each)
         io.read
@@ -505,7 +500,7 @@ describe Down::ChunkedIO do
     it "raises IOError when closed" do
       io = chunked_io(chunks: ["ab", "c"].each)
       io.close
-      assert_raises(IOError) { io.readpartial }
+      assert_raises(IOError) { io.readpartial(4) }
     end
   end
 
@@ -600,14 +595,6 @@ describe Down::ChunkedIO do
       io.each_chunk {}
       io.rewind
       assert_equal "", io.read
-    end
-
-    it "returns chunks in correct encoding" do
-      io = chunked_io(chunks: ["ab", "c"].each)
-      io.each_chunk { |chunk| assert_equal Encoding::BINARY, chunk.encoding }
-
-      io = chunked_io(chunks: ["ab", "c"].each, encoding: "utf-8")
-      io.each_chunk { |chunk| assert_equal Encoding::UTF_8, chunk.encoding }
     end
 
     it "raises IOError when closed" do

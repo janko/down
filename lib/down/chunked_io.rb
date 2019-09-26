@@ -63,21 +63,18 @@ module Down
     def read(length = nil, outbuf = nil)
       fail IOError, "closed stream" if closed?
 
+      data             = outbuf.to_s.clear.force_encoding(Encoding::BINARY)
       remaining_length = length
 
-      begin
-        data = readpartial(remaining_length, outbuf)
-        data = data.dup unless outbuf
-        remaining_length = length - data.bytesize if length
-      rescue EOFError
-      end
-
       until remaining_length == 0 || eof?
-        data << readpartial(remaining_length)
+        data << readpartial(remaining_length, buffer ||= String.new)
         remaining_length = length - data.bytesize if length
       end
 
-      data.to_s unless length && length > 0 && (data.nil? || data.empty?)
+      buffer.clear if buffer # deallocate string
+
+      data.force_encoding(@encoding) unless length
+      data unless data.empty? && length && length > 0
     end
 
     # Implements IO#gets semantics. Without arguments it retrieves lines of
@@ -108,27 +105,33 @@ module Down
 
       separator = "\n\n" if separator.empty?
 
-      begin
-        data = readpartial(limit)
+      data = String.new
 
-        until data.include?(separator) || data.bytesize == limit || eof?
-          remaining_length = limit - data.bytesize if limit
-          data << readpartial(remaining_length, outbuf ||= String.new)
-        end
-
-        line, extra = data.split(separator, 2)
-        line << separator if data.include?(separator)
-
-        if cache
-          cache.pos -= extra.to_s.bytesize
-        else
-          @buffer = @buffer.to_s.prepend(extra.to_s)
-        end
-      rescue EOFError
-        line = nil
+      until data.include?(separator) || data.bytesize == limit || eof?
+        remaining_length = limit - data.bytesize if limit
+        data << readpartial(remaining_length, buffer ||= String.new)
       end
 
-      line
+      buffer.clear if buffer # deallocate buffer
+
+      line, extra = data.split(separator, 2)
+      line << separator if data.include?(separator)
+
+      data.clear # deallocate data
+
+      if extra
+        if cache
+          cache.pos -= extra.bytesize
+        else
+          if @buffer
+            @buffer.prepend(extra)
+          else
+            @buffer = extra
+          end
+        end
+      end
+
+      line.force_encoding(@encoding) if line
     end
 
     # Implements IO#readpartial semantics. If there is any content readily
@@ -145,27 +148,25 @@ module Down
     # where the value is replaced with retrieved content.
     #
     # Raises EOFError if end of file is reached. Raises IOError if closed.
-    def readpartial(length = nil, outbuf = nil)
+    def readpartial(maxlen = nil, outbuf = nil)
       fail IOError, "closed stream" if closed?
 
-      data = outbuf.clear.force_encoding(@encoding) if outbuf
+      maxlen ||= 16*1024
 
-      return data.to_s if length == 0
+      data   = cache.read(maxlen, outbuf) if cache && !cache.eof?
+      data ||= outbuf.to_s.clear
 
-      if cache && !cache.eof?
-        data = cache.read(length, outbuf)
-        data.force_encoding(@encoding)
-      end
+      return data if maxlen == 0
 
-      if @buffer.nil? && (data.nil? || data.empty?)
+      if @buffer.nil? && data.empty?
         fail EOFError, "end of file reached" if chunks_depleted?
         @buffer = retrieve_chunk
       end
 
-      remaining_length = data && length ? length - data.bytesize : length
+      remaining_length = maxlen - data.bytesize
 
       unless @buffer.nil? || remaining_length == 0
-        if remaining_length && remaining_length < @buffer.bytesize
+        if remaining_length < @buffer.bytesize
           buffered_data = @buffer.byteslice(0, remaining_length)
           @buffer       = @buffer.byteslice(remaining_length..-1)
         else
@@ -173,21 +174,16 @@ module Down
           @buffer       = nil
         end
 
-        if data
-          data << buffered_data
-        else
-          data = buffered_data
-        end
+        data << buffered_data
 
         cache.write(buffered_data) if cache
 
-        buffered_data.clear unless buffered_data.equal?(data)
+        buffered_data.clear unless buffered_data.frozen?
       end
 
       @position += data.bytesize
 
-      data.force_encoding(Encoding::BINARY) if length
-      data
+      data.force_encoding(Encoding::BINARY)
     end
 
     # Implements IO#seek semantics.
@@ -303,7 +299,7 @@ module Down
     def retrieve_chunk
       chunk = @next_chunk
       @next_chunk = chunks_fiber.resume
-      chunk.force_encoding(@encoding) if chunk
+      chunk
     end
 
     # Returns whether there is any content left to retrieve.

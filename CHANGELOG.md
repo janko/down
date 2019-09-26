@@ -1,3 +1,17 @@
+## HEAD
+
+* Change `ChunkedIO#each_chunk` to return chunks in original encoding (@janko)
+
+* Always return binary strings in `ChunkedIO#readpartial` (@janko)
+
+* Handle frozen chunks in `Down::ChunkedIO` (@janko)
+
+* Change `ChunkedIO#gets` to return lines in specified encoding (@janko)
+
+* Halve memory allocation for `ChunkedIO#gets` (@janko)
+
+* Halve memory allocation for `ChunkedIO#read` without arguments (@janko)
+
 ## 4.8.1 (2019-05-01)
 
 * Make `ChunkedIO#read`/`#readpartial` with length always return strings in binary encoding (@janko)
