@@ -142,7 +142,7 @@ module Down
     # or the next chunk. This is useful when you don't care about the size of
     # chunks and you want to minimize string allocations.
     #
-    # With `length` argument returns maximum of that amount of bytes.
+    # With `maxlen` argument returns maximum of that amount of bytes.
     #
     # With `outbuf` argument each call will return that same string object,
     # where the value is replaced with retrieved content.
