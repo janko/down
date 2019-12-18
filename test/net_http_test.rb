@@ -233,6 +233,11 @@ describe Down do
       assert_equal "foo bar", tempfile.meta["etag"]
     end
 
+    it "only normalizes URLs when URI says the URL is invalid" do
+      Addressable::URI.expects(:parse).never
+      Down::NetHttp.download("#{$httpbin}/etag/2ELk8hUpTC2wqJ%2BZ%25GfTFA.jpg")
+    end
+
     it "raises on invalid URLs" do
       assert_raises(Down::InvalidUrl) { Down::NetHttp.download("foo://example.org") }
       assert_raises(Down::InvalidUrl) { Down::NetHttp.download("| ls") }
