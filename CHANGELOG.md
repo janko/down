@@ -1,3 +1,7 @@
+## 5.0.1 (2019-12-20)
+
+* In `Down::NetHttp` only use Addressable normalization if `URI.parse` fails (@coding-chimp)
+
 ## 5.0.0 (2019-09-26)
 
 * Change `ChunkedIO#each_chunk` to return chunks in original encoding (@janko)
