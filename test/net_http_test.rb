@@ -234,8 +234,9 @@ describe Down do
     end
 
     it "only normalizes URLs when URI says the URL is invalid" do
-      Addressable::URI.expects(:parse).never
-      Down::NetHttp.download("#{$httpbin}/etag/2ELk8hUpTC2wqJ%2BZ%25GfTFA.jpg")
+      url = "#{$httpbin}/etag/2ELk8hUpTC2wqJ%2BZ%25GfTFA.jpg"
+      tempfile = Down::NetHttp.download(url)
+      assert_equal url, tempfile.base_uri.to_s
     end
 
     it "raises on invalid URLs" do
