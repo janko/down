@@ -285,6 +285,8 @@ module Down
 
     # Makes sure that the URL is properly encoded.
     def addressable_normalize(url)
+      URI(url)
+    rescue URI::InvalidURIError
       addressable_uri = Addressable::URI.parse(url)
       addressable_uri.normalize.to_s
     end
