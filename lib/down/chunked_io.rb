@@ -63,7 +63,9 @@ module Down
     def read(length = nil, outbuf = nil)
       fail IOError, "closed stream" if closed?
 
-      data             = outbuf.to_s.clear.force_encoding(Encoding::BINARY)
+      data   = outbuf.clear.force_encoding(Encoding::BINARY) if outbuf
+      data ||= "".b
+
       remaining_length = length
 
       until remaining_length == 0 || eof?
@@ -142,7 +144,8 @@ module Down
     # or the next chunk. This is useful when you don't care about the size of
     # chunks and you want to minimize string allocations.
     #
-    # With `maxlen` argument returns maximum of that amount of bytes.
+    # With `maxlen` argument returns maximum of that amount of bytes (default
+    # is 16KB).
     #
     # With `outbuf` argument each call will return that same string object,
     # where the value is replaced with retrieved content.
@@ -154,7 +157,8 @@ module Down
       maxlen ||= 16*1024
 
       data   = cache.read(maxlen, outbuf) if cache && !cache.eof?
-      data ||= outbuf.to_s.clear
+      data ||= outbuf.clear.force_encoding(Encoding::BINARY) if outbuf
+      data ||= "".b
 
       return data if maxlen == 0
 

@@ -1,3 +1,9 @@
+## master
+
+* Fix keyword arguments warnings on Ruby 2.7 (@janko)
+
+* Deprecate passing headers as top-level options in `Down::NetHttp` (@janko)
+
 ## 5.0.1 (2019-12-20)
 
 * In `Down::NetHttp` only use Addressable normalization if `URI.parse` fails (@coding-chimp)

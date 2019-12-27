@@ -12,7 +12,7 @@ module Down
   # Provides streaming downloads implemented with HTTP.rb.
   class Http < Backend
     # Initializes the backend with common defaults.
-    def initialize(options = {}, &block)
+    def initialize(**options, &block)
       @method = options.delete(:method) || :get
       @client = HTTP
         .headers("User-Agent" => "Down/#{Down::VERSION}")
@@ -106,7 +106,7 @@ module Down
 
     # Raises non-sucessful response as a Down::ResponseError.
     def response_error!(response)
-      args = [response.status.to_s, response: response]
+      args = [response.status.to_s, response]
 
       case response.code
       when 404      then raise Down::NotFound.new(*args)

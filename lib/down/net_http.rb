@@ -13,26 +13,26 @@ module Down
   # Provides streaming downloads implemented with Net::HTTP and open-uri.
   class NetHttp < Backend
     # Initializes the backend with common defaults.
-    def initialize(options = {})
-      @options = {
-        "User-Agent" => "Down/#{Down::VERSION}",
+    def initialize(*args, **options)
+      @options = merge_options({
+        headers:       { "User-Agent" => "Down/#{Down::VERSION}" },
         max_redirects: 2,
         open_timeout:  30,
         read_timeout:  30,
-      }.merge(options)
+      }, *args, **options)
     end
 
     # Downloads a remote file to disk using open-uri. Accepts any open-uri
     # options, and a few more.
-    def download(url, options = {})
-      options = @options.merge(options)
+    def download(url, *args, **options)
+      options = merge_options(@options, *args, **options)
 
       max_size            = options.delete(:max_size)
       max_redirects       = options.delete(:max_redirects)
       progress_proc       = options.delete(:progress_proc)
       content_length_proc = options.delete(:content_length_proc)
       destination         = options.delete(:destination)
-      headers             = options.delete(:headers) || {}
+      headers             = options.delete(:headers)
 
       # Use open-uri's :content_lenth_proc or :progress_proc to raise an
       # exception early if the file is too large.
@@ -95,13 +95,15 @@ module Down
 
     # Starts retrieving the remote file using Net::HTTP and returns an IO-like
     # object which downloads the response body on-demand.
-    def open(url, options = {})
+    def open(url, *args, **options)
       uri     = ensure_uri(addressable_normalize(url))
-      options = @options.merge(options)
+      options = merge_options(@options, *args, **options)
+
+      max_redirects = options.delete(:max_redirects)
 
       # Create a Fiber that halts when response headers are received.
       request = Fiber.new do
-        net_http_request(uri, options) do |response|
+        net_http_request(uri, options, follows_remaining: max_redirects) do |response|
           Fiber.yield response
         end
       end
@@ -131,7 +133,7 @@ module Down
     private
 
     # Calls open-uri's URI::HTTP#open method. Additionally handles redirects.
-    def open_uri(uri, options, follows_remaining: 0)
+    def open_uri(uri, options, follows_remaining:)
       uri.open(options)
     rescue OpenURI::HTTPRedirect => exception
       raise Down::TooManyRedirects, "too many redirects" if follows_remaining == 0
@@ -186,7 +188,7 @@ module Down
     end
 
     # Makes a Net::HTTP request and follows redirects.
-    def net_http_request(uri, options, follows_remaining: options.fetch(:max_redirects, 2), &block)
+    def net_http_request(uri, options, follows_remaining:, &block)
       http, request = create_net_http(uri, options)
 
       begin
@@ -251,8 +253,7 @@ module Down
       http.read_timeout = options[:read_timeout] if options.key?(:read_timeout)
       http.open_timeout = options[:open_timeout] if options.key?(:open_timeout)
 
-      headers = options.select { |key, value| key.is_a?(String) }
-      headers.merge!(options[:headers]) if options[:headers]
+      headers = options[:headers].to_h
       headers["Accept-Encoding"] = "" # Net::HTTP's inflater causes FiberErrors
 
       get = Net::HTTP::Get.new(uri.request_uri, headers)
@@ -312,7 +313,7 @@ module Down
       code    = response.code.to_i
       message = response.message.split(" ").map(&:capitalize).join(" ")
 
-      args = ["#{code} #{message}", response: response]
+      args = ["#{code} #{message}", response]
 
       case response.code.to_i
       when 404      then raise Down::NotFound.new(*args)
@@ -335,6 +336,24 @@ module Down
         raise Down::SSLError, exception.message
       else
         raise exception
+      end
+    end
+
+    # Merge default and ad-hoc options, merging nested headers.
+    def merge_options(options, headers = {}, **new_options)
+      # Deprecate passing headers as top-level options, taking into account
+      # that Ruby 2.7+ accepts kwargs with string keys.
+      if headers.any?
+        warn %([Down::NetHttp] Passing headers as top-level options has been deprecated, use the :headers option instead, e.g: `Down::NetHttp.download(headers: { "Key" => "Value", ... }, ...)`)
+        new_options[:headers] = headers
+      elsif new_options.any? { |key, value| key.is_a?(String) }
+        warn %([Down::NetHttp] Passing headers as top-level options has been deprecated, use the :headers option instead, e.g: `Down::NetHttp.download(headers: { "Key" => "Value", ... }, ...)`)
+        new_options[:headers] = new_options.select { |key, value| key.is_a?(String) }
+        new_options.reject! { |key, value| key.is_a?(String) }
+      end
+
+      options.merge(new_options) do |key, value1, value2|
+        key == :headers ? value1.merge(value2) : value2
       end
     end
 

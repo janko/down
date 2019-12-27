@@ -134,23 +134,17 @@ describe Down do
     end
 
     it "accepts request headers" do
-      tempfile = Down::NetHttp.download("#{$httpbin}/headers", {"Key" => "Value"})
-      assert_equal "Value", JSON.parse(tempfile.read)["headers"]["Key"]
-
-      tempfile = Down::NetHttp.download("#{$httpbin}/headers", headers: {"Key" => "Value"})
+      tempfile = Down::NetHttp.download("#{$httpbin}/headers", headers: { "Key" => "Value" })
       assert_equal "Value", JSON.parse(tempfile.read)["headers"]["Key"]
     end
 
     it "forwards other options to open-uri" do
-      tempfile = Down::NetHttp.download("#{$httpbin}/user-agent", {"User-Agent" => "Custom/Agent"})
-      assert_equal "Custom/Agent", JSON.parse(tempfile.read)["user-agent"]
-
       tempfile = Down::NetHttp.download("#{$httpbin}/basic-auth/user/password", http_basic_authentication: ["user", "password"])
       assert_equal true, JSON.parse(tempfile.read)["authenticated"]
     end
 
     it "applies default options" do
-      net_http = Down::NetHttp.new("User-Agent" => "Janko")
+      net_http = Down::NetHttp.new(headers: { "User-Agent" => "Janko" })
       tempfile = net_http.download("#{$httpbin}/user-agent")
       assert_equal "Janko", JSON.parse(tempfile.read)["user-agent"]
     end
@@ -255,6 +249,22 @@ describe Down do
     it "raises on timeout errors" do
       assert_raises(Down::TimeoutError) { Down::NetHttp.download("#{$httpbin}/delay/0.5", read_timeout: 0, open_timeout: 0) }
     end
+
+    deprecated "accepts top-level request headers" do
+      tempfile = Down::NetHttp.download("#{$httpbin}/headers", { "Key" => "Value" })
+      assert_equal "Value", JSON.parse(tempfile.read)["headers"]["Key"]
+
+      tempfile = Down::NetHttp.download("#{$httpbin}/headers", "Key" => "Value")
+      assert_equal "Value", JSON.parse(tempfile.read)["headers"]["Key"]
+
+      net_http = Down::NetHttp.new({ "User-Agent" => "Janko" })
+      tempfile = net_http.download("#{$httpbin}/user-agent")
+      assert_equal "Janko", JSON.parse(tempfile.read)["user-agent"]
+
+      net_http = Down::NetHttp.new("User-Agent" => "Janko")
+      tempfile = net_http.download("#{$httpbin}/user-agent")
+      assert_equal "Janko", JSON.parse(tempfile.read)["user-agent"]
+    end
   end
 
   describe "#open" do
@@ -329,10 +339,7 @@ describe Down do
     end
 
     it "accepts request headers" do
-      io = Down::NetHttp.open("#{$httpbin}/headers", {"Key" => "Value"})
-      assert_equal "Value", JSON.parse(io.read)["headers"]["Key"]
-
-      io = Down::NetHttp.open("#{$httpbin}/headers", headers: {"Key" => "Value"})
+      io = Down::NetHttp.open("#{$httpbin}/headers", headers: { "Key" => "Value" })
       assert_equal "Value", JSON.parse(io.read)["headers"]["Key"]
     end
 
@@ -354,7 +361,7 @@ describe Down do
     end
 
     it "applies default options" do
-      net_http = Down::NetHttp.new("User-Agent" => "Janko")
+      net_http = Down::NetHttp.new(headers: { "User-Agent" => "Janko" })
       io = net_http.open("#{$httpbin}/user-agent")
       assert_equal "Janko", JSON.parse(io.read)["user-agent"]
     end
@@ -407,6 +414,22 @@ describe Down do
       TCPSocket.expects(:open).raises(ArgumentError)
 
       assert_raises(ArgumentError) { Down::NetHttp.open($httpbin) }
+    end
+
+    deprecated "accepts top-level request headers" do
+      io = Down::NetHttp.open("#{$httpbin}/headers", { "Key" => "Value" })
+      assert_equal "Value", JSON.parse(io.read)["headers"]["Key"]
+
+      io = Down::NetHttp.open("#{$httpbin}/headers", "Key" => "Value")
+      assert_equal "Value", JSON.parse(io.read)["headers"]["Key"]
+
+      net_http = Down::NetHttp.new({ "User-Agent" => "Janko" })
+      io = net_http.open("#{$httpbin}/user-agent")
+      assert_equal "Janko", JSON.parse(io.read)["user-agent"]
+
+      net_http = Down::NetHttp.new("User-Agent" => "Janko")
+      io = net_http.open("#{$httpbin}/user-agent")
+      assert_equal "Janko", JSON.parse(io.read)["user-agent"]
     end
   end
 end

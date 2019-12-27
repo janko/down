@@ -3,8 +3,8 @@ require "down/chunked_io"
 require "timeout"
 
 describe Down::ChunkedIO do
-  def chunked_io(options = {})
-    Down::ChunkedIO.new(options)
+  def chunked_io(**options)
+    Down::ChunkedIO.new(**options)
   end
 
   describe "#initialize" do

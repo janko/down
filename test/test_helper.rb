@@ -11,6 +11,8 @@ require "mocha/minitest"
 require "docker-api"
 require "http"
 
+require "./test/support/deprecated_helper"
+
 puts "Docker URL: #{Docker.url}"
 
 image = "kennethreitz/httpbin"

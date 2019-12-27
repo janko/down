@@ -9,12 +9,12 @@ require "fileutils"
 
 module Down
   class Backend
-    def self.download(*args, &block)
-      new.download(*args, &block)
+    def self.download(*args, **options, &block)
+      new.download(*args, **options, &block)
     end
 
-    def self.open(*args, &block)
-      new.open(*args, &block)
+    def self.open(*args, **options, &block)
+      new.open(*args, **options, &block)
     end
 
     private
