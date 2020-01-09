@@ -1,6 +1,8 @@
-## master
+## 5.1.0 (2020-01-09)
 
 * Fix keyword arguments warnings on Ruby 2.7 (@janko)
+
+* Fix `FrozenError` exception in `Down::ChunkedIO#readpartial` (@janko)
 
 * Deprecate passing headers as top-level options in `Down::NetHttp` (@janko)
 
