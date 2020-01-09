@@ -470,12 +470,12 @@ wget.open("http://nature.com/forest.jpg")
 
 ## Supported Ruby versions
 
-* MRI 2.2
 * MRI 2.3
 * MRI 2.4
 * MRI 2.5
 * MRI 2.6
-* JRuby
+* MRI 2.7
+* JRuby 9.2
 
 ## Development
 

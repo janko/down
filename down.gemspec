@@ -4,7 +4,7 @@ Gem::Specification.new do |spec|
   spec.name         = "down"
   spec.version      = Down::VERSION
 
-  spec.required_ruby_version = ">= 2.1"
+  spec.required_ruby_version = ">= 2.3"
 
   spec.summary      = "Robust streaming downloads using Net::HTTP, HTTP.rb or wget."
   spec.homepage     = "https://github.com/janko/down"
