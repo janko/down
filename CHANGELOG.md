@@ -1,3 +1,7 @@
+## master
+
+* Fix keyword arguments warnings on Ruby 2.7 in `Down.download` and `Down.open` (@janko)
+
 ## 5.1.0 (2020-01-09)
 
 * Fix keyword arguments warnings on Ruby 2.7 (@janko)

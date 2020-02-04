@@ -3,6 +3,8 @@ require "test_helper"
 require "down"
 require "down/http"
 
+require "json"
+
 describe Down do
   i_suck_and_my_tests_are_order_dependent! # ಠ_ಠ
 
@@ -24,15 +26,17 @@ describe Down do
 
   describe "#download" do
     it "delegates to the underlying backend" do
-      Down.backend.expects(:download).with("http://example.com")
-      Down.download("http://example.com")
+      tempfile = Down.download("#{$httpbin}/headers", headers: { "Foo" => "Bar" })
+      headers = JSON.parse(tempfile.read).fetch("headers")
+      assert_equal "Bar", headers.fetch("Foo")
     end
   end
 
   describe "#open" do
     it "delegates to the underlying backend" do
-      Down.backend.expects(:open).with("http://example.com")
-      Down.open("http://example.com")
+      io = Down.open("#{$httpbin}/headers", headers: { "Foo" => "Bar" })
+      headers = JSON.parse(io.read).fetch("headers")
+      assert_equal "Bar", headers.fetch("Foo")
     end
   end
 end
