@@ -12,13 +12,6 @@ rvm:
   - 2.6
   - 2.7
   - jruby-9.2.9.0
-  - ruby-head
-  - jruby-head
-
-matrix:
-  allow_failures:
-    - rvm: ruby-head
-    - rvm: jruby-head
 
 # Doesn't currently work with MRI 2.5.1: https://github.com/travis-ci/travis-ci/issues/8978
 # cache: bundler
