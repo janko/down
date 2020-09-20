@@ -2,7 +2,7 @@
 
 * Add `:uri_normalizer` option to `Down::NetHttp` (@janko)
 
-* Add `:http_basic_authentication` option to `Down::NetHttp#download` (@janko)
+* Add `:http_basic_authentication` option to `Down::NetHttp#open` (@janko)
 
 * Fix uninitialized instance variables warnings in `Down::ChunkedIO` (@janko)
 
