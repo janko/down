@@ -36,6 +36,8 @@ module Down
       @rewindable = rewindable
       @buffer     = nil
       @position   = 0
+      @next_chunk = nil
+      @closed     = false
 
       retrieve_chunk # fetch first chunk so that we know whether the file is empty
     end
