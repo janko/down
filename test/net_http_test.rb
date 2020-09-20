@@ -363,6 +363,11 @@ describe Down do
       assert_equal 100, io.size
     end
 
+    it "accepts :http_basic_authentication_option" do
+      io = Down::NetHttp.open("#{$httpbin}/basic-auth/user/password", http_basic_authentication: ["user", "password"])
+      assert_equal true, JSON.parse(io.read)["authenticated"]
+    end
+
     it "detects and applies basic authentication from URL" do
       io = Down::NetHttp.open("#{$httpbin.sub("http://", '\0user:password@')}/basic-auth/user/password")
       assert_equal true, JSON.parse(io.read)["authenticated"]
