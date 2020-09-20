@@ -241,6 +241,12 @@ describe Down do
       assert_equal url, tempfile.base_uri.to_s
     end
 
+    it "accepts :uri_normalizer" do
+      assert_raises(Down::InvalidUrl) do
+        Down::NetHttp.download("#{$httpbin}/etag/foo bar", uri_normalizer: -> (uri) { uri })
+      end
+    end
+
     it "raises on invalid URLs" do
       assert_raises(Down::InvalidUrl) { Down::NetHttp.download("foo://example.org") }
       assert_raises(Down::InvalidUrl) { Down::NetHttp.download("| ls") }
@@ -399,6 +405,12 @@ describe Down do
     it "accepts non-escaped URLs" do
       io = Down::NetHttp.open("#{$httpbin}/etag/foo bar")
       assert_equal "foo bar", io.data[:headers]["Etag"]
+    end
+
+    it "accepts :uri_normalizer" do
+      assert_raises(Down::InvalidUrl) do
+        Down::NetHttp.open("#{$httpbin}/etag/foo bar", uri_normalizer: -> (uri) { uri })
+      end
     end
 
     it "raises on invalid URLs" do

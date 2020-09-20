@@ -12,13 +12,19 @@ require "fileutils"
 module Down
   # Provides streaming downloads implemented with Net::HTTP and open-uri.
   class NetHttp < Backend
+    URI_NORMALIZER = -> (url) do
+      addressable_uri = Addressable::URI.parse(url)
+      addressable_uri.normalize.to_s
+    end
+
     # Initializes the backend with common defaults.
     def initialize(*args, **options)
       @options = merge_options({
-        headers:       { "User-Agent" => "Down/#{Down::VERSION}" },
-        max_redirects: 2,
-        open_timeout:  30,
-        read_timeout:  30,
+        headers:        { "User-Agent" => "Down/#{Down::VERSION}" },
+        max_redirects:  2,
+        open_timeout:   30,
+        read_timeout:   30,
+        uri_normalizer: URI_NORMALIZER,
       }, *args, **options)
     end
 
@@ -33,6 +39,7 @@ module Down
       content_length_proc = options.delete(:content_length_proc)
       destination         = options.delete(:destination)
       headers             = options.delete(:headers)
+      uri_normalizer      = options.delete(:uri_normalizer)
 
       # Use open-uri's :content_lenth_proc or :progress_proc to raise an
       # exception early if the file is too large.
@@ -74,7 +81,7 @@ module Down
       open_uri_options.merge!(options)
       open_uri_options.merge!(headers)
 
-      uri = ensure_uri(addressable_normalize(url))
+      uri = ensure_uri(normalize_uri(url, uri_normalizer: uri_normalizer))
 
       # Handle basic authentication in the remote URL.
       if uri.user || uri.password
@@ -96,10 +103,12 @@ module Down
     # Starts retrieving the remote file using Net::HTTP and returns an IO-like
     # object which downloads the response body on-demand.
     def open(url, *args, **options)
-      uri     = ensure_uri(addressable_normalize(url))
       options = merge_options(@options, *args, **options)
 
-      max_redirects = options.delete(:max_redirects)
+      max_redirects  = options.delete(:max_redirects)
+      uri_normalizer = options.delete(:uri_normalizer)
+
+      uri = ensure_uri(normalize_uri(url, uri_normalizer: uri_normalizer))
 
       # Create a Fiber that halts when response headers are received.
       request = Fiber.new do
@@ -287,11 +296,10 @@ module Down
     end
 
     # Makes sure that the URL is properly encoded.
-    def addressable_normalize(url)
+    def normalize_uri(url, uri_normalizer:)
       URI(url)
     rescue URI::InvalidURIError
-      addressable_uri = Addressable::URI.parse(url)
-      addressable_uri.normalize.to_s
+      uri_normalizer.call(url)
     end
 
     # When open-uri raises an exception, it doesn't expose the response object.

@@ -333,6 +333,18 @@ Down::NetHttp.open("http://example.com/image.jpg",
   ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER)
 ```
 
+#### URI normalization
+
+If the URL isn't parseable by `URI.parse`, `Down::NetHttp` will
+attempt to normalize the URL using [Addressable::URI], URI-escaping
+any potentially unescaped characters. You can change the normalizer
+via the `:uri_normalizer` option:
+
+```rb
+# this skips URL normalization
+Down::NetHttp.download("http://example.com/image.jpg", uri_normalizer: -> (url) { url })
+```
+
 #### Additional options
 
 Any additional options passed to `Down.download` will be forwarded to
