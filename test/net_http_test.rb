@@ -220,6 +220,14 @@ describe Down do
       error = assert_raises(Down::ServerError) { Down::NetHttp.download("#{$httpbin}/status/500") }
       assert_equal "500 Internal Server Error", error.message
       assert_kind_of Net::HTTPResponse, error.response
+
+      error = assert_raises(Down::ServerError) { Down::NetHttp.download("#{$httpbin}/status/599") }
+      assert_equal "599 Unknown", error.message
+      assert_kind_of Net::HTTPResponse, error.response
+
+      error = assert_raises(Down::ResponseError) { Down::NetHttp.download("#{$httpbin}/status/999") }
+      assert_equal "999 Unknown", error.message
+      assert_kind_of Net::HTTPResponse, error.response
     end
 
     it "accepts non-escaped URLs" do
