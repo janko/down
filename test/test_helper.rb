@@ -8,10 +8,11 @@ require "minitest/pride"
 
 require "mocha/minitest"
 
+require_relative "support/deprecated_helper"
+require_relative "support/warnings"
+
 require "docker-api"
 require "http"
-
-require "./test/support/deprecated_helper"
 
 puts "Docker URL: #{Docker.url}"
 

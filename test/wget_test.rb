@@ -38,15 +38,15 @@ describe Down::Wget do
     end
 
     it "accepts :content_length_proc" do
-      tempfile = Down::Wget.download("#{$httpbin}/stream-bytes/100", content_length_proc: -> (length) { @length = length })
+      Down::Wget.download("#{$httpbin}/stream-bytes/100", content_length_proc: -> (length) { @length = length })
       refute instance_variable_defined?(:@length)
 
-      tempfile = Down::Wget.download("#{$httpbin}/bytes/100", content_length_proc: -> (length) { @length = length })
+      Down::Wget.download("#{$httpbin}/bytes/100", content_length_proc: -> (length) { @length = length })
       assert_equal 100, @length
     end
 
     it "accepts :progress_proc" do
-      tempfile = Down::Wget.download("#{$httpbin}/stream-bytes/100?chunk_size=10", progress_proc: -> (progress) { (@progress ||= []) << progress })
+      Down::Wget.download("#{$httpbin}/stream-bytes/100?chunk_size=10", progress_proc: -> (progress) { (@progress ||= []) << progress })
       assert_equal 100, @progress.last
     end
 

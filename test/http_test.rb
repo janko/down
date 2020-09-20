@@ -73,15 +73,15 @@ describe Down::Http do
     end
 
     it "accepts :content_length_proc" do
-      tempfile = Down::Http.download("#{$httpbin}/stream-bytes/100", content_length_proc: -> (length) { @length = length })
+      Down::Http.download("#{$httpbin}/stream-bytes/100", content_length_proc: -> (length) { @length = length })
       refute instance_variable_defined?(:@length)
 
-      tempfile = Down::Http.download("#{$httpbin}/bytes/100", content_length_proc: -> (length) { @length = length })
+      Down::Http.download("#{$httpbin}/bytes/100", content_length_proc: -> (length) { @length = length })
       assert_equal 100, @length
     end
 
     it "accepts :progress_proc" do
-      tempfile = Down::Http.download("#{$httpbin}/stream-bytes/100?chunk_size=10", progress_proc: -> (progress) { (@progress ||= []) << progress })
+      Down::Http.download("#{$httpbin}/stream-bytes/100?chunk_size=10", progress_proc: -> (progress) { (@progress ||= []) << progress })
       assert_equal 100, @progress.last
     end
 

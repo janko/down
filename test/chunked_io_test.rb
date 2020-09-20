@@ -532,19 +532,20 @@ describe Down::ChunkedIO do
     end
 
     it "calls :on_close once whole content has been read" do
-      io = chunked_io(chunks: ["ab", "c"].each, on_close: -> { @on_close_called = true })
-      refute @on_close_called
+      on_close_called = nil
+      io = chunked_io(chunks: ["ab", "c"].each, on_close: -> { on_close_called = true })
+      refute on_close_called
       io.read
-      assert @on_close_called
+      assert on_close_called
     end
 
     it "calls :on_close only once" do
-      @on_close_called = 0
-      io = chunked_io(chunks: ["ab", "c"].each, on_close: -> { @on_close_called += 1 })
+      on_close_called = 0
+      io = chunked_io(chunks: ["ab", "c"].each, on_close: -> { on_close_called += 1 })
       io.read
       io.rewind
       io.read
-      assert_equal 1, @on_close_called
+      assert_equal 1, on_close_called
     end
 
     it "propagates exceptions that occur when retrieving chunks" do
@@ -572,9 +573,10 @@ describe Down::ChunkedIO do
         y << "content"
         raise Timeout::Error
       end
-      io = chunked_io(chunks: exceptional_chunks, on_close: -> { @on_close_called = true })
+      on_close_called = nil
+      io = chunked_io(chunks: exceptional_chunks, on_close: -> { on_close_called = true })
       io.read rescue nil
-      assert @on_close_called
+      assert on_close_called
     end
   end
 
@@ -752,17 +754,18 @@ describe Down::ChunkedIO do
 
   describe "#close" do
     it "calls :on_close" do
-      io = chunked_io(chunks: ["ab", "c"].each, on_close: -> { @on_close_called = true })
+      on_close_called = nil
+      io = chunked_io(chunks: ["ab", "c"].each, on_close: -> { on_close_called = true })
       io.close
-      assert @on_close_called
+      assert on_close_called
     end
 
     it "doesn't call :on_close again after whole content has been read" do
-      @on_close_called = 0
-      io = chunked_io(chunks: ["ab", "c"].each, on_close: -> { @on_close_called += 1 })
+      on_close_called = 0
+      io = chunked_io(chunks: ["ab", "c"].each, on_close: -> { on_close_called += 1 })
       io.read
       io.close
-      assert_equal 1, @on_close_called
+      assert_equal 1, on_close_called
     end
 
     it "doesn't fail when :on_close wasn't specified" do
@@ -791,11 +794,11 @@ describe Down::ChunkedIO do
     end
 
     it "can be called multiple times" do
-      @on_close_called = 0
-      io = chunked_io(chunks: ["ab", "c"].each, on_close: -> { @on_close_called += 1 })
+      on_close_called = 0
+      io = chunked_io(chunks: ["ab", "c"].each, on_close: -> { on_close_called += 1 })
       io.close
       io.close
-      assert_equal 1, @on_close_called
+      assert_equal 1, on_close_called
     end
   end
 
