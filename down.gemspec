@@ -24,5 +24,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "posix-spawn" unless RUBY_ENGINE == "jruby"
   spec.add_development_dependency "http_parser.rb"
   spec.add_development_dependency "docker-api"
-  spec.add_development_dependency "warning"
+  spec.add_development_dependency "warning" if RUBY_VERSION >= "2.4"
 end
