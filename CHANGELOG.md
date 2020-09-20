@@ -1,3 +1,13 @@
+## 5.2.0 (2020-09-20)
+
+* Add `:uri_normalizer` option to `Down::NetHttp` (@janko)
+
+* Add `:http_basic_authentication` option to `Down::NetHttp#download` (@janko)
+
+* Fix uninitialized instance variables warnings in `Down::ChunkedIO` (@janko)
+
+* Handle unknown HTTP error codes in `Down::NetHttp` (@darndt)
+
 ## 5.1.1 (2020-02-04)
 
 * Fix keyword arguments warnings on Ruby 2.7 in `Down.download` and `Down.open` (@janko)
