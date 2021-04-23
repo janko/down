@@ -216,9 +216,9 @@ module Down
         request_error!(exception)
       end
 
-    if response.is_a?(Net::HTTPNotModified)
-      raise Down::NotModified
-    elsif response.is_a?(Net::HTTPRedirection)
+      if response.is_a?(Net::HTTPNotModified)
+        raise Down::NotModified
+      elsif response.is_a?(Net::HTTPRedirection)
         raise Down::TooManyRedirects if follows_remaining == 0
 
         # fail if redirect URI is not a valid http or https URL
