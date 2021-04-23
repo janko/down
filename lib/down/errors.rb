@@ -13,6 +13,9 @@ module Down
   # raised when the number of redirects was larger than the specified maximum
   class TooManyRedirects < Error; end
 
+  # raised when the requested resource has not been modified
+  class NotModified < Error; end
+
   # raised when response returned 4xx or 5xx response
   class ResponseError < Error
     attr_reader :response

@@ -421,6 +421,10 @@ describe Down do
       assert_raises(Down::ResponseError) { Down::NetHttp.open("#{$httpbin}/redirect-to?url=#{CGI.escape("ftp://localhost/file.txt")}") }
     end
 
+    it "raises on redirect not modfied" do
+      assert_raises(Down::NotModified) { Down::NetHttp.open("#{$httpbin}/status/304") }
+    end
+
     it "raises on connection errors" do
       assert_raises(Down::ConnectionError) { Down::NetHttp.open("http://localhost:99999") }
     end
