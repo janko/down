@@ -1,3 +1,7 @@
+## 5.2.1 (2021-04-26)
+
+* Raise `Down::NotModified` on 304 response status in `Down::NetHttp#open` (@ellafeldmann)
+
 ## 5.2.0 (2020-09-20)
 
 * Add `:uri_normalizer` option to `Down::NetHttp` (@janko)
