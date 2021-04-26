@@ -212,6 +212,7 @@ the `Down::Error` subclasses. This is Down's exception hierarchy:
   * `Down::TooLarge`
   * `Down::InvalidUrl`
   * `Down::TooManyRedirects`
+  * `Down::NotModified`
   * `Down::ResponseError`
     * `Down::ClientError`
       * `Down::NotFound`
