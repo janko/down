@@ -1,6 +1,6 @@
 # frozen-string-literal: true
 
-gem "http", ">= 2.1.0", "< 5"
+gem "http", ">= 2.1.0", "< 6"
 
 require "http"
 
