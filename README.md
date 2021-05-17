@@ -371,8 +371,8 @@ net_http.open("http://example.com/image.jpg")
 The `Down::Http` backend implements downloads using the [http.rb] gem.
 
 ```rb
-gem "down", "~> 4.4"
-gem "http", "~> 4.0"
+gem "down", "~> 5.0"
+gem "http", "~> 5.0"
 ```
 ```rb
 require "down/http"
