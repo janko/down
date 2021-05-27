@@ -1,3 +1,9 @@
+## 5.2.2 (2021-05-27)
+
+* Add info about received content length in `Down::TooLarge` error (@evheny0)
+
+* Relax http.rb constraint to allow versions 5.x (@mgrunberg)
+
 ## 5.2.1 (2021-04-26)
 
 * Raise `Down::NotModified` on 304 response status in `Down::NetHttp#open` (@ellafeldmann)
