@@ -252,10 +252,10 @@ Down.open("...")
 ### Down::NetHttp
 
 The `Down::NetHttp` backend implements downloads using [open-uri] and
-[Net::HTTP].
+[Net::HTTP] standard libraries.
 
 ```rb
-gem "down", "~> 4.4"
+gem "down", "~> 5.0"
 ```
 ```rb
 require "down/net_http"
@@ -441,7 +441,7 @@ The `Down::Wget` backend implements downloads using the `wget` command line
 utility.
 
 ```rb
-gem "down", "~> 4.4"
+gem "down", "~> 5.0"
 gem "posix-spawn" # omit if on JRuby
 gem "http_parser.rb"
 ```
