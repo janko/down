@@ -35,7 +35,7 @@ module Down
       content_length_proc.call(io.size) if content_length_proc && io.size
 
       if max_size && io.size && io.size > max_size
-        raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
+        raise Down::TooLarge, "file is too large (#{io.size/1024/1024}MB, max is #{max_size/1024/1024}MB)"
       end
 
       extname  = File.extname(URI(url).path)
@@ -49,7 +49,7 @@ module Down
         progress_proc.call(tempfile.size) if progress_proc
 
         if max_size && tempfile.size > max_size
-          raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
+          raise Down::TooLarge, "file is too large (#{tempfile.size/1024/1024}MB, max is #{max_size/1024/1024}MB)"
         end
       end
 

@@ -49,13 +49,13 @@ module Down
       open_uri_options = {
         content_length_proc: proc { |size|
           if size && max_size && size > max_size
-            raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
+            raise Down::TooLarge, "file is too large (#{size/1024/1024}MB, max is #{max_size/1024/1024}MB)"
           end
           content_length_proc.call(size) if content_length_proc
         },
         progress_proc: proc { |current_size|
           if max_size && current_size > max_size
-            raise Down::TooLarge, "file is too large (max is #{max_size/1024/1024}MB)"
+            raise Down::TooLarge, "file is too large (#{current_size/1024/1024}MB, max is #{max_size/1024/1024}MB)"
           end
           progress_proc.call(current_size) if progress_proc
         },

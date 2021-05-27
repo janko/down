@@ -66,9 +66,10 @@ describe Down do
     end
 
     it "accepts max size" do
-      assert_raises(Down::TooLarge) do
+      error = assert_raises(Down::TooLarge) do
         Down::NetHttp.download("#{$httpbin}/bytes/10", max_size: 5)
       end
+      assert_match "file is too large (0MB, max is 0MB)", error.message
 
       assert_raises(Down::TooLarge) do
         Down::NetHttp.download("#{$httpbin}/stream-bytes/10", max_size: 5)

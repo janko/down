@@ -22,9 +22,10 @@ describe Down::Wget do
     end
 
     it "accepts maximum size" do
-      assert_raises(Down::TooLarge) do
+      error = assert_raises(Down::TooLarge) do
         Down::Wget.download("#{$httpbin}/bytes/10", max_size: 5)
       end
+      assert_match "file is too large (0MB, max is 0MB)", error.message
 
       assert_raises(Down::TooLarge) do
         Down::Wget.download("#{$httpbin}/stream-bytes/10", max_size: 5)
