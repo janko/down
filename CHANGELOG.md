@@ -1,3 +1,7 @@
+## 5.2.3 (2021-08-03)
+
+* Bump addressable version requirement to 2.8+ to remediate vulnerability (@aldodelgado)
+
 ## 5.2.2 (2021-05-27)
 
 * Add info about received content length in `Down::TooLarge` error (@evheny0)
