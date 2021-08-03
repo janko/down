@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
   spec.files        = Dir["README.md", "LICENSE.txt", "CHANGELOG.md", "*.gemspec", "lib/**/*.rb"]
   spec.require_path = "lib"
 
-  spec.add_dependency "addressable", ">= 2.8.0"
+  spec.add_dependency "addressable", "~> 2.8.0"
 
   spec.add_development_dependency "minitest", "~> 5.8"
   spec.add_development_dependency "mocha", "~> 1.5"
