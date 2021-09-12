@@ -1,3 +1,7 @@
+## 5.2.4 (2021-09-12)
+
+* Keep original cookies between redirections (@antprt)
+
 ## 5.2.3 (2021-08-03)
 
 * Bump addressable version requirement to 2.8+ to remediate vulnerability (@aldodelgado)
