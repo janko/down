@@ -202,13 +202,13 @@ module Down
 
       begin
         response = http.start do
-          http.request(request) do |response|
-            unless response.is_a?(Net::HTTPRedirection)
-              yield response
+          http.request(request) do |resp|
+            unless resp.is_a?(Net::HTTPRedirection)
+              yield resp
               # In certain cases the caller wants to download only one portion
               # of the file and close the connection, so we tell Net::HTTP that
               # it shouldn't continue retrieving it.
-              response.instance_variable_set("@read", true)
+              resp.instance_variable_set("@read", true)
             end
           end
         end
@@ -310,8 +310,8 @@ module Down
     def rebuild_response_from_open_uri_exception(exception)
       code, message = exception.io.status
 
-      response_class = Net::HTTPResponse::CODE_TO_OBJ.fetch(code) do |code|
-        Net::HTTPResponse::CODE_CLASS_TO_OBJ.fetch(code[0]) do
+      response_class = Net::HTTPResponse::CODE_TO_OBJ.fetch(code) do |c|
+        Net::HTTPResponse::CODE_CLASS_TO_OBJ.fetch(c[0]) do
           Net::HTTPUnknownResponse
         end
       end
