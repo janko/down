@@ -71,6 +71,9 @@ describe Down::Http do
 
       tempfile = Down::Http.download("#{$httpbin}/redirect-to", params: { url: "#{$httpbin}/robots.txt" })
       assert_equal ".txt", File.extname(tempfile.path)
+
+      tempfile = Down::Http.download("#{$httpbin}/robots/", extension: "txt")
+      assert_equal ".txt", File.extname(tempfile.path)
     end
 
     it "accepts :content_length_proc" do

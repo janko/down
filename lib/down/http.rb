@@ -25,7 +25,7 @@ module Down
 
     # Downlods the remote file to disk. Accepts HTTP.rb options via a hash or a
     # block, and some additional options as well.
-    def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, **options, &block)
+    def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, extension: nil, **options, &block)
       response = request(url, **options, &block)
 
       content_length_proc.call(response.content_length) if content_length_proc && response.content_length
@@ -34,7 +34,7 @@ module Down
         raise Down::TooLarge, "file is too large (#{response.content_length/1024/1024}MB, max is #{max_size/1024/1024}MB)"
       end
 
-      extname  = File.extname(response.uri.path)
+      extname  = extension || File.extname(response.uri.path)
       tempfile = Tempfile.new(["down-http", extname], binmode: true)
 
       stream_body(response) do |chunk|

@@ -29,7 +29,7 @@ module Down
 
     # Downlods the remote file to disk. Accepts wget command-line options and
     # some additional options as well.
-    def download(url, *args, max_size: nil, content_length_proc: nil, progress_proc: nil, destination: nil, **options)
+    def download(url, *args, max_size: nil, content_length_proc: nil, progress_proc: nil, destination: nil, extension: nil, **options)
       io = open(url, *args, **options, rewindable: false)
 
       content_length_proc.call(io.size) if content_length_proc && io.size
@@ -38,7 +38,7 @@ module Down
         raise Down::TooLarge, "file is too large (#{io.size/1024/1024}MB, max is #{max_size/1024/1024}MB)"
       end
 
-      extname  = File.extname(URI(url).path)
+      extname  = extension || File.extname(URI(url).path)
       tempfile = Tempfile.new(["down-wget", extname], binmode: true)
 
       until io.eof?
