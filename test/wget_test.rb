@@ -206,9 +206,10 @@ describe Down::Wget do
     end
 
     it "saves response data" do
-      io = Down::Wget.open("#{$httpbin}/response-headers?Header=Value")
+      io = Down::Wget.open("#{$httpbin}/response-headers?Header=Value&bar=baz")
       assert_equal 200,     io.data[:status]
       assert_equal "Value", io.data[:headers]["Header"]
+      assert_equal "baz",   io.data[:headers]["Bar"]
     end
 
     it "closes the command" do

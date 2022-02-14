@@ -233,9 +233,10 @@ describe Down::Http do
     end
 
     it "saves response data" do
-      io = Down::Http.open("#{$httpbin}/response-headers?Foo=Bar")
+      io = Down::Http.open("#{$httpbin}/response-headers?Foo=Bar&bar=baz")
       assert_equal 200,                  io.data[:status]
       assert_equal "Bar",                io.data[:headers]["Foo"]
+      assert_equal "baz",                io.data[:headers]["Bar"]
       assert_instance_of HTTP::Response, io.data[:response]
     end
 

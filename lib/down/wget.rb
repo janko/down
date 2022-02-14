@@ -94,7 +94,7 @@ module Down
         raise Down::Error, "failed to parse response headers"
       end
 
-      headers = parser.headers
+      headers = normalize_headers(parser.headers)
       status  = parser.status_code
 
       content_length = headers["Content-Length"].to_i if headers["Content-Length"]
