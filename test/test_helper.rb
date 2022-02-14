@@ -15,6 +15,9 @@ require "docker-api"
 require "http"
 
 puts "Docker URL: #{Docker.url}"
+docker_host = Addressable::URI.parse(Docker.url).host rescue nil
+docker_host = nil if docker_host.empty?
+docker_host ||= "localhost"
 
 image = "kennethreitz/httpbin"
 port  = 8080
@@ -51,7 +54,7 @@ at_exit do
   container.kill
 end
 
-$httpbin = "http://localhost:#{port}"
+$httpbin = "http://#{docker_host}:#{port}"
 
 HTTP.get($httpbin).to_s rescue retry # wait until service has started
 
