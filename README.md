@@ -63,6 +63,13 @@ Down.download("http://example.com/image.jpg", destination: "/path/to/destination
 In this case `Down.download` won't have any return value, so if you need a File
 object you'll have to create it manually.
 
+You can also keep the tempfile, but override the extension:
+
+```rb
+tempfile = Down.download("http://example.com/some/file", extension: "txt")
+File.extname(tempfile.path) #=> ".txt"
+```
+
 ### Basic authentication
 
 `Down.download` and `Down.open` will automatically detect and apply HTTP basic

@@ -34,7 +34,7 @@ module Down
         raise Down::TooLarge, "file is too large (#{response.content_length/1024/1024}MB, max is #{max_size/1024/1024}MB)"
       end
 
-      extname  = extension || File.extname(response.uri.path)
+      extname  = extension ? ".#{extension}" : File.extname(response.uri.path)
       tempfile = Tempfile.new(["down-http", extname], binmode: true)
 
       stream_body(response) do |chunk|

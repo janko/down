@@ -38,7 +38,7 @@ module Down
         raise Down::TooLarge, "file is too large (#{io.size/1024/1024}MB, max is #{max_size/1024/1024}MB)"
       end
 
-      extname  = extension || File.extname(URI(url).path)
+      extname  = extension ? ".#{extension}" : File.extname(URI(url).path)
       tempfile = Tempfile.new(["down-wget", extname], binmode: true)
 
       until io.eof?

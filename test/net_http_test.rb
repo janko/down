@@ -54,8 +54,8 @@ describe Down do
       tempfile = Down::NetHttp.download("#{$httpbin}/redirect-to?url=#{$httpbin}/robots.txt")
       assert_equal ".txt", File.extname(tempfile.path)
 
-      tempfile = Down::NetHttp.download("#{$httpbin}/robots/", extension: "txt")
-      assert_equal ".txt", File.extname(tempfile.path)
+      tempfile = Down::NetHttp.download("#{$httpbin}/robots.txt", extension: "foo")
+      assert_equal ".foo", File.extname(tempfile.path)
     end
 
     it "accepts an URI object" do
