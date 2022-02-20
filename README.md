@@ -157,7 +157,7 @@ You can access the response status and headers of the HTTP request that was made
 ```rb
 remote_file = Down.open("http://example.com/image.jpg")
 remote_file.data[:status]   #=> 200
-remote_file.data[:headers]  #=> { ... }
+remote_file.data[:headers]  #=> { "Content-Type" => "image/jpeg", ... } (header names are normalized)
 remote_file.data[:response] # returns the response object
 ```
 
