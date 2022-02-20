@@ -65,6 +65,9 @@ describe Down::Wget do
 
       tempfile = Down::Wget.download("#{$httpbin}/robots.txt?foo=bar")
       assert_equal ".txt", File.extname(tempfile.path)
+
+      tempfile = Down::Wget.download("#{$httpbin}/robots/", extension: 'txt')
+      assert_equal ".txt", File.extname(tempfile.path)
     end
 
     it "adds #headers and #url" do

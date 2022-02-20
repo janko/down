@@ -40,6 +40,7 @@ module Down
       destination         = options.delete(:destination)
       headers             = options.delete(:headers)
       uri_normalizer      = options.delete(:uri_normalizer)
+      extension           = options.delete(:extension)
 
       # Use open-uri's :content_lenth_proc or :progress_proc to raise an
       # exception early if the file is too large.
@@ -93,7 +94,7 @@ module Down
       open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects)
 
       # Handle the fact that open-uri returns StringIOs for small files.
-      tempfile = ensure_tempfile(open_uri_file, File.extname(open_uri_file.base_uri.path))
+      tempfile = ensure_tempfile(open_uri_file, extension || File.extname(open_uri_file.base_uri.path))
       OpenURI::Meta.init tempfile, open_uri_file # add back open-uri methods
       tempfile.extend Down::NetHttp::DownloadedFile
 
