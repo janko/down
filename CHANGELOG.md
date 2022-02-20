@@ -1,3 +1,9 @@
+## 5.3.0 (2022-02-20)
+
+* Add `:extension` argument to `Down.download` for overriding tempfile extension (@razum2um)
+
+* Normalize response header names for http.rb and wget backends (@zarqman)
+
 ## 5.2.4 (2021-09-12)
 
 * Keep original cookies between redirections (@antprt)
