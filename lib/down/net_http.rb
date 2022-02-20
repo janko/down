@@ -130,10 +130,7 @@ module Down
         on_close:   -> { request.resume }, # close HTTP connnection
         data: {
           status:   response.code.to_i,
-          headers:  response.each_header.inject({}) { |headers, (downcased_name, value)|
-                      name = downcased_name.split("-").map(&:capitalize).join("-")
-                      headers.merge!(name => value)
-                    },
+          headers:  normalize_headers(response.each_header),
           response: response,
         },
       )

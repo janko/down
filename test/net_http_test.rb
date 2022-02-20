@@ -387,8 +387,9 @@ describe Down do
     end
 
     it "saves response data" do
-      io = Down::NetHttp.open("#{$httpbin}/response-headers?Key=Value")
+      io = Down::NetHttp.open("#{$httpbin}/response-headers?Key=Value&bar=baz")
       assert_equal "Value",             io.data[:headers]["Key"]
+      assert_equal "baz",               io.data[:headers]["Bar"]
       assert_equal 200,                 io.data[:status]
       assert_kind_of Net::HTTPResponse, io.data[:response]
     end

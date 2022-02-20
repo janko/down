@@ -71,7 +71,11 @@ module Down
         size:       response.content_length,
         encoding:   response.content_type.charset,
         rewindable: rewindable,
-        data:       { status: response.code, headers: response.headers.to_h, response: response },
+        data:       {
+          status:   response.code,
+          headers:  normalize_headers(response.headers.to_h),
+          response: response
+        },
       )
     end
 

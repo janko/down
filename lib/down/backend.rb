@@ -29,5 +29,12 @@ module Down
 
       nil
     end
+
+    def normalize_headers(response_headers)
+      response_headers.inject({}) do |headers, (downcased_name, value)|
+        name = downcased_name.split("-").map(&:capitalize).join("-")
+        headers.merge!(name => value)
+      end
+    end
   end
 end
