@@ -439,13 +439,21 @@ describe Down do
     end
 
     it "re-raises SSL errors" do
-      TCPSocket.expects(:open).raises(OpenSSL::SSL::SSLError)
+      if RUBY_VERSION >= "3.1"
+        Socket.expects(:tcp).raises(OpenSSL::SSL::SSLError)
+      else
+        TCPSocket.expects(:open).raises(OpenSSL::SSL::SSLError)
+      end
 
       assert_raises(Down::SSLError) { Down::NetHttp.open($httpbin) }
     end
 
     it "re-raises other exceptions" do
-      TCPSocket.expects(:open).raises(ArgumentError)
+      if RUBY_VERSION >= "3.1"
+        Socket.expects(:tcp).raises(ArgumentError)
+      else
+        TCPSocket.expects(:open).raises(ArgumentError)
+      end
 
       assert_raises(ArgumentError) { Down::NetHttp.open($httpbin) }
     end
