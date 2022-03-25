@@ -159,9 +159,9 @@ module Down
       if !exception.io.meta["set-cookie"].to_s.empty?
         options["Cookie"] ||= ''
         # Add new cookies avoiding duplication
-        new_cookies = exception.io.meta["set-cookie"].to_s.split(',').map(&:strip)
-        old_cookies = options["Cookie"].split(',')
-        options["Cookie"] = (old_cookies | new_cookies).join(',')
+        new_cookies = exception.io.meta["set-cookie"].to_s.split(';').map(&:strip)
+        old_cookies = options["Cookie"].split(';')
+        options["Cookie"] = (old_cookies | new_cookies).join(';')
       end
 
       follows_remaining -= 1
