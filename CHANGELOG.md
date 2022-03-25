@@ -1,3 +1,7 @@
+## 5.3.1 (2022-03-25)
+
+* Correctly split cookie headers on `;` instead of `,` when forwarding them on redirects (@ermolaev)
+
 ## 5.3.0 (2022-02-20)
 
 * Add `:extension` argument to `Down.download` for overriding tempfile extension (@razum2um)
