@@ -52,7 +52,7 @@ module Down
 
       tempfile.extend Down::Http::DownloadedFile
       tempfile.url     = response.uri.to_s
-      tempfile.headers = response.headers.to_h
+      tempfile.headers = normalize_headers(response.headers.to_h)
 
       download_result(tempfile, destination)
     rescue
