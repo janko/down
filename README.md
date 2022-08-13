@@ -495,7 +495,9 @@ wget.open("http://nature.com/forest.jpg")
 * MRI 2.5
 * MRI 2.6
 * MRI 2.7
-* JRuby 9.2
+* MRI 3.0
+* MRI 3.1
+* JRuby 9.3
 
 ## Development
 
