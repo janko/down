@@ -439,7 +439,7 @@ describe Down do
     end
 
     it "re-raises SSL errors" do
-      if RUBY_VERSION >= "3.1"
+      if defined?(Net::HTTP::VERSION) && Net::HTTP::VERSION.start_with?("0.2")
         Socket.expects(:tcp).raises(OpenSSL::SSL::SSLError)
       else
         TCPSocket.expects(:open).raises(OpenSSL::SSL::SSLError)
@@ -449,7 +449,7 @@ describe Down do
     end
 
     it "re-raises other exceptions" do
-      if RUBY_VERSION >= "3.1"
+      if defined?(Net::HTTP::VERSION) && Net::HTTP::VERSION.start_with?("0.2")
         Socket.expects(:tcp).raises(ArgumentError)
       else
         TCPSocket.expects(:open).raises(ArgumentError)
