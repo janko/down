@@ -1,8 +1,8 @@
 # Down
 
 Down is a utility tool for streaming, flexible and safe downloading of remote
-files. It can use [open-uri] + `Net::HTTP`, [http.rb] or `wget` as the backend
-HTTP library.
+files. It can use [open-uri] + `Net::HTTP`, [http.rb], [HTTPX], or `wget` as
+the backend HTTP library.
 
 ## Installation
 
@@ -234,6 +234,7 @@ The following backends are available:
 
 * [Down::NetHttp](#downnethttp) (default)
 * [Down::Http](#downhttp)
+* [Down::Httpx](#downhttpx)
 * [Down::Wget](#downwget)
 
 You can use the backend directly:
@@ -442,6 +443,28 @@ down = Down::Http.new(method: :post)
 down.download("http://example.org/image.jpg")
 ```
 
+### Down::Httpx
+
+The `Down::Httpx` backend implements downloads using the [HTTPX] gem, which
+supports the HTTP/2 protocol, in addition to many other features.
+
+```rb
+gem "down", "~> 5.0"
+gem "httpx", "~> 0.22"
+```
+```rb
+require "down/httpx"
+
+tempfile = Down::Httpx.download("http://nature.com/forest.jpg")
+tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/20150925-55456-z7vxqz.jpg>
+
+io = Down::Httpx.open("http://nature.com/forest.jpg")
+io #=> #<Down::ChunkedIO ...>
+```
+
+It's implemented in much of the same way as `Down::Http`, so be sure to check
+its docs for ways to pass additional options.
+
 ### Down::Wget (experimental)
 
 The `Down::Wget` backend implements downloads using the `wget` command line
@@ -521,5 +544,6 @@ $ bundle exec rake test
 [open-uri]: http://ruby-doc.org/stdlib-2.3.0/libdoc/open-uri/rdoc/OpenURI.html
 [Net::HTTP]: https://ruby-doc.org/stdlib-2.4.1/libdoc/net/http/rdoc/Net/HTTP.html
 [http.rb]: https://github.com/httprb/http
+[HTTPX]: https://github.com/HoneyryderChuck/httpx
 [Addressable::URI]: https://github.com/sporkmonger/addressable
 [httpbin]: https://github.com/postmanlabs/httpbin
