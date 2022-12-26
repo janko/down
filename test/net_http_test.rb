@@ -261,7 +261,7 @@ describe Down do
     end
 
     it "raises on connection errors" do
-      assert_raises(Down::ConnectionError) { Down::NetHttp.download("http://localhost:99999") }
+      assert_raises(Down::ConnectionError) { Down::NetHttp.download("http://localhost:9999") }
     end
 
     it "raises on timeout errors" do
@@ -431,7 +431,7 @@ describe Down do
     end
 
     it "raises on connection errors" do
-      assert_raises(Down::ConnectionError) { Down::NetHttp.open("http://localhost:99999") }
+      assert_raises(Down::ConnectionError) { Down::NetHttp.open("http://localhost:9999") }
     end
 
     it "raises on timeout errors" do
@@ -439,7 +439,7 @@ describe Down do
     end
 
     it "re-raises SSL errors" do
-      if RUBY_VERSION >= "3.1"
+      if defined?(Net::HTTP::VERSION) && Net::HTTP::VERSION.start_with?("0.2")
         Socket.expects(:tcp).raises(OpenSSL::SSL::SSLError)
       else
         TCPSocket.expects(:open).raises(OpenSSL::SSL::SSLError)
@@ -449,7 +449,7 @@ describe Down do
     end
 
     it "re-raises other exceptions" do
-      if RUBY_VERSION >= "3.1"
+      if defined?(Net::HTTP::VERSION) && Net::HTTP::VERSION.start_with?("0.2")
         Socket.expects(:tcp).raises(ArgumentError)
       else
         TCPSocket.expects(:open).raises(ArgumentError)

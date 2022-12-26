@@ -501,14 +501,18 @@ wget.open("http://nature.com/forest.jpg")
 
 ## Development
 
-You can run tests with
+Tests require that a [httpbin] server is running locally, which you can do via Docker:
+
+```sh
+$ docker pull kennethreitz/httpbin
+$ docker run -p 80:80 kennethreitz/httpbin
+```
+
+Then you can run tests:
 
 ```
 $ bundle exec rake test
 ```
-
-The test suite pulls and runs [kennethreitz/httpbin] as a Docker container, so
-you'll need to have Docker installed and running.
 
 ## License
 
@@ -518,4 +522,4 @@ you'll need to have Docker installed and running.
 [Net::HTTP]: https://ruby-doc.org/stdlib-2.4.1/libdoc/net/http/rdoc/Net/HTTP.html
 [http.rb]: https://github.com/httprb/http
 [Addressable::URI]: https://github.com/sporkmonger/addressable
-[kennethreitz/httpbin]: https://github.com/kennethreitz/httpbin
+[httpbin]: https://github.com/postmanlabs/httpbin

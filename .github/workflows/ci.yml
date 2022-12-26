@@ -23,6 +23,12 @@ jobs:
           - "3.2"
           - "jruby-9.4"
 
+    services:
+      httpbin:
+        image: kennethreitz/httpbin
+        ports:
+          - 80:80
+
     steps:
       - uses: actions/checkout@v2
 
@@ -31,9 +37,6 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-
-      - name: Pull httpbin
-        run: docker pull kennethreitz/httpbin
 
       - name: Run tests
         run: bundle exec rake test
