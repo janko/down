@@ -1,3 +1,7 @@
+## 5.4.0 (2022-12-26)
+
+* Add new HTTPX backend, which supports HTTP/2 protocol among other features (@HoneyryderChuck)
+
 ## 5.3.1 (2022-03-25)
 
 * Correctly split cookie headers on `;` instead of `,` when forwarding them on redirects (@ermolaev)
