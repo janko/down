@@ -312,13 +312,14 @@ module Down
     # rebuild the Net::HTTP response object.
     def rebuild_response_from_open_uri_exception(exception)
       code, message = exception.io.status
+      message ||= "Unknown"
 
       response_class = Net::HTTPResponse::CODE_TO_OBJ.fetch(code) do |c|
         Net::HTTPResponse::CODE_CLASS_TO_OBJ.fetch(c[0]) do
           Net::HTTPUnknownResponse
         end
       end
-      response       = response_class.new(nil, code, message)
+      response = response_class.new(nil, code, message)
 
       exception.io.metas.each do |name, values|
         values.each { |value| response.add_field(name, value) }

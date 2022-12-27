@@ -268,6 +268,10 @@ describe Down do
       assert_raises(Down::TimeoutError) { Down::NetHttp.download("#{$httpbin}/delay/0.5", read_timeout: 0, open_timeout: 0) }
     end
 
+    it "doesn't trip up on unknown response status" do
+      assert_raises(Down::ClientError) { Down::NetHttp.download("#{$httpbin}/status/444") }
+    end
+
     deprecated "accepts top-level request headers" do
       tempfile = Down::NetHttp.download("#{$httpbin}/headers", { "Key" => "Value" })
       assert_equal "Value", JSON.parse(tempfile.read)["headers"]["Key"]
