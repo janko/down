@@ -511,17 +511,6 @@ wget.download("http://nature.com/forest.jpg")
 wget.open("http://nature.com/forest.jpg")
 ```
 
-## Supported Ruby versions
-
-* MRI 2.3
-* MRI 2.4
-* MRI 2.5
-* MRI 2.6
-* MRI 2.7
-* MRI 3.0
-* MRI 3.1
-* JRuby 9.3
-
 ## Development
 
 Tests require that a [httpbin] server is running locally, which you can do via Docker:
