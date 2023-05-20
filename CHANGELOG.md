@@ -1,3 +1,13 @@
+## 5.4.1 (2023-05-20)
+
+* Handle additional params in `Content-Disposition` header (@janko)
+
+* Add ability to detect response URI when using net/http (@aglushkov)
+
+* Avoid deprecation warning in HTTPX (@ollym)
+
+* Handle unknown response status in net/http backend (@janko)
+
 ## 5.4.0 (2022-12-26)
 
 * Add new HTTPX backend, which supports HTTP/2 protocol among other features (@HoneyryderChuck)
