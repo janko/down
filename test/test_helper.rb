@@ -18,6 +18,8 @@ $httpbin = "http://localhost"
 begin
   HTTP.get($httpbin).to_s
 rescue HTTP::ConnectionError
+  raise if RUBY_ENGINE == "jruby"
+
   warn <<-WARNING
 
 The httpbin server is not running on port 80, which is required for tests. Please run:
