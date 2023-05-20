@@ -401,6 +401,16 @@ describe Down do
       assert_kind_of Net::HTTPResponse, io.data[:response]
     end
 
+    # The response URI is only available if a URI was used to create the request.
+    # https://ruby-doc.org/stdlib-2.7.0/libdoc/net/http/rdoc/Net/HTTPResponse.html#uri
+    it "constructs http response with #uri attribute set" do
+      io = Down::NetHttp.open("#{$httpbin}/get")
+      assert_equal URI("#{$httpbin}/get"), io.data[:response].uri
+
+      io = Down::NetHttp.open("#{$httpbin}/redirect/1")
+      assert_equal URI("#{$httpbin}/get"), io.data[:response].uri # redirected uri
+    end
+
     it "raises on HTTP error responses" do
       error = assert_raises(Down::ClientError) { Down::NetHttp.open("#{$httpbin}/status/404") }
       assert_equal "404 Not Found", error.message

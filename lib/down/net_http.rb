@@ -270,7 +270,7 @@ module Down
       headers = options[:headers].to_h
       headers["Accept-Encoding"] = "" # Net::HTTP's inflater causes FiberErrors
 
-      get = Net::HTTP::Get.new(uri.request_uri, headers)
+      get = Net::HTTP::Get.new(uri, headers)
 
       user, password = options[:http_basic_authentication] || [uri.user, uri.password]
       get.basic_auth(user, password) if user || password
