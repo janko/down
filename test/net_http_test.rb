@@ -160,7 +160,7 @@ describe Down do
       tempfile = Down::NetHttp.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"my%2520filename.ext\"")
       assert_equal "my filename.ext", tempfile.original_filename
 
-      tempfile = Down::NetHttp.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=my%2520filename.ext")
+      tempfile = Down::NetHttp.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=my%2520filename.ext; size=3718678")
       assert_equal "my filename.ext", tempfile.original_filename
 
       tempfile = Down::NetHttp.download("#{$httpbin}/response-headers?Content-Disposition=inline;%20filename=\"ascii%20filename.ext\"%3B%20filename*=UTF-8''utf8%2520filename.ext")

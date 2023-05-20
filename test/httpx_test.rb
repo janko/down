@@ -111,7 +111,7 @@ describe Down::Httpx do
       tempfile = Down::Httpx.download("#{$httpbin}/response-headers", params: { "Content-Disposition": "inline; filename=\"my%20filename.ext\"" })
       assert_equal "my filename.ext", tempfile.original_filename
 
-      tempfile = Down::Httpx.download("#{$httpbin}/response-headers", params: { "Content-Disposition": "inline; filename=my%20filename.ext" })
+      tempfile = Down::Httpx.download("#{$httpbin}/response-headers", params: { "Content-Disposition": "inline; filename=my%20filename.ext; size=3718678" })
       assert_equal "my filename.ext", tempfile.original_filename
 
       tempfile = Down::Httpx.download("#{$httpbin}/response-headers", params: { "Content-Disposition": "inline; filename=\"ascii%20filename.ext\"; filename*=UTF-8''utf8%20filename.ext" })
