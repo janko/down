@@ -6,6 +6,8 @@ require "minitest"
 require "minitest/spec"
 require "minitest/pride"
 
+# Mocha still references the old constant
+MiniTest = Minitest unless defined?(MiniTest)
 require "mocha/minitest"
 
 require_relative "support/deprecated_helper"
