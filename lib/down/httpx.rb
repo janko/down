@@ -14,12 +14,14 @@ module Down
 
     USER_AGENT = "Down/#{Down::VERSION}"
 
+    BASIC_AUTH = HTTPX::VERSION >= "1.0.0" ? :basic_auth : :basic_authentication
+
     def initialize(**options, &block)
       @method = options.delete(:method) || :get
       headers = options.delete(:headers) || {}
       @client = HTTPX
           .plugin(:follow_redirects, max_redirects: 2)
-          .plugin(:basic_authentication)
+          .plugin(BASIC_AUTH)
           .plugin(:stream)
           .with(
             headers: { "user-agent": USER_AGENT }.merge(headers),
