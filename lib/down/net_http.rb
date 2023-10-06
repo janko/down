@@ -41,6 +41,7 @@ module Down
       headers             = options.delete(:headers)
       uri_normalizer      = options.delete(:uri_normalizer)
       extension           = options.delete(:extension)
+      auth_on_redirect    = options.delete(:auth_on_redirect)
 
       # Use open-uri's :content_lenth_proc or :progress_proc to raise an
       # exception early if the file is too large.
@@ -91,7 +92,7 @@ module Down
         uri.password = nil
       end
 
-      open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects)
+      open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects, auth_on_redirect: )
 
       # Handle the fact that open-uri returns StringIOs for small files.
       extname = extension ? ".#{extension}" : File.extname(open_uri_file.base_uri.path)
@@ -141,7 +142,7 @@ module Down
     private
 
     # Calls open-uri's URI::HTTP#open method. Additionally handles redirects.
-    def open_uri(uri, options, follows_remaining:)
+    def open_uri(uri, options, follows_remaining:, auth_on_redirect:)
       uri.open(options)
     rescue OpenURI::HTTPRedirect => exception
       raise Down::TooManyRedirects, "too many redirects" if follows_remaining == 0
@@ -154,6 +155,10 @@ module Down
 
         raise ResponseError.new("Invalid Redirect URI: #{exception.uri}", response: response)
       end
+
+      # do not leak credentials on redirect
+      options.delete("Authorization") unless auth_on_redirect
+      options.delete(:http_basic_authentication) unless auth_on_redirect
 
       # forward cookies on the redirect
       if !exception.io.meta["set-cookie"].to_s.empty?

@@ -125,6 +125,21 @@ describe Down do
       # "Set-Cookie" header.
     end
 
+    it "removes Authorization header on  redirects" do
+      tempfile = Down::NetHttp.download("#{$httpbin}/redirect/1", headers: {"Authorization" => "Basic dXNlcjpwYXNzd29yZA=="})
+      assert_nil JSON.parse(tempfile.read)["headers"]["Authorization"]
+    end
+
+    it "removes Baisic Auth credentials header on  redirects" do
+      tempfile = Down::NetHttp.download("#{$httpbin.sub("http://", '\0user:password@')}/redirect/1", )
+      assert_nil JSON.parse(tempfile.read)["headers"]["Authorization"]
+    end
+
+    it "preserves Authorization header on redirect, when asked" do
+      tempfile = Down::NetHttp.download("#{$httpbin.sub("http://", '\0user:password@')}/redirect/1", auth_on_redirect:true )
+      assert_equal "Basic dXNlcjpwYXNzd29yZA==", JSON.parse(tempfile.read)["headers"]["Authorization"]
+    end
+
     # I don't know how to test that the proxy is actually used
     it "accepts proxy" do
       tempfile = Down::NetHttp.download("#{$httpbin}/bytes/100", proxy: $httpbin)
