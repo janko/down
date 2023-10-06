@@ -77,7 +77,7 @@ module Down
 
       buffer.clear if buffer # deallocate string
 
-      data.force_encoding(@encoding) unless length
+      data.force_encoding(@encoding)
       data unless data.empty? && length && length > 0
     end
 
