@@ -108,14 +108,15 @@ module Down
     def open(url, *args, **options)
       options = merge_options(@options, *args, **options)
 
-      max_redirects  = options.delete(:max_redirects)
-      uri_normalizer = options.delete(:uri_normalizer)
+      max_redirects    = options.delete(:max_redirects)
+      uri_normalizer   = options.delete(:uri_normalizer)
+      auth_on_redirect = options.delete(:auth_on_redirect)
 
       uri = ensure_uri(normalize_uri(url, uri_normalizer: uri_normalizer))
 
       # Create a Fiber that halts when response headers are received.
       request = Fiber.new do
-        net_http_request(uri, options, follows_remaining: max_redirects) do |response|
+        net_http_request(uri, options, follows_remaining: max_redirects, auth_on_redirect:) do |response|
           Fiber.yield response
         end
       end
@@ -205,7 +206,7 @@ module Down
     end
 
     # Makes a Net::HTTP request and follows redirects.
-    def net_http_request(uri, options, follows_remaining:, &block)
+    def net_http_request(uri, options, follows_remaining:, auth_on_redirect:, &block)
       http, request = create_net_http(uri, options)
 
       begin
@@ -236,10 +237,15 @@ module Down
           raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response: response)
         end
 
+        # do not leak credentials on redirect
+        uri.user = nil unless auth_on_redirect
+        uri.password = nil unless auth_on_redirect
+        options[:headers].delete("Authorization") unless auth_on_redirect
+
         # handle relative redirects
         location = uri + location if location.relative?
 
-        net_http_request(location, options, follows_remaining: follows_remaining - 1, &block)
+        net_http_request(location, options, follows_remaining: follows_remaining - 1, auth_on_redirect:, &block)
       end
     end
 

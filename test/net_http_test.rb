@@ -339,6 +339,21 @@ describe Down do
       assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
     end
 
+    it "removes Authorization header on  redirects" do
+      io = Down::NetHttp.open("#{$httpbin}/redirect/1", headers: {"Authorization" => "Basic dXNlcjpwYXNzd29yZA=="})
+      assert_nil JSON.parse(io.read)["headers"]["Authorization"]
+    end
+
+    it "removes Baisic Auth credentials header on  redirects" do
+      io = Down::NetHttp.open("#{$httpbin.sub("http://", '\0user:password@')}/redirect/1", )
+      assert_nil JSON.parse(io.read)["headers"]["Authorization"]
+    end
+
+    it "preserves Authorization header on redirect, when asked" do
+      io = Down::NetHttp.open("#{$httpbin.sub("http://", '\0user:password@')}/redirect/1", auth_on_redirect:true )
+      assert_equal "Basic dXNlcjpwYXNzd29yZA==", JSON.parse(io.read)["headers"]["Authorization"]
+    end
+
     it "returns content in encoding specified by charset" do
       io = Down::NetHttp.open("#{$httpbin}/stream/10")
       assert_equal Encoding::BINARY, io.read.encoding
