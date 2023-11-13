@@ -150,6 +150,7 @@ module Down
 
       # fail if redirect URI scheme is not http or https
       begin
+        same_host = uri.host.eql? exception.uri.host
         uri = ensure_uri(exception.uri)
       rescue Down::InvalidUrl
         response = rebuild_response_from_open_uri_exception(exception)
@@ -238,12 +239,14 @@ module Down
         end
 
         # do not leak credentials on redirect
-        uri.user = nil unless auth_on_redirect
-        uri.password = nil unless auth_on_redirect
         options[:headers].delete("Authorization") unless auth_on_redirect
 
         # handle relative redirects
-        location = uri + location if location.relative?
+        if location.relative?
+          location = uri + location
+          uri.user = nil unless auth_on_redirect
+          uri.password = nil unless auth_on_redirect
+        end
 
         net_http_request(location, options, follows_remaining: follows_remaining - 1, auth_on_redirect:, &block)
       end
