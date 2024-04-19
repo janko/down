@@ -1,3 +1,7 @@
+## 5.4.2 (2024-04-19)
+
+* Add support for HTTPX 1.x (@HoneyryderChuck)
+
 ## 5.4.1 (2023-05-20)
 
 * Handle additional params in `Content-Disposition` header (@janko)
