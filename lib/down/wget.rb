@@ -1,5 +1,7 @@
 # frozen-string-literal: true
 
+warn "The Down::Wget backend has been deprecated and will be removed in the next major version. Please use the Net::HTTP/open-uri, http.rb or HTTPX backend instead."
+
 begin
   require "posix-spawn"
 rescue LoadError
