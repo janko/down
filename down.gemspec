@@ -4,7 +4,7 @@ Gem::Specification.new do |spec|
   spec.name         = "down"
   spec.version      = Down::VERSION
 
-  spec.required_ruby_version = ">= 2.3"
+  spec.required_ruby_version = ">= 2.4"
 
   spec.summary      = "Robust streaming downloads using Net::HTTP, http.rb or HTTPX."
   spec.homepage     = "https://github.com/janko/down"
@@ -22,6 +22,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake"
   spec.add_development_dependency "httpx", "~> 0", "< 2.0.0"
   spec.add_development_dependency "http", RUBY_VERSION >= "2.5" ? "~> 5.0" : "~> 4.3"
-  spec.add_development_dependency "warning" if RUBY_VERSION >= "2.4"
+  spec.add_development_dependency "warning"
   spec.add_development_dependency "csv"
 end
