@@ -1,3 +1,9 @@
+## HEAD
+
+* Drop support for Ruby 2.3 (@janko)
+
+* Deprecate wget backend (@janko)
+
 ## 5.4.2 (2024-04-19)
 
 * Add support for HTTPX 1.x (@HoneyryderChuck)
