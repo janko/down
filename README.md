@@ -449,7 +449,7 @@ supports the HTTP/2 protocol, in addition to many other features.
 
 ```rb
 gem "down", "~> 5.0"
-gem "httpx", "~> 0.22"
+gem "httpx", "~> 1.0"
 ```
 ```rb
 require "down/httpx"
