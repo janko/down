@@ -58,6 +58,16 @@ describe Down do
       assert_equal ".foo", File.extname(tempfile.path)
     end
 
+    it "accepts custom tempfile name" do
+      tempfile = Down::NetHttp.download("#{$httpbin}/bytes/100", tempfile_name: "custom-prefix")
+      assert_match(/custom-prefix/, tempfile.path)
+    end
+
+    it "preserves file extension with custom tempfile name" do
+      tempfile = Down::NetHttp.download("#{$httpbin}/robots.txt", tempfile_name: "my-file")
+      assert_match(/my-file.*\.txt\z/, tempfile.path)
+    end
+
     it "accepts an URI object" do
       tempfile = Down::NetHttp.download(URI("#{$httpbin}/bytes/100"))
       assert_equal 100, tempfile.size

@@ -41,6 +41,8 @@ module Down
       headers             = options.delete(:headers)
       uri_normalizer      = options.delete(:uri_normalizer)
       extension           = options.delete(:extension)
+      tempfile_name       = options.delete(:tempfile_name)
+
 
       # Use open-uri's :content_lenth_proc or :progress_proc to raise an
       # exception early if the file is too large.
@@ -95,7 +97,7 @@ module Down
 
       # Handle the fact that open-uri returns StringIOs for small files.
       extname = extension ? ".#{extension}" : File.extname(open_uri_file.base_uri.path)
-      tempfile = ensure_tempfile(open_uri_file, extname)
+      tempfile = ensure_tempfile(open_uri_file, extname, tempfile_name) 
       OpenURI::Meta.init tempfile, open_uri_file # add back open-uri methods
       tempfile.extend Down::NetHttp::DownloadedFile
 
@@ -182,8 +184,8 @@ module Down
     # Converts the given IO into a Tempfile if it isn't one already (open-uri
     # returns a StringIO when there is less than 10KB of content), and gives
     # it the specified file extension.
-    def ensure_tempfile(io, extension)
-      tempfile = Tempfile.new(["down-net_http", extension], binmode: true)
+    def ensure_tempfile(io, extension, tempfile_name = nil)
+      tempfile = Tempfile.new([tempfile_name || "down-net_http", extension], binmode: true)
 
       if io.is_a?(Tempfile)
         # Windows requires file descriptors to be closed before files are moved
