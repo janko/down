@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "test_helper"
 require "down/chunked_io"
 require "timeout"
@@ -170,20 +172,20 @@ describe Down::ChunkedIO do
     describe "with length and buffer" do
       it "reads specified number of bytes" do
         io = chunked_io(chunks: ["abc"].each)
-        assert_equal "a",  io.read(1, "")
-        assert_equal "bc", io.read(2, "")
+        assert_equal "a",  io.read(1, "".dup)
+        assert_equal "bc", io.read(2, "".dup)
       end
 
       it "reads across chunks" do
         io = chunked_io(chunks: ["ab", "cd", "e"].each)
-        assert_equal "a",  io.read(1, "")
-        assert_equal "bc", io.read(2, "")
-        assert_equal "de", io.read(2, "")
+        assert_equal "a",  io.read(1, "".dup)
+        assert_equal "bc", io.read(2, "".dup)
+        assert_equal "de", io.read(2, "".dup)
       end
 
       it "writes read content into the buffer" do
         io = chunked_io(chunks: ["abc"].each)
-        buffer = ""
+        buffer = "".dup
         io.read(1, buffer)
         assert_equal "a", buffer
         io.read(2, buffer)
@@ -192,7 +194,7 @@ describe Down::ChunkedIO do
 
       it "returns the buffer" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        buffer = ""
+        buffer = "".dup
         assert_equal buffer.object_id, io.read(1, buffer).object_id
         assert_equal buffer.object_id, io.read(2, buffer).object_id
         io.rewind
@@ -202,12 +204,12 @@ describe Down::ChunkedIO do
 
       it "reads as much as it can read" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        assert_equal "abc", io.read(4, "")
+        assert_equal "abc", io.read(4, "".dup)
       end
 
       it "returns empty string when length is zero" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        buffer = ""
+        buffer = "".dup
         assert_equal "",               io.read(0, buffer)
         assert_equal buffer.object_id, io.read(0, buffer).object_id
         assert_equal "abc", io.read
@@ -215,50 +217,50 @@ describe Down::ChunkedIO do
 
       it "reads from cache" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        io.read(1, "")
+        io.read(1, "".dup)
         io.rewind
-        assert_equal "a",  io.read(1, "")
-        assert_equal "bc", io.read(2, "")
+        assert_equal "a",  io.read(1, "".dup)
+        assert_equal "bc", io.read(2, "".dup)
       end
 
       it "seamlessly switches between reading cached and new content" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        io.read(1, "")
+        io.read(1, "".dup)
         io.rewind
-        assert_equal "abc", io.read(3, "")
+        assert_equal "abc", io.read(3, "".dup)
       end
 
       it "returns nil on eof" do
         io = chunked_io(chunks: ["ab", "c"].each)
         io.read
-        buffer = "buffer"
+        buffer = "buffer".dup
         assert_nil io.read(1, buffer)
         assert_equal "", buffer
       end
 
       it "returns nil on zero chunks" do
         io = chunked_io(chunks: [].each)
-        buffer = "buffer"
+        buffer = "buffer".dup
         assert_nil io.read(1, buffer)
         assert_equal "", buffer
       end
 
       it "works when not rewindable" do
         io = chunked_io(chunks: ["ab", "c"].each, rewindable: false)
-        assert_equal "a",  io.read(1, "")
-        assert_equal "bc", io.read(2, "")
+        assert_equal "a",  io.read(1, "".dup)
+        assert_equal "bc", io.read(2, "".dup)
       end
 
       it "returns content in binary encoding" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        assert_equal Encoding::BINARY, io.read(1, "").encoding
+        assert_equal Encoding::BINARY, io.read(1, "".dup).encoding
         io.rewind
-        assert_equal Encoding::BINARY, io.read(1, "").encoding
+        assert_equal Encoding::BINARY, io.read(1, "".dup).encoding
 
         io = chunked_io(chunks: ["ab", "c"].each, encoding: "utf-8")
-        assert_equal Encoding::BINARY, io.read(1, "").encoding
+        assert_equal Encoding::BINARY, io.read(1, "".dup).encoding
         io.rewind
-        assert_equal Encoding::BINARY, io.read(1, "").encoding
+        assert_equal Encoding::BINARY, io.read(1, "".dup).encoding
       end
     end
 
@@ -419,19 +421,19 @@ describe Down::ChunkedIO do
     describe "with maxlen and buffer" do
       it "reads specified number of bytes" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        assert_equal "a", io.readpartial(1, "")
-        assert_equal "b", io.readpartial(1, "")
-        assert_equal "c", io.readpartial(1, "")
+        assert_equal "a", io.readpartial(1, "".dup)
+        assert_equal "b", io.readpartial(1, "".dup)
+        assert_equal "c", io.readpartial(1, "".dup)
       end
 
       it "reads maximum of one chunk" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        assert_equal "ab", io.readpartial(3, "")
+        assert_equal "ab", io.readpartial(3, "".dup)
       end
 
       it "writes read content into the buffer" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        buffer = ""
+        buffer = "".dup
         io.readpartial(1, buffer)
         assert_equal "a", buffer
         io.readpartial(1, buffer)
@@ -440,7 +442,7 @@ describe Down::ChunkedIO do
 
       it "returns the buffer" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        buffer = ""
+        buffer = "".dup
         assert_equal buffer.object_id, io.readpartial(1, buffer).object_id
         assert_equal buffer.object_id, io.readpartial(2, buffer).object_id
         io.rewind
@@ -450,7 +452,7 @@ describe Down::ChunkedIO do
 
       it "returns empty string when length is zero" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        buffer = ""
+        buffer = "".dup
         assert_equal "",               io.readpartial(0, buffer)
         assert_equal buffer.object_id, io.readpartial(0, buffer).object_id
         assert_equal "abc", io.read
@@ -458,40 +460,40 @@ describe Down::ChunkedIO do
 
       it "reads available data from cache" do
         io = chunked_io(chunks: ["abc"].each)
-        io.readpartial(3, "")
+        io.readpartial(3, "".dup)
         io.rewind
-        assert_equal "a",  io.readpartial(1, "")
-        assert_equal "bc", io.readpartial(2, "")
+        assert_equal "a",  io.readpartial(1, "".dup)
+        assert_equal "bc", io.readpartial(2, "".dup)
       end
 
       it "reads available data from cache and buffer" do
         io = chunked_io(chunks: ["ab", "c"].each)
-        io.readpartial(1, "")
+        io.readpartial(1, "".dup)
         io.rewind
-        assert_equal "ab", io.readpartial(4, "")
+        assert_equal "ab", io.readpartial(4, "".dup)
       end
 
       it "returns data in binary encoding" do
         io = chunked_io(chunks: ["ab", "c"])
-        assert_equal Encoding::BINARY, io.readpartial(1, "").encoding
+        assert_equal Encoding::BINARY, io.readpartial(1, "".dup).encoding
       end
 
       it "works with frozen chunks" do
         io = chunked_io(chunks: ["ab".freeze, "c".freeze])
-        assert_equal Encoding::BINARY, io.readpartial(2, "").encoding
+        assert_equal Encoding::BINARY, io.readpartial(2, "".dup).encoding
       end
 
       it "raises EOFError on eof" do
         io = chunked_io(chunks: ["ab", "c"].each)
         io.read
-        buffer = "buffer"
+        buffer = "buffer".dup
         assert_raises(EOFError) { io.readpartial(1, buffer) }
         assert_equal "", buffer
       end
 
       it "raises EOFError on zero chunks" do
         io = chunked_io(chunks: [].each)
-        buffer = "buffer"
+        buffer = "buffer".dup
         assert_raises(EOFError) { io.readpartial(1, buffer) }
         assert_equal "", buffer
       end
