@@ -70,6 +70,12 @@ tempfile = Down.download("http://example.com/some/file", extension: "txt")
 File.extname(tempfile.path) #=> ".txt"
 ```
 
+You can also specify the filename prefix.
+
+```rb
+tempfile = Down.downlaod("http://example.com/some/file", tempfile_name: "custom-prefix")
+```
+
 ### Basic authentication
 
 `Down.download` and `Down.open` will automatically detect and apply HTTP basic
