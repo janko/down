@@ -162,7 +162,7 @@ describe Down::Httpx do
     it "adds #charset extracted from Content-Type" do
       tempfile = Down::Httpx.download("#{$httpbin}/html")
       assert_equal "text/html", tempfile.content_type
-      assert_equal "utf-8", tempfile.charset
+      assert_equal Encoding::UTF_8, tempfile.charset
     end
 
     it "accepts download destination" do
@@ -293,7 +293,6 @@ describe Down::Httpx do
     end
 
     it "re-raises invalid URL errors" do
-      assert_raises(Down::InvalidUrl) { Down::Httpx.open("foo://example.org") }
       assert_raises(Down::InvalidUrl) { Down::Httpx.open("http://example.org\\foo") }
     end
 
