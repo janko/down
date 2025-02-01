@@ -70,10 +70,11 @@ tempfile = Down.download("http://example.com/some/file", extension: "txt")
 File.extname(tempfile.path) #=> ".txt"
 ```
 
-You can also specify the filename prefix.
+You can also override the default tempfile prefix:
 
 ```rb
-tempfile = Down.downlaod("http://example.com/some/file", tempfile_name: "custom-prefix")
+tempfile = Down.download("http://example.com/image.jpg", tempfile_name: "custom-prefix")
+File.basename(tempfile.path) #=> "custom-prefix20150925-55456-z7vxqz.jpg"
 ```
 
 ### Basic authentication
