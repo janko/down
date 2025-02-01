@@ -43,7 +43,6 @@ module Down
       extension           = options.delete(:extension)
       tempfile_name       = options.delete(:tempfile_name)
 
-
       # Use open-uri's :content_lenth_proc or :progress_proc to raise an
       # exception early if the file is too large.
       #
@@ -97,7 +96,7 @@ module Down
 
       # Handle the fact that open-uri returns StringIOs for small files.
       extname = extension ? ".#{extension}" : File.extname(open_uri_file.base_uri.path)
-      tempfile = ensure_tempfile(open_uri_file, extname, tempfile_name) 
+      tempfile = ensure_tempfile(open_uri_file, extname, tempfile_name)
       OpenURI::Meta.init tempfile, open_uri_file # add back open-uri methods
       tempfile.extend Down::NetHttp::DownloadedFile
 

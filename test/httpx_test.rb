@@ -76,6 +76,16 @@ describe Down::Httpx do
       assert_equal ".foo", File.extname(tempfile.path)
     end
 
+    it "accepts custom tempfile name" do
+      tempfile = Down::Httpx.download("#{$httpbin}/bytes/100", tempfile_name: "custom-prefix")
+      assert_match(/custom-prefix/, tempfile.path)
+    end
+
+    it "preserves file extension with custom tempfile name" do
+      tempfile = Down::Httpx.download("#{$httpbin}/robots.txt", tempfile_name: "my-file")
+      assert_match(/my-file.*\.txt\z/, tempfile.path)
+    end
+
     it "accepts :content_length_proc" do
       Down::Httpx.download("#{$httpbin}/stream-bytes/100", content_length_proc: -> (length) { @length = length })
       refute instance_variable_defined?(:@length)
