@@ -33,7 +33,7 @@ module Down
     end
 
 
-    # Downlods the remote file to disk. Accepts HTTPX options via a hash or a
+    # Downloads the remote file to disk. Accepts HTTPX options via a hash or a
     # block, and some additional options as well.
     def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, extension: nil, tempfile_name: nil, **options, &block)
       client = @client
@@ -82,7 +82,7 @@ module Down
     end
 
     # Starts retrieving the remote file and returns an IO-like object which
-    # downloads the response body on-demand. Accepts HTTP.rb options via a hash
+    # downloads the response body on-demand. Accepts HTTPX options via a hash
     # or a block.
     def open(url, rewindable: true, **options, &block)
       response = request(@client, url, stream: true, **options, &block)
@@ -105,7 +105,15 @@ module Down
 
     # Yields chunks of the response body to the block.
     def stream_body(response, &block)
-      response.each(&block)
+      response.each do |chunk|
+        next if (300..399).include?(response.status)
+
+        block.call(chunk)
+      end
+
+      if (300..399).include?(response.status)
+        raise Down::TooManyRedirects, "too many redirects"
+      end
     rescue => exception
       request_error!(exception)
     end
@@ -113,7 +121,7 @@ module Down
     def request(client, url, method: @method, **options, &block)
       response = send_request(client, method, url, **options, &block)
       response.raise_for_status
-      response_error!(response) unless (200..299).include?(response.status)
+      response_error!(response) unless (200..399).include?(response.status)
       response
     rescue HTTPX::HTTPError
       response_error!(response)
@@ -140,7 +148,6 @@ module Down
       args = [response.status.to_s, response]
 
       case response.status
-      when 300..399 then raise Down::TooManyRedirects, "too many redirects"
       when 404      then raise Down::NotFound.new(*args)
       when 400..499 then raise Down::ClientError.new(*args)
       when 500..599 then raise Down::ServerError.new(*args)
