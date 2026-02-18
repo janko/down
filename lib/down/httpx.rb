@@ -35,7 +35,7 @@ module Down
 
     # Downlods the remote file to disk. Accepts HTTPX options via a hash or a
     # block, and some additional options as well.
-    def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, extension: nil, **options, &block)
+    def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, extension: nil, tempfile_name: nil, **options, &block)
       client = @client
 
       response = request(client, url, **options, &block)
@@ -54,7 +54,7 @@ module Down
       end
 
       extname  = extension ? ".#{extension}" : File.extname(response.uri.path)
-      tempfile = Tempfile.new(["down-http", extname], binmode: true)
+      tempfile = Tempfile.new([tempfile_name || "down-http", extname], binmode: true)
 
       stream_body(response) do |chunk|
         tempfile.write(chunk)

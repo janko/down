@@ -1,8 +1,8 @@
 # Down
 
 Down is a utility tool for streaming, flexible and safe downloading of remote
-files. It can use [open-uri] + `Net::HTTP`, [http.rb], [HTTPX], or `wget` as
-the backend HTTP library.
+files. It can use [open-uri] + `Net::HTTP`, [http.rb] or [HTTPX] as the backend
+HTTP library.
 
 ## Installation
 
@@ -68,6 +68,13 @@ You can also keep the tempfile, but override the extension:
 ```rb
 tempfile = Down.download("http://example.com/some/file", extension: "txt")
 File.extname(tempfile.path) #=> ".txt"
+```
+
+You can also override the default tempfile prefix:
+
+```rb
+tempfile = Down.download("http://example.com/image.jpg", tempfile_name: "custom-prefix")
+File.basename(tempfile.path) #=> "custom-prefix20150925-55456-z7vxqz.jpg"
 ```
 
 ### Basic authentication
@@ -235,7 +242,6 @@ The following backends are available:
 * [Down::NetHttp](#downnethttp) (default)
 * [Down::Http](#downhttp)
 * [Down::Httpx](#downhttpx)
-* [Down::Wget](#downwget)
 
 You can use the backend directly:
 
@@ -450,7 +456,7 @@ supports the HTTP/2 protocol, in addition to many other features.
 
 ```rb
 gem "down", "~> 5.0"
-gem "httpx", "~> 0.22"
+gem "httpx", "~> 1.0"
 ```
 ```rb
 require "down/httpx"
@@ -464,52 +470,6 @@ io #=> #<Down::ChunkedIO ...>
 
 It's implemented in much of the same way as `Down::Http`, so be sure to check
 its docs for ways to pass additional options.
-
-### Down::Wget (experimental)
-
-The `Down::Wget` backend implements downloads using the `wget` command line
-utility.
-
-```rb
-gem "down", "~> 5.0"
-gem "posix-spawn" # omit if on JRuby
-gem "http_parser.rb"
-```
-```rb
-require "down/wget"
-
-tempfile = Down::Wget.download("http://nature.com/forest.jpg")
-tempfile #=> #<Tempfile:/var/folders/k7/6zx6dx6x7ys3rv3srh0nyfj00000gn/T/20150925-55456-z7vxqz.jpg>
-
-io = Down::Wget.open("http://nature.com/forest.jpg")
-io #=> #<Down::ChunkedIO ...>
-```
-
-One major advantage of `wget` is that it automatically resumes downloads that
-were interrupted due to network failures, which is very useful when you're
-downloading large files.
-
-However, the Wget backend should still be considered experimental, as it wasn't
-easy to implement a CLI wrapper that streams output, so it's possible that I've
-made mistakes. Let me know how it's working out for you 😉.
-
-#### Additional arguments
-
-You can pass additional arguments to the underlying `wget` commmand via symbols:
-
-```rb
-Down::Wget.download("http://nature.com/forest.jpg", :no_proxy, connect_timeout: 3)
-Down::Wget.open("http://nature.com/forest.jpg", user: "janko", password: "secret")
-```
-
-You can also initialize the backend with default arguments:
-
-```rb
-wget = Down::Wget.new(:no_proxy, connect_timeout: 3)
-
-wget.download("http://nature.com/forest.jpg")
-wget.open("http://nature.com/forest.jpg")
-```
 
 ## Development
 

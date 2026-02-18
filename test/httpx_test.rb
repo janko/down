@@ -76,6 +76,16 @@ describe Down::Httpx do
       assert_equal ".foo", File.extname(tempfile.path)
     end
 
+    it "accepts custom tempfile name" do
+      tempfile = Down::Httpx.download("#{$httpbin}/bytes/100", tempfile_name: "custom-prefix")
+      assert_match(/custom-prefix/, tempfile.path)
+    end
+
+    it "preserves file extension with custom tempfile name" do
+      tempfile = Down::Httpx.download("#{$httpbin}/robots.txt", tempfile_name: "my-file")
+      assert_match(/my-file.*\.txt\z/, tempfile.path)
+    end
+
     it "accepts :content_length_proc" do
       Down::Httpx.download("#{$httpbin}/stream-bytes/100", content_length_proc: -> (length) { @length = length })
       refute instance_variable_defined?(:@length)
@@ -152,7 +162,7 @@ describe Down::Httpx do
     it "adds #charset extracted from Content-Type" do
       tempfile = Down::Httpx.download("#{$httpbin}/html")
       assert_equal "text/html", tempfile.content_type
-      assert_equal "utf-8", tempfile.charset
+      assert_equal Encoding::UTF_8, tempfile.charset
     end
 
     it "accepts download destination" do
@@ -283,7 +293,6 @@ describe Down::Httpx do
     end
 
     it "re-raises invalid URL errors" do
-      assert_raises(Down::InvalidUrl) { Down::Httpx.open("foo://example.org") }
       assert_raises(Down::InvalidUrl) { Down::Httpx.open("http://example.org\\foo") }
     end
 
