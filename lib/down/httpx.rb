@@ -105,11 +105,7 @@ module Down
 
     # Yields chunks of the response body to the block.
     def stream_body(response, &block)
-      if response.respond_to?(:each)
-        response.each(&block)
-      else
-        response.body.each(&block)
-      end
+      response.each(&block)
     rescue => exception
       request_error!(exception)
     end

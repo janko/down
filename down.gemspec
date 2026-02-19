@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "minitest", "~> 5.8"
   spec.add_development_dependency "mocha", "~> 1.5"
   spec.add_development_dependency "rake"
-  spec.add_development_dependency "httpx", "~> 1.0"
+  spec.add_development_dependency "httpx", "~> 1.0", "< 1.4.4"
   spec.add_development_dependency "http", "~> 5.0"
   spec.add_development_dependency "warning"
   spec.add_development_dependency "csv"
