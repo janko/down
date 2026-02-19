@@ -41,6 +41,7 @@ module Down
       headers             = options.delete(:headers)
       uri_normalizer      = options.delete(:uri_normalizer)
       extension           = options.delete(:extension)
+      auth_on_redirect    = options.delete(:auth_on_redirect)
       tempfile_name       = options.delete(:tempfile_name)
 
       # Use open-uri's :content_lenth_proc or :progress_proc to raise an
@@ -92,7 +93,7 @@ module Down
         uri.password = nil
       end
 
-      open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects)
+      open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects, auth_on_redirect: )
 
       # Handle the fact that open-uri returns StringIOs for small files.
       extname = extension ? ".#{extension}" : File.extname(open_uri_file.base_uri.path)
@@ -108,14 +109,15 @@ module Down
     def open(url, *args, **options)
       options = merge_options(@options, *args, **options)
 
-      max_redirects  = options.delete(:max_redirects)
-      uri_normalizer = options.delete(:uri_normalizer)
+      max_redirects    = options.delete(:max_redirects)
+      uri_normalizer   = options.delete(:uri_normalizer)
+      auth_on_redirect = options.delete(:auth_on_redirect)
 
       uri = ensure_uri(normalize_uri(url, uri_normalizer: uri_normalizer))
 
       # Create a Fiber that halts when response headers are received.
       request = Fiber.new do
-        net_http_request(uri, options, follows_remaining: max_redirects) do |response|
+        net_http_request(uri, options, follows_remaining: max_redirects, auth_on_redirect:) do |response|
           Fiber.yield response
         end
       end
@@ -142,19 +144,24 @@ module Down
     private
 
     # Calls open-uri's URI::HTTP#open method. Additionally handles redirects.
-    def open_uri(uri, options, follows_remaining:)
+    def open_uri(uri, options, follows_remaining:, auth_on_redirect:)
       uri.open(options)
     rescue OpenURI::HTTPRedirect => exception
       raise Down::TooManyRedirects, "too many redirects" if follows_remaining == 0
 
       # fail if redirect URI scheme is not http or https
       begin
+        same_host = uri.host.eql? exception.uri.host
         uri = ensure_uri(exception.uri)
       rescue Down::InvalidUrl
         response = rebuild_response_from_open_uri_exception(exception)
 
         raise ResponseError.new("Invalid Redirect URI: #{exception.uri}", response: response)
       end
+
+      # do not leak credentials on redirect
+      options.delete("Authorization") unless auth_on_redirect
+      options.delete(:http_basic_authentication) unless auth_on_redirect
 
       # forward cookies on the redirect
       if !exception.io.meta["set-cookie"].to_s.empty?
@@ -201,7 +208,7 @@ module Down
     end
 
     # Makes a Net::HTTP request and follows redirects.
-    def net_http_request(uri, options, follows_remaining:, &block)
+    def net_http_request(uri, options, follows_remaining:, auth_on_redirect:, &block)
       http, request = create_net_http(uri, options)
 
       begin
@@ -232,10 +239,17 @@ module Down
           raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response: response)
         end
 
-        # handle relative redirects
-        location = uri + location if location.relative?
+        # do not leak credentials on redirect
+        options[:headers].delete("Authorization") unless auth_on_redirect
 
-        net_http_request(location, options, follows_remaining: follows_remaining - 1, &block)
+        # handle relative redirects
+        if location.relative?
+          location = uri + location
+          uri.user = nil unless auth_on_redirect
+          uri.password = nil unless auth_on_redirect
+        end
+
+        net_http_request(location, options, follows_remaining: follows_remaining - 1, auth_on_redirect:, &block)
       end
     end
 

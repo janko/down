@@ -135,6 +135,21 @@ describe Down do
       # "Set-Cookie" header.
     end
 
+    it "removes Authorization header on  redirects" do
+      tempfile = Down::NetHttp.download("#{$httpbin}/redirect/1", headers: {"Authorization" => "Basic dXNlcjpwYXNzd29yZA=="})
+      assert_nil JSON.parse(tempfile.read)["headers"]["Authorization"]
+    end
+
+    it "removes Basic Auth credentials header on redirects" do
+      tempfile = Down::NetHttp.download("#{$httpbin.sub("http://", '\0user:password@')}/redirect/1", )
+      assert_nil JSON.parse(tempfile.read)["headers"]["Authorization"]
+    end
+
+    it "preserves Authorization header on redirect, when asked" do
+      tempfile = Down::NetHttp.download("#{$httpbin.sub("http://", '\0user:password@')}/redirect/1", auth_on_redirect:true )
+      assert_equal "Basic dXNlcjpwYXNzd29yZA==", JSON.parse(tempfile.read)["headers"]["Authorization"]
+    end
+
     # I don't know how to test that the proxy is actually used
     it "accepts proxy" do
       tempfile = Down::NetHttp.download("#{$httpbin}/bytes/100", proxy: $httpbin)
@@ -332,6 +347,26 @@ describe Down do
       assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
       io = Down::NetHttp.open("#{$httpbin}/relative-redirect/1")
       assert_equal "#{$httpbin}/get", JSON.parse(io.read)["url"]
+    end
+
+    it "removes Authorization header on  redirects" do
+      io = Down::NetHttp.open("#{$httpbin}/redirect/1", headers: {"Authorization" => "Basic dXNlcjpwYXNzd29yZA=="})
+      assert_nil JSON.parse(io.read)["headers"]["Authorization"]
+    end
+
+    it "removes Basic Auth credentials header on absolute redirects" do
+      io = Down::NetHttp.open("#{$httpbin.sub("http://", '\0user:password@')}/absolute-redirect/1", )
+      assert_nil JSON.parse(io.read)["headers"]["Authorization"]
+    end
+
+    it "preserves Basic Auth credentials header on relative redirects" do
+      io = Down::NetHttp.open("#{$httpbin.sub("http://", '\0user:password@')}/relative-redirect/1", )
+      assert_equal "Basic dXNlcjpwYXNzd29yZA==", JSON.parse(io.read)["headers"]["Authorization"]
+    end
+
+    it "preserves Authorization header on redirect, when asked" do
+      io = Down::NetHttp.open("#{$httpbin.sub("http://", '\0user:password@')}/redirect/1", auth_on_redirect:true )
+      assert_equal "Basic dXNlcjpwYXNzd29yZA==", JSON.parse(io.read)["headers"]["Authorization"]
     end
 
     it "returns content in encoding specified by charset" do
