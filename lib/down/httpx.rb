@@ -105,7 +105,11 @@ module Down
 
     # Yields chunks of the response body to the block.
     def stream_body(response, &block)
-      response.each(&block)
+      if response.respond_to?(:each)
+        response.each(&block)
+      else
+        response.body.each(&block)
+      end
     rescue => exception
       request_error!(exception)
     end
@@ -130,7 +134,7 @@ module Down
       end
       client = block.call(client) if block
 
-      client.request(method.to_s.upcase, uri, stream: true, **options)
+      client.request(method.to_s.upcase, uri, **options, stream: true)
     rescue => exception
       request_error!(exception)
     end
