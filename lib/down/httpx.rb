@@ -130,7 +130,7 @@ module Down
       end
       client = block.call(client) if block
 
-      client.request(method.to_s.upcase, uri,stream: true, **options)
+      client.request(method.to_s.upcase, uri, stream: true, **options)
     rescue => exception
       request_error!(exception)
     end
