@@ -93,7 +93,7 @@ module Down
         uri.password = nil
       end
 
-      open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects, auth_on_redirect: )
+      open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects, auth_on_redirect: auth_on_redirect)
 
       # Handle the fact that open-uri returns StringIOs for small files.
       extname = extension ? ".#{extension}" : File.extname(open_uri_file.base_uri.path)
@@ -117,7 +117,7 @@ module Down
 
       # Create a Fiber that halts when response headers are received.
       request = Fiber.new do
-        net_http_request(uri, options, follows_remaining: max_redirects, auth_on_redirect:) do |response|
+        net_http_request(uri, options, follows_remaining: max_redirects, auth_on_redirect: auth_on_redirect) do |response|
           Fiber.yield response
         end
       end
@@ -249,7 +249,7 @@ module Down
           uri.password = nil unless auth_on_redirect
         end
 
-        net_http_request(location, options, follows_remaining: follows_remaining - 1, auth_on_redirect:, &block)
+        net_http_request(location, options, follows_remaining: follows_remaining - 1, auth_on_redirect: auth_on_redirect, &block)
       end
     end
 
