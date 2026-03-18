@@ -151,7 +151,6 @@ module Down
 
       # fail if redirect URI scheme is not http or https
       begin
-        same_host = uri.host.eql? exception.uri.host
         uri = ensure_uri(exception.uri)
       rescue Down::InvalidUrl
         response = rebuild_response_from_open_uri_exception(exception)
