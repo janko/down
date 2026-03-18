@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "addressable", "~> 2.8"
   spec.add_dependency "base64", "~> 0.3"
 
-  spec.add_development_dependency "minitest", "~> 6.0"
+  spec.add_development_dependency "minitest", RUBY_VERSION >= "3.2" ? "~> 6.0" : "~> 5.0"
   spec.add_development_dependency "mocha", "~> 1.5"
   spec.add_development_dependency "rake"
   spec.add_development_dependency "httpx", "~> 1.0", "< 1.4.4"
