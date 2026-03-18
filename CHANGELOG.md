@@ -1,6 +1,14 @@
-## HEAD
+## 5.5.0 (2026-03-18)
 
-* Drop support for Ruby 2.3 (@janko)
+* Add support for http.rb 6.0 (@sferik)
+
+* Fix `Down::TooManyRedirects` error with `Down::Httpx` happening on first redirect (@artrybalko)
+
+* Add `:auth_on_redirect` option to `Down::NetHttp` backend for skipping authentication on redirects (@makrsmark)
+
+* Add `:tempfile_name` keyword argument to `.download` for overriding tempfile prefix (@softwaregravy)
+
+* Drop support for Ruby 2.6 and older (@janko)
 
 * Deprecate wget backend (@janko)
 
