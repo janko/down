@@ -312,8 +312,8 @@ describe Down::Http do
       assert_equal "500 Internal Server Error", error.message
       assert_instance_of HTTP::Response, error.response
 
-      error = assert_raises(Down::ResponseError) { Down::Http.open("#{$httpbin}/status/100") }
-      assert_equal "100 Continue", error.message
+      error = assert_raises(Down::ResponseError) { Down::Http.open("#{$httpbin}/status/305") }
+      assert_equal "305 Use Proxy", error.message
       assert_instance_of HTTP::Response, error.response
     end
 

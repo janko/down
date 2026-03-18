@@ -1,8 +1,9 @@
 # frozen-string-literal: true
 
-gem "http", ">= 2.1.0", "< 6"
+gem "http", ">= 2.1.0", "< 7"
 
 require "http"
+require "addressable/uri"
 
 require "down/backend"
 
@@ -19,7 +20,10 @@ module Down
         .follow(max_hops: 2)
         .timeout(connect: 30, write: 30, read: 30)
 
-      @client = HTTP::Client.new(@client.default_options.merge(options)) if options.any?
+      if options.any?
+        client_class = defined?(HTTP::Session) ? HTTP::Session : HTTP::Client
+        @client = client_class.new(@client.default_options.merge(options))
+      end
       @client = block.call(@client) if block
     end
 
@@ -94,7 +98,7 @@ module Down
       client = client.basic_auth(user: uri.user, pass: uri.password) if uri.user || uri.password
       client = block.call(client) if block
 
-      client.request(method, url, options)
+      client.request(method, url, **options)
     rescue => exception
       request_error!(exception)
     end
@@ -123,7 +127,7 @@ module Down
     # Re-raise HTTP.rb exceptions as Down::Error exceptions.
     def request_error!(exception)
       case exception
-      when HTTP::Request::UnsupportedSchemeError, Addressable::URI::InvalidURIError
+      when HTTP::Request::UnsupportedSchemeError, Addressable::URI::InvalidURIError, *invalid_url_errors
         raise Down::InvalidUrl, exception.message
       when HTTP::ConnectionError
         raise Down::ConnectionError, exception.message
@@ -136,6 +140,10 @@ module Down
       else
         raise exception
       end
+    end
+
+    def invalid_url_errors
+      defined?(HTTP::URI::InvalidError) ? [HTTP::URI::InvalidError] : []
     end
 
     # Defines some additional attributes for the returned Tempfile.
