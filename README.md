@@ -473,13 +473,6 @@ its docs for ways to pass additional options.
 
 ## Development
 
-Tests require that a [httpbin] server is running locally, which you can do via Docker:
-
-```sh
-$ docker pull kennethreitz/httpbin
-$ docker run -p 80:80 kennethreitz/httpbin
-```
-
 Then you can run tests:
 
 ```
@@ -495,4 +488,3 @@ $ bundle exec rake test
 [http.rb]: https://github.com/httprb/http
 [HTTPX]: https://github.com/HoneyryderChuck/httpx
 [Addressable::URI]: https://github.com/sporkmonger/addressable
-[httpbin]: https://github.com/postmanlabs/httpbin

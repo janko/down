@@ -251,11 +251,11 @@ describe Down do
       assert_kind_of Net::HTTPResponse, error.response
 
       error = assert_raises(Down::ServerError) { Down::NetHttp.download("#{$httpbin}/status/599") }
-      assert_equal "599 Unknown", error.message
+      assert_equal "599 Custom", error.message
       assert_kind_of Net::HTTPResponse, error.response
 
       error = assert_raises(Down::ResponseError) { Down::NetHttp.download("#{$httpbin}/status/999") }
-      assert_equal "999 Unknown", error.message
+      assert_equal "999 Custom", error.message
       assert_kind_of Net::HTTPResponse, error.response
     end
 

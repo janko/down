@@ -4,3 +4,5 @@ gemspec
 
 gem "pry"
 gem "memory_profiler"
+gem "puma"
+gem "rack"

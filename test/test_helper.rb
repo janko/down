@@ -14,21 +14,29 @@ require_relative "support/deprecated_helper"
 require_relative "support/warnings"
 
 require "http"
+require "rack"
+require_relative "support/httpbin"
 
-$httpbin = "http://localhost"
+# Pick a random available port
+sock = TCPServer.new("localhost", 0)
+port = sock.addr[1]
+sock.close
 
-begin
-  HTTP.get($httpbin).to_s
-rescue HTTP::ConnectionError
-  warn <<-WARNING
+$httpbin = "http://localhost:#{port}"
 
-The httpbin server is not running on port 80, which is required for tests. Please run:
+# Start the httpbin Rack app on Puma in a background thread
+puma = Puma::Server.new(Httpbin.new)
+puma.add_tcp_listener("localhost", port)
+puma.run
 
-$ docker pull kennethreitz/httpbin
-$ docker run -p 80:80 kennethreitz/httpbin
-
-WARNING
-  exit 1
+# Wait for the server to accept connections
+30.times do
+  begin
+    HTTP.timeout(connect: 0.5, write: 0.5, read: 0.5).get($httpbin)
+    break
+  rescue HTTP::ConnectionError, HTTP::TimeoutError
+    sleep 0.1
+  end
 end
 
 Minitest.autorun
