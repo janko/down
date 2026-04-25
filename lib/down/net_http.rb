@@ -246,6 +246,9 @@ module Down
           location = uri + location
           uri.user = nil unless auth_on_redirect
           uri.password = nil unless auth_on_redirect
+        elsif auth_on_redirect && (uri.user || uri.password)
+          # for absolute redirects, carry over URI credentials since the new location won't have them
+          options[:http_basic_authentication] ||= [uri.user, uri.password]
         end
 
         net_http_request(location, options, follows_remaining: follows_remaining - 1, auth_on_redirect: auth_on_redirect, &block)
