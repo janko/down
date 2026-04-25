@@ -110,7 +110,7 @@ module Down
         separator = separator_or_limit
       end
 
-      return read(limit) if separator.nil?
+      return read(limit)&.force_encoding(@encoding) if separator.nil?
 
       separator = "\n\n" if separator.empty?
 

@@ -344,6 +344,20 @@ describe Down::ChunkedIO do
       assert_equal Encoding::BINARY, io.gets.encoding
     end
 
+    it "returns content in specified encoding when separator is nil" do
+      io = chunked_io(chunks: ["ab", "c"].each, encoding: "utf-8")
+      assert_equal Encoding::UTF_8, io.gets(nil).encoding
+
+      io = chunked_io(chunks: ["ab", "c"].each, encoding: "utf-8")
+      assert_equal Encoding::UTF_8, io.gets(nil, 2).encoding
+
+      io = chunked_io(chunks: ["ab", "c"].each)
+      assert_equal Encoding::BINARY, io.gets(nil).encoding
+
+      io = chunked_io(chunks: ["ab", "c"].each)
+      assert_equal Encoding::BINARY, io.gets(nil, 2).encoding
+    end
+
     it "returns nil when on EOF" do
       io = chunked_io(chunks: ["a\n"].each)
       io.gets
