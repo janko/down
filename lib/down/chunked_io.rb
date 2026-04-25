@@ -42,6 +42,11 @@ module Down
       retrieve_chunk # fetch first chunk so that we know whether the file is empty
     end
 
+    # For compatibility with multipart-post gem.
+    def length
+      @size
+    end
+
     # Yields elements of the underlying enumerator.
     def each_chunk
       fail IOError, "closed stream" if closed?
