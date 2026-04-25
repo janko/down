@@ -2,6 +2,8 @@
 
 require "json"
 require "base64"
+require "zlib"
+require "stringio"
 require "rack"
 require "rack/auth/basic"
 require "puma"
@@ -113,6 +115,18 @@ class Httpbin
     when %r{\A/etag/(.+)\z}
       etag = Rack::Utils.unescape_path($1)
       [200, { "Content-Type" => "application/json", "ETag" => etag }, ["{}"]]
+
+    when "/gzip"
+      body = JSON.generate(request_info(req))
+      io = StringIO.new
+      gz = Zlib::GzipWriter.new(io)
+      gz.write(body)
+      gz.close
+      gzipped = io.string
+      # Send chunked: split gzipped into pieces to force Transfer-Encoding: chunked
+      chunks = gzipped.bytes.each_slice(50).map { |s| s.pack("C*") }
+      [200, { "Content-Type" => "application/json", "Content-Encoding" => "gzip" },
+       Rack::BodyProxy.new(chunks.each) {}]
 
     else
       [404, { "Content-Type" => "text/plain" }, ["Not Found"]]

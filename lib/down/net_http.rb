@@ -285,7 +285,12 @@ module Down
       http.open_timeout = options[:open_timeout] if options.key?(:open_timeout)
 
       headers = options[:headers].to_h
-      headers["Accept-Encoding"] = "" # Net::HTTP's inflater causes FiberErrors
+      # Net::HTTP's inflater raises FiberError on chunked & gzipped responses
+      # on Ruby < 3.1, so we default Accept-Encoding to "" to opt out of
+      # compression. Users can still set their own Accept-Encoding header.
+      if RUBY_VERSION < "3.1" && headers.keys.none? { |key| key.to_s.downcase == "accept-encoding" }
+        headers["Accept-Encoding"] = ""
+      end
 
       get = Net::HTTP::Get.new(uri, headers)
 

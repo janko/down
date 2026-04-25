@@ -1,3 +1,7 @@
+## Unreleased
+
+* Allow user-supplied `Accept-Encoding` request header in `Down::NetHttp` backend, and let Net::HTTP transparently decompress gzipped responses on Ruby 3.1+ (@janko)
+
 ## 5.5.0 (2026-03-18)
 
 * Add support for http.rb 6.0 (@sferik)
