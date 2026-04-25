@@ -9,6 +9,20 @@ require "rack/auth/basic"
 require "puma"
 require "puma/server"
 
+# Rack body that streams an array of chunks without Content-Length.
+# Avoids Enumerator/Fiber on JRuby which can cause premature connection closes.
+class StreamBody
+  def initialize(chunks)
+    @chunks = chunks
+  end
+
+  def each(&block)
+    @chunks.each(&block)
+  end
+
+  def close; end
+end
+
 # Rack app that implements the subset of httpbin.org endpoints used in tests.
 class Httpbin
   # Minimal valid 1×1 PNG image
@@ -56,12 +70,12 @@ class Httpbin
       seed = req.GET["seed"]
       bytes = random_bytes(n, seed ? seed.to_i : nil)
       chunks = bytes.bytes.each_slice(chunk_size).map { |s| s.pack("C*") }
-      [200, { "Content-Type" => "application/octet-stream" }, Rack::BodyProxy.new(chunks.each) {}]
+      [200, { "Content-Type" => "application/octet-stream" }, StreamBody.new(chunks)]
 
     when %r{\A/stream/(\d+)\z}
       n = $1.to_i
       lines = Array.new(n) { |i| "#{JSON.generate("id" => i, "url" => req.url)}\n" }
-      [200, { "Content-Type" => "application/json" }, Rack::BodyProxy.new(lines.each) {}]
+      [200, { "Content-Type" => "application/json" }, StreamBody.new(lines)]
 
     when "/robots.txt"
       [200, { "Content-Type" => "text/plain" }, ["User-agent: *\nDisallow: /deny\n"]]
@@ -126,7 +140,7 @@ class Httpbin
       # Send chunked: split gzipped into pieces to force Transfer-Encoding: chunked
       chunks = gzipped.bytes.each_slice(50).map { |s| s.pack("C*") }
       [200, { "Content-Type" => "application/json", "Content-Encoding" => "gzip" },
-       Rack::BodyProxy.new(chunks.each) {}]
+       StreamBody.new(chunks)]
 
     else
       [404, { "Content-Type" => "text/plain" }, ["Not Found"]]
