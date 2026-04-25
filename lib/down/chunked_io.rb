@@ -243,6 +243,7 @@ module Down
       return false if cache && !cache.eof?
       @buffer.nil? && chunks_depleted?
     end
+    alias eof eof?
 
     # Implements IO#rewind semantics. Rewinds the Down::ChunkedIO by rewinding
     # the cache and setting the position to the beginning of the file. Raises
