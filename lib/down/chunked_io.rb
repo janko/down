@@ -129,6 +129,8 @@ module Down
       data.clear # deallocate data
 
       if extra
+        @position -= extra.bytesize
+
         if cache
           cache.pos -= extra.bytesize
         else

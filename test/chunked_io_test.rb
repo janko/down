@@ -355,6 +355,17 @@ describe Down::ChunkedIO do
       io.close
       assert_raises(IOError) { io.gets }
     end
+
+    it "updates #pos" do
+      io = chunked_io(chunks: ["a\nb\nc\n"].each)
+      assert_equal 0, io.pos
+      io.gets
+      assert_equal 2, io.pos
+      io.gets
+      assert_equal 4, io.pos
+      io.gets
+      assert_equal 6, io.pos
+    end
   end
 
   describe "#readpartial" do
