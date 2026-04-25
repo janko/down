@@ -1,6 +1,18 @@
-## Unreleased
+## 5.6.0 (2026-04-25)
 
-* Allow user-supplied `Accept-Encoding` request header in `Down::NetHttp` backend, and let Net::HTTP transparently decompress gzipped responses on Ruby 3.1+ (@janko)
+* Require Ruby 3.2+ (@janko)
+
+* Return `Down::Chunked#gets(nil, n)` in specified encoding for `IO` compatibility (@janko)
+
+* Allow net/http to transparently decompress response bodies again (@janko)
+
+* Handle `:auth_on_redirect` for absolute redirects in net/http backend (@janko)
+
+* Fix `#pos` not always being updated after `Down::ChunkedIO#gets` (@janko)
+
+* Add `#eof` alias to `Down::ChunkedIO#eof?` for `IO` compatibility
+
+* Add `#length` alias for `Down::ChunkedIO#size` for `multipart-post` gem compatibility (@janko)
 
 ## 5.5.0 (2026-03-18)
 
