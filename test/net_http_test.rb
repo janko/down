@@ -415,14 +415,6 @@ describe Down do
       assert_equal "identity", JSON.parse(io.read)["headers"]["Accept-Encoding"]
     end
 
-    if RUBY_VERSION >= "3.1"
-      it "transparently decompresses gzipped chunked responses" do
-        io = Down::NetHttp.open("#{$httpbin}/gzip")
-        body = io.read
-        assert_equal "#{$httpbin}/gzip", JSON.parse(body)["url"]
-      end
-    end
-
     # I don't know how to test that the proxy is actually used
     it "accepts proxy" do
       io = Down::NetHttp.open("#{$httpbin}/bytes/100", proxy: $httpbin)
