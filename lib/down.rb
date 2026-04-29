@@ -6,12 +6,12 @@ require "down/net_http"
 module Down
   module_function
 
-  def download(*args, **options, &block)
-    backend.download(*args, **options, &block)
+  def download(...)
+    backend.download(...)
   end
 
-  def open(*args, **options, &block)
-    backend.open(*args, **options, &block)
+  def open(...)
+    backend.open(...)
   end
 
   # Allows setting a backend via a symbol or a downloader object.

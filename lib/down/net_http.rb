@@ -17,31 +17,32 @@ module Down
       addressable_uri.normalize.to_s
     end
 
+    DEFAULT_OPTIONS = {
+      headers:        { "User-Agent" => "Down/#{Down::VERSION}" }.freeze,
+      max_redirects:  2,
+      open_timeout:   30,
+      read_timeout:   30,
+      uri_normalizer: URI_NORMALIZER,
+    }.freeze
+
     # Initializes the backend with common defaults.
-    def initialize(*args, **options)
-      @options = merge_options({
-        headers:        { "User-Agent" => "Down/#{Down::VERSION}" },
-        max_redirects:  2,
-        open_timeout:   30,
-        read_timeout:   30,
-        uri_normalizer: URI_NORMALIZER,
-      }, *args, **options)
+    def initialize(...)
+      @options = merge_options(DEFAULT_OPTIONS, ...)
     end
 
     # Downloads a remote file to disk using open-uri. Accepts any open-uri
     # options, and a few more.
-    def download(url, *args, **options)
-      options = merge_options(@options, *args, **options)
+    def download(url, ...)
+      options = merge_options(@options, ...)
 
       max_size            = options.delete(:max_size)
-      max_redirects       = options.delete(:max_redirects)
       progress_proc       = options.delete(:progress_proc)
       content_length_proc = options.delete(:content_length_proc)
+      proxy               = options.delete(:proxy)
       destination         = options.delete(:destination)
       headers             = options.delete(:headers)
       uri_normalizer      = options.delete(:uri_normalizer)
       extension           = options.delete(:extension)
-      auth_on_redirect    = options.delete(:auth_on_redirect)
       tempfile_name       = options.delete(:tempfile_name)
 
       # Use open-uri's :content_lenth_proc or :progress_proc to raise an
@@ -54,20 +55,20 @@ module Down
           if size && max_size && size > max_size
             raise Down::TooLarge, "file is too large (#{size/1024/1024}MB, max is #{max_size/1024/1024}MB)"
           end
-          content_length_proc.call(size) if content_length_proc
+          content_length_proc&.call(size)
         },
         progress_proc: proc { |current_size|
           if max_size && current_size > max_size
             raise Down::TooLarge, "file is too large (#{current_size/1024/1024}MB, max is #{max_size/1024/1024}MB)"
           end
-          progress_proc.call(current_size) if progress_proc
+          progress_proc&.call(current_size)
         },
         redirect: false,
       }
 
       # Handle basic authentication in the :proxy option.
-      if options[:proxy]
-        proxy    = URI(options.delete(:proxy))
+      if proxy
+        proxy    = URI(proxy)
         user     = proxy.user
         password = proxy.password
 
@@ -81,10 +82,9 @@ module Down
         end
       end
 
-      open_uri_options.merge!(options)
-      open_uri_options.merge!(headers)
+      open_uri_options.merge!(options, headers)
 
-      uri = ensure_uri(normalize_uri(url, uri_normalizer: uri_normalizer))
+      uri = ensure_uri(normalize_uri(url, uri_normalizer:))
 
       # Handle basic authentication in the remote URL.
       if uri.user || uri.password
@@ -93,7 +93,7 @@ module Down
         uri.password = nil
       end
 
-      open_uri_file = open_uri(uri, open_uri_options, follows_remaining: max_redirects, auth_on_redirect: auth_on_redirect)
+      open_uri_file = open_uri(uri, **open_uri_options)
 
       # Handle the fact that open-uri returns StringIOs for small files.
       extname = extension ? ".#{extension}" : File.extname(open_uri_file.base_uri.path)
@@ -106,18 +106,16 @@ module Down
 
     # Starts retrieving the remote file using Net::HTTP and returns an IO-like
     # object which downloads the response body on-demand.
-    def open(url, *args, **options)
-      options = merge_options(@options, *args, **options)
+    def open(url, ...)
+      options = merge_options(@options, ...)
 
-      max_redirects    = options.delete(:max_redirects)
-      uri_normalizer   = options.delete(:uri_normalizer)
-      auth_on_redirect = options.delete(:auth_on_redirect)
+      uri_normalizer = options.delete(:uri_normalizer)
 
-      uri = ensure_uri(normalize_uri(url, uri_normalizer: uri_normalizer))
+      uri = ensure_uri(normalize_uri(url, uri_normalizer:))
 
       # Create a Fiber that halts when response headers are received.
       request = Fiber.new do
-        net_http_request(uri, options, follows_remaining: max_redirects, auth_on_redirect: auth_on_redirect) do |response|
+        net_http_request(uri, **options) do |response|
           Fiber.yield response
         end
       end
@@ -129,7 +127,7 @@ module Down
       # Build an IO-like object that will retrieve response body on-demand.
       Down::ChunkedIO.new(
         chunks:     enum_for(:stream_body, response),
-        size:       response["Content-Length"] && response["Content-Length"].to_i,
+        size:       response["Content-Length"]&.to_i,
         encoding:   response.type_params["charset"],
         rewindable: options.fetch(:rewindable, true),
         on_close:   -> { request.resume }, # close HTTP connnection
@@ -144,10 +142,10 @@ module Down
     private
 
     # Calls open-uri's URI::HTTP#open method. Additionally handles redirects.
-    def open_uri(uri, options, follows_remaining:, auth_on_redirect:)
+    def open_uri(uri, max_redirects:, auth_on_redirect: false, **options)
       uri.open(options)
     rescue OpenURI::HTTPRedirect => exception
-      raise Down::TooManyRedirects, "too many redirects" if follows_remaining == 0
+      raise Down::TooManyRedirects, "too many redirects" if max_redirects == 0
 
       # fail if redirect URI scheme is not http or https
       begin
@@ -155,7 +153,7 @@ module Down
       rescue Down::InvalidUrl
         response = rebuild_response_from_open_uri_exception(exception)
 
-        raise ResponseError.new("Invalid Redirect URI: #{exception.uri}", response: response)
+        raise ResponseError.new("Invalid Redirect URI: #{exception.uri}", response:)
       end
 
       # do not leak credentials on redirect
@@ -171,14 +169,14 @@ module Down
         options["Cookie"] = (old_cookies | new_cookies).join(';')
       end
 
-      follows_remaining -= 1
+      max_redirects -= 1
       retry
     rescue OpenURI::HTTPError => exception
       response = rebuild_response_from_open_uri_exception(exception)
 
       # open-uri attempts to parse the redirect URI, so we re-raise that exception
       if exception.message.include?("(Invalid Location URI)")
-        raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response: response)
+        raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response:)
       end
 
       response_error!(response)
@@ -207,8 +205,8 @@ module Down
     end
 
     # Makes a Net::HTTP request and follows redirects.
-    def net_http_request(uri, options, follows_remaining:, auth_on_redirect:, &block)
-      http, request = create_net_http(uri, options)
+    def net_http_request(uri, max_redirects:, auth_on_redirect: false, **options, &)
+      http, request = create_net_http(uri, **options)
 
       begin
         response = http.start do
@@ -229,13 +227,13 @@ module Down
       if response.is_a?(Net::HTTPNotModified)
         raise Down::NotModified
       elsif response.is_a?(Net::HTTPRedirection)
-        raise Down::TooManyRedirects if follows_remaining == 0
+        raise Down::TooManyRedirects if max_redirects == 0
 
         # fail if redirect URI is not a valid http or https URL
         begin
           location = ensure_uri(response["Location"], allow_relative: true)
         rescue Down::InvalidUrl
-          raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response: response)
+          raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response:)
         end
 
         # do not leak credentials on redirect
@@ -251,16 +249,16 @@ module Down
           options[:http_basic_authentication] ||= [uri.user, uri.password]
         end
 
-        net_http_request(location, options, follows_remaining: follows_remaining - 1, auth_on_redirect: auth_on_redirect, &block)
+        net_http_request(location, **options, max_redirects: max_redirects - 1, auth_on_redirect:, &)
       end
     end
 
     # Build a Net::HTTP object for making a request.
-    def create_net_http(uri, options)
+    def create_net_http(uri, proxy: nil, ssl_verify_mode: nil, ssl_ca_cert: nil, read_timeout: nil, open_timeout: nil, headers: {}, http_basic_authentication: nil, **)
       http_class = Net::HTTP
 
-      if options[:proxy]
-        proxy = URI(options[:proxy])
+      if proxy
+        proxy = URI(proxy)
         http_class = Net::HTTP::Proxy(proxy.hostname, proxy.port, proxy.user, proxy.password)
       end
 
@@ -269,10 +267,10 @@ module Down
       # Handle SSL parameters (taken from the open-uri implementation).
       if uri.is_a?(URI::HTTPS)
         http.use_ssl = true
-        http.verify_mode = options[:ssl_verify_mode] || OpenSSL::SSL::VERIFY_PEER
+        http.verify_mode = ssl_verify_mode || OpenSSL::SSL::VERIFY_PEER
         store = OpenSSL::X509::Store.new
-        if options[:ssl_ca_cert]
-          Array(options[:ssl_ca_cert]).each do |cert|
+        if ssl_ca_cert
+          Array(ssl_ca_cert).each do |cert|
             File.directory?(cert) ? store.add_path(cert) : store.add_file(cert)
           end
         else
@@ -281,20 +279,20 @@ module Down
         http.cert_store = store
       end
 
-      http.read_timeout = options[:read_timeout] if options.key?(:read_timeout)
-      http.open_timeout = options[:open_timeout] if options.key?(:open_timeout)
+      http.read_timeout = read_timeout
+      http.open_timeout = open_timeout
 
-      get = Net::HTTP::Get.new(uri, options[:headers].to_h)
+      get = Net::HTTP::Get.new(uri, headers.to_h)
 
-      user, password = options[:http_basic_authentication] || [uri.user, uri.password]
+      user, password = http_basic_authentication || [uri.user, uri.password]
       get.basic_auth(user, password) if user || password
 
       [http, get]
     end
 
     # Yields chunks of the response body to the block.
-    def stream_body(response, &block)
-      response.read_body(&block)
+    def stream_body(response, &)
+      response.read_body(&)
     rescue => exception
       request_error!(exception)
     end
@@ -384,6 +382,8 @@ module Down
         warn %([Down::NetHttp] Passing headers as top-level options has been deprecated, use the :headers option instead, e.g: `Down::NetHttp.download(headers: { "Key" => "Value", ... }, ...)`)
         new_options[:headers] = new_options.select { |key, value| key.is_a?(String) }
         new_options.reject! { |key, value| key.is_a?(String) }
+      else
+        new_options[:headers] ||= {}
       end
 
       options.merge(new_options) do |key, value1, value2|

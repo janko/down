@@ -13,8 +13,8 @@ module Down
   # Provides streaming downloads implemented with HTTP.rb.
   class Http < Backend
     # Initializes the backend with common defaults.
-    def initialize(**options, &block)
-      @method = options.delete(:method) || :get
+    def initialize(method: :get, **options, &block)
+      @method = method
       @client = HTTP
         .headers("User-Agent" => "Down/#{Down::VERSION}")
         .follow(max_hops: 2)
@@ -29,10 +29,10 @@ module Down
 
     # Downlods the remote file to disk. Accepts HTTP.rb options via a hash or a
     # block, and some additional options as well.
-    def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, extension: nil, tempfile_name: nil, **options, &block)
-      response = request(url, **options, &block)
+    def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, extension: nil, tempfile_name: nil, **, &)
+      response = request(url, **, &)
 
-      content_length_proc.call(response.content_length) if content_length_proc && response.content_length
+      content_length_proc&.call(response.content_length) if response.content_length
 
       if max_size && response.content_length && response.content_length > max_size
         raise Down::TooLarge, "file is too large (#{response.content_length/1024/1024}MB, max is #{max_size/1024/1024}MB)"
@@ -45,7 +45,7 @@ module Down
         tempfile.write(chunk)
         chunk.clear # deallocate string
 
-        progress_proc.call(tempfile.size) if progress_proc
+        progress_proc&.call(tempfile.size)
 
         if max_size && tempfile.size > max_size
           raise Down::TooLarge, "file is too large (#{tempfile.size/1024/1024}MB, max is #{max_size/1024/1024}MB)"
@@ -60,15 +60,15 @@ module Down
 
       download_result(tempfile, destination)
     rescue
-      tempfile.close! if tempfile
+      tempfile&.close!
       raise
     end
 
     # Starts retrieving the remote file and returns an IO-like object which
     # downloads the response body on-demand. Accepts HTTP.rb options via a hash
     # or a block.
-    def open(url, rewindable: true, **options, &block)
-      response = request(url, **options, &block)
+    def open(url, rewindable: true, **, &)
+      response = request(url, **, &)
 
       Down::ChunkedIO.new(
         chunks:     enum_for(:stream_body, response),
@@ -85,27 +85,27 @@ module Down
 
     private
 
-    def request(url, method: @method, **options, &block)
-      response = send_request(method, url, **options, &block)
+    def request(url, method: @method, **, &)
+      response = send_request(method, url, **, &)
       response_error!(response) unless response.status.success?
       response
     end
 
-    def send_request(method, url, **options, &block)
+    def send_request(method, url, **, &block)
       uri = HTTP::URI.parse(url)
 
       client = @client
       client = client.basic_auth(user: uri.user, pass: uri.password) if uri.user || uri.password
       client = block.call(client) if block
 
-      client.request(method, url, **options)
+      client.request(method, url, **)
     rescue => exception
       request_error!(exception)
     end
 
     # Yields chunks of the response body to the block.
-    def stream_body(response, &block)
-      response.body.each(&block)
+    def stream_body(response, &)
+      response.body.each(&)
     rescue => exception
       request_error!(exception)
     ensure
