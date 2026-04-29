@@ -6,16 +6,14 @@ require "httpx"
 
 require "down/backend"
 
-
 module Down
   # Provides streaming downloads implemented with HTTPX.
   class Httpx < Backend
-    # Initializes the backend
-
     USER_AGENT = "Down/#{Down::VERSION}"
 
     BASIC_AUTH = HTTPX::VERSION >= "1.0.0" ? :basic_auth : :basic_authentication
 
+    # Initializes the backend with common defaults.
     def initialize(method: :get, headers: {}, **options, &block)
       @method = method
       @client = HTTPX
@@ -30,7 +28,6 @@ module Down
 
       @client = block.call(@client) if block
     end
-
 
     # Downloads the remote file to disk. Accepts HTTPX options via a hash or a
     # block, and some additional options as well.
