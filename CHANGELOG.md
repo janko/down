@@ -1,3 +1,7 @@
+## 5.6.1 (2026-10-18)
+
+* Avoid warnings on requiring `cgi` on Ruby 4.0+ (@janko)
+
 ## 5.6.0 (2026-04-25)
 
 * Require Ruby 3.2+ (@janko)
