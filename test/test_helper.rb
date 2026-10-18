@@ -1,5 +1,7 @@
 require "bundler/setup"
 
+require_relative "support/warnings"
+
 ENV["MT_NO_EXPECTATIONS"] = "1"
 
 require "minitest"
@@ -11,7 +13,6 @@ MiniTest = Minitest unless defined?(MiniTest)
 require "mocha/minitest"
 
 require_relative "support/deprecated_helper"
-require_relative "support/warnings"
 
 require "http"
 require "rack"

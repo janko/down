@@ -1,4 +1,8 @@
-require "cgi"
+if RUBY_VERSION >= "4.0"
+  require "cgi/escape"
+else
+  require "cgi/util"
+end
 
 module Down
   module Utils

@@ -20,7 +20,6 @@ Gem::Specification.new do |spec|
 
   spec.add_development_dependency "minitest", "~> 6.0"
   spec.add_development_dependency "mocha", "~> 1.5"
-  spec.add_development_dependency "cgi"
   spec.add_development_dependency "rake"
   spec.add_development_dependency "httpx", "~> 1.0", "< 1.4.4"
   spec.add_development_dependency "http", "~> 6.0"
