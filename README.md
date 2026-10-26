@@ -109,7 +109,7 @@ internally downloads chunks of the remote file, but only how much is needed.
 
 ```rb
 remote_file = Down.open("http://example.com/image.jpg")
-remote_file.size # read from the "Content-Length" header
+remote_file.size # read from the "Content-Length" header, nil if unknown
 
 remote_file.read(1024) # downloads and returns first 1 KB
 remote_file.read(1024) # downloads and returns next 1 KB
@@ -119,6 +119,17 @@ remote_file.read # downloads and returns the rest of the file content
 remote_file.eof? #=> true
 
 remote_file.close # closes the HTTP connection and deletes the internal Tempfile
+```
+
+The size is `nil` when the server doesn't send a `Content-Length`. With the
+Net::HTTP backend it's also `nil` when the response body is compressed, because
+Net::HTTP decompresses it on the fly and the header holds the compressed size. If
+you need the size, you can set your own `Accept-Encoding`, which turns off
+decompression; the body may then need to be decompressed by hand if the server
+sends it compressed anyway:
+
+```rb
+remote_file = Down.open("http://example.com/file.json", headers: { "Accept-Encoding" => "identity" })
 ```
 
 The following IO methods are implemented:

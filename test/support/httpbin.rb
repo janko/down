@@ -3,7 +3,6 @@
 require "json"
 require "base64"
 require "zlib"
-require "stringio"
 require "rack"
 require "rack/auth/basic"
 require "puma"
@@ -131,16 +130,28 @@ class Httpbin
       [200, { "Content-Type" => "application/json", "ETag" => etag }, ["{}"]]
 
     when "/gzip"
-      body = JSON.generate(request_info(req))
-      io = StringIO.new
-      gz = Zlib::GzipWriter.new(io)
-      gz.write(body)
-      gz.close
-      gzipped = io.string
+      gzipped = Zlib.gzip(JSON.generate(request_info(req)))
       # Send chunked: split gzipped into pieces to force Transfer-Encoding: chunked
       chunks = gzipped.bytes.each_slice(50).map { |s| s.pack("C*") }
       [200, { "Content-Type" => "application/json", "Content-Encoding" => "gzip" },
        StreamBody.new(chunks)]
+
+    # Always compresses, regardless of Accept-Encoding, and sends the
+    # compressed size as Content-Length.
+    when %r{\A/encoded-bytes/([^/]+)/(\d+)\z}
+      encoding, body = $1, "a" * $2.to_i
+      encoded = case encoding.downcase
+                when "gzip", "x-gzip" then Zlib.gzip(body)
+                when "deflate"        then Zlib::Deflate.deflate(body)
+                else                       body
+                end
+      headers = { "Content-Type" => "application/octet-stream", "Content-Encoding" => encoding, "Content-Length" => encoded.bytesize.to_s }
+      if req.GET["content_range"]
+        headers["Content-Range"] = "bytes 0-#{encoded.bytesize - 1}/#{encoded.bytesize}"
+        [206, headers, [encoded]]
+      else
+        [200, headers, [encoded]]
+      end
 
     else
       [404, { "Content-Type" => "text/plain" }, ["Not Found"]]

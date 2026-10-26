@@ -17,6 +17,10 @@ module Down
       addressable_uri.normalize.to_s
     end
 
+    # Content encodings that Net::HTTP transparently decodes.
+    DECODED_ENCODINGS = %w[gzip x-gzip deflate].freeze
+    private_constant :DECODED_ENCODINGS
+
     DEFAULT_OPTIONS = {
       headers:        { "User-Agent" => "Down/#{Down::VERSION}" }.freeze,
       max_redirects:  2,
@@ -127,7 +131,7 @@ module Down
       # Build an IO-like object that will retrieve response body on-demand.
       Down::ChunkedIO.new(
         chunks:     enum_for(:stream_body, response),
-        size:       response["Content-Length"]&.to_i,
+        size:       content_length(response),
         encoding:   response.type_params["charset"],
         rewindable: options.fetch(:rewindable, true),
         on_close:   -> { request.resume }, # close HTTP connnection
@@ -295,6 +299,20 @@ module Down
       response.read_body(&)
     rescue => exception
       request_error!(exception)
+    end
+
+    # Returns the Content-Length, unless a Transfer-Encoding is present or
+    # Net::HTTP will decode the body, in which case it doesn't reflect the
+    # number of bytes read. Decoding conditions mirror Net::HTTPResponse#inflater.
+    def content_length(response)
+      return if response["Transfer-Encoding"]
+
+      length = response.content_length
+      return length if length.nil? || length.zero?
+      return if response.decode_content && !response["Content-Range"] &&
+                DECODED_ENCODINGS.include?(response["Content-Encoding"]&.downcase)
+
+      length
     end
 
     # Checks that the url is a valid URI and that its scheme is http or https.
