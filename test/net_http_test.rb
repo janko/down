@@ -299,7 +299,13 @@ describe Down do
     end
 
     it "raises on invalid redirect url" do
-      assert_raises(Down::ResponseError) { Down::NetHttp.download("#{$httpbin}/redirect-to?url=#{CGI.escape("ftp://localhost/file.txt")}") }
+      error = assert_raises(Down::ResponseError) { Down::NetHttp.download("#{$httpbin}/redirect-to?url=#{CGI.escape("ftp://localhost/file.txt")}") }
+      assert_equal "Invalid Redirect URI: ftp://localhost/file.txt", error.message
+      assert_kind_of Net::HTTPRedirection, error.response
+
+      error = assert_raises(Down::ResponseError) { Down::NetHttp.download("#{$httpbin}/redirect-to?url=#{CGI.escape("http://exa mple.com")}") }
+      assert_equal "Invalid Redirect URI: http://exa mple.com", error.message
+      assert_kind_of Net::HTTPRedirection, error.response
     end
 
     it "raises on connection errors" do
@@ -564,7 +570,9 @@ describe Down do
     end
 
     it "raises on invalid redirect url" do
-      assert_raises(Down::ResponseError) { Down::NetHttp.open("#{$httpbin}/redirect-to?url=#{CGI.escape("ftp://localhost/file.txt")}") }
+      error = assert_raises(Down::ResponseError) { Down::NetHttp.open("#{$httpbin}/redirect-to?url=#{CGI.escape("ftp://localhost/file.txt")}") }
+      assert_equal "Invalid Redirect URI: ftp://localhost/file.txt", error.message
+      assert_kind_of Net::HTTPRedirection, error.response
     end
 
     it "raises on redirect not modfied" do

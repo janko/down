@@ -157,7 +157,7 @@ module Down
       rescue Down::InvalidUrl
         response = rebuild_response_from_open_uri_exception(exception)
 
-        raise ResponseError.new("Invalid Redirect URI: #{exception.uri}", response:)
+        raise ResponseError.new("Invalid Redirect URI: #{exception.uri}", response)
       end
 
       # do not leak credentials on redirect
@@ -180,7 +180,7 @@ module Down
 
       # open-uri attempts to parse the redirect URI, so we re-raise that exception
       if exception.message.include?("(Invalid Location URI)")
-        raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response:)
+        raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response)
       end
 
       response_error!(response)
@@ -237,7 +237,7 @@ module Down
         begin
           location = ensure_uri(response["Location"], allow_relative: true)
         rescue Down::InvalidUrl
-          raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response:)
+          raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response)
         end
 
         # do not leak credentials on redirect

@@ -2,6 +2,8 @@
 
 * Return `nil` `Down::ChunkedIO#size` from `Down::NetHttp.open` when net/http decompresses the body (@wtn)
 
+* Set `Down::ResponseError#response` to the response object on invalid redirect URIs in `Down::NetHttp` (@wtn)
+
 ## 5.6.1 (2026-10-18)
 
 * Avoid warnings on requiring `cgi` on Ruby 4.0+ (@janko)
