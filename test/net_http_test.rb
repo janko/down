@@ -4,10 +4,27 @@ require "down/net_http"
 require "http"
 
 require "stringio"
+require "zlib"
+require "socket"
 require "json"
 require "base64"
 
 describe Down do
+  # Serves a fixed raw HTTP response, for cases Puma won't produce.
+  def with_raw_server(response)
+    server = TCPServer.new("127.0.0.1", 0)
+    thread = Thread.new do
+      socket = server.accept
+      nil until [nil, "\r\n"].include?(socket.gets)
+      socket.write(response)
+      socket.close
+    end
+    yield "http://127.0.0.1:#{server.addr[1]}/"
+  ensure
+    thread&.kill
+    server&.close
+  end
+
   describe "#download" do
     it "downloads content from url" do
       tempfile = Down::NetHttp.download("#{$httpbin}/bytes/#{20*1024}?seed=0")
@@ -397,6 +414,66 @@ describe Down do
 
       io = Down::NetHttp.open(URI("#{$httpbin}/stream-bytes/100"))
       assert_nil io.size
+    end
+
+    it "doesn't report Content-Length as size when Net::HTTP decodes the body" do
+      %w[gzip x-gzip deflate GZIP].each do |encoding|
+        io = Down::NetHttp.open("#{$httpbin}/encoded-bytes/#{encoding}/1000")
+        assert_nil io.size
+        assert_nil io.length
+        assert_equal "a" * 1000, io.read
+      end
+
+      io = Down::NetHttp.open("#{$httpbin}/encoded-bytes/gzip/0")
+      assert_nil io.size
+      assert_equal "", io.read
+    end
+
+    it "reports Content-Length as size when Net::HTTP doesn't decode the body" do
+      # Net::HTTP doesn't decode when the user sets Accept-Encoding or Range
+      [{ "Accept-Encoding" => "identity" }, { "Range" => "bytes=0-" }].each do |headers|
+        io = Down::NetHttp.open("#{$httpbin}/encoded-bytes/gzip/1000", headers:)
+        refute_nil io.size
+        assert_equal io.size, io.read.bytesize
+        io.rewind
+        assert_equal "a" * 1000, Zlib.gunzip(io.read)
+      end
+
+      # Net::HTTP doesn't decode partial content
+      io = Down::NetHttp.open("#{$httpbin}/encoded-bytes/gzip/1000?content_range=1")
+      refute_nil io.size
+      assert_equal io.size, io.read.bytesize
+      io.rewind
+      assert_equal "a" * 1000, Zlib.gunzip(io.read)
+
+      # Net::HTTP doesn't decode other encodings
+      %w[identity none br UTF-8].each do |encoding|
+        io = Down::NetHttp.open("#{$httpbin}/encoded-bytes/#{encoding}/1000")
+        assert_equal 1000, io.size
+        assert_equal "a" * 1000, io.read
+      end
+
+      # an empty body stays empty after decoding
+      with_raw_server("HTTP/1.1 200 OK\r\nContent-Length: 0\r\nContent-Encoding: gzip\r\nConnection: close\r\n\r\n") do |url|
+        io = Down::NetHttp.open(url)
+        assert_equal 0, io.size
+        assert_equal "", io.read
+      end
+    end
+
+    it "doesn't report Content-Length as size when a Transfer-Encoding is present" do
+      [
+        "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n5\r\nhello\r\n0\r\n\r\n",
+        "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n5\r\nhello\r\n0\r\n\r\n",
+        "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nTransfer-Encoding: identity\r\nConnection: close\r\n\r\nhello",
+      ].each do |response|
+        with_raw_server(response) do |url|
+          io = Down::NetHttp.open(url)
+          assert_nil io.size
+          # net-http 0.9 frames a non-chunked Transfer-Encoding by Content-Length
+          assert_includes ["hello", "hel"], io.read
+        end
+      end
     end
 
     it "closes the connection on #close" do
