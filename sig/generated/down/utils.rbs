@@ -1,0 +1,13 @@
+# Generated from lib/down/utils.rb with RBS::Inline
+
+module Down
+  module Utils
+    # Retrieves potential filename from the "Content-Disposition" header.
+    # : (_ToS content_disposition) -> String?
+    def self?.filename_from_content_disposition: (_ToS content_disposition) -> String?
+
+    # Retrieves potential filename from the URL path.
+    # : (String path) -> String?
+    def self?.filename_from_path: (String path) -> String?
+  end
+end

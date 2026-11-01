@@ -1,0 +1,5 @@
+# Generated from lib/down/version.rb with RBS::Inline
+
+module Down
+  VERSION: ::String
+end

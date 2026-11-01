@@ -1,0 +1,17 @@
+# Fills gaps in the stdlib open-uri signatures (rbs 4.2).
+module OpenURI
+  module Meta
+    def self.init: (Object obj, ?untyped src) -> void
+
+    attr_reader metas: Hash[String, Array[String]]
+
+    def charset: () ?{ () -> String } -> String?
+  end
+
+  module OpenRead
+    # Without a block it returns the downloaded StringIO/Tempfile extended with
+    # OpenURI::Meta, which the shipped signature declares as IO.
+    def open: (*untyped) -> ((StringIO | Tempfile) & Meta)
+            | ...
+  end
+end

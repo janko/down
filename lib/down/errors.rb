@@ -18,8 +18,10 @@ module Down
 
   # raised when response returned 4xx or 5xx response
   class ResponseError < Error
-    attr_reader :response
+    # The backend-specific response object (e.g. Net::HTTPResponse, HTTP::Response, HTTPX::Response).
+    attr_reader :response #: untyped
 
+    #: (String message, ?untyped response) -> void
     def initialize(message, response = nil)
       super(message)
       @response = response

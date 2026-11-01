@@ -30,3 +30,30 @@ jobs:
 
       - name: Run tests
         run: bundle exec rake test
+
+  types:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+
+      - name: Install RBS collection
+        run: bundle exec rbs collection install --frozen
+
+      - name: Generate signatures and type check
+        run: bundle exec rake steep
+
+      - name: Check generated signatures are committed
+        run: |
+          if [ -n "$(git status --porcelain sig)" ]; then
+            git status --porcelain sig
+            git --no-pager diff sig
+            echo "Signatures in sig/generated/ are out of date. Run 'bundle exec rake rbs:generate' and commit the changes."
+            exit 1
+          fi

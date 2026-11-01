@@ -12,13 +12,15 @@ require "fileutils"
 module Down
   # Provides streaming downloads implemented with Net::HTTP and open-uri.
   class NetHttp < Backend
+    # @rbs @options: Hash[Symbol, untyped]
+
     URI_NORMALIZER = -> (url) do
       addressable_uri = Addressable::URI.parse(url)
       addressable_uri.normalize.to_s
-    end
+    end #: ^(String) -> String
 
     # Content encodings that Net::HTTP transparently decodes.
-    DECODED_ENCODINGS = %w[gzip x-gzip deflate].freeze
+    DECODED_ENCODINGS = %w[gzip x-gzip deflate].freeze #: Array[String]
     private_constant :DECODED_ENCODINGS
 
     DEFAULT_OPTIONS = {
@@ -27,15 +29,18 @@ module Down
       open_timeout:   30,
       read_timeout:   30,
       uri_normalizer: URI_NORMALIZER,
-    }.freeze
+    }.freeze #: Hash[Symbol, untyped]
 
     # Initializes the backend with common defaults.
+    #: (**untyped options) -> void
     def initialize(...)
       @options = merge_options(DEFAULT_OPTIONS, ...)
     end
 
     # Downloads a remote file to disk using open-uri. Accepts any open-uri
     # options, and a few more.
+    #: (url url, destination: String, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer?) -> void)?, ?extension: String?, ?tempfile_name: String?, ?headers: Hash[String, String], ?max_redirects: Integer, ?auth_on_redirect: bool, ?proxy: (String | URI::Generic)?, **untyped) -> nil
+    #: (url url, ?destination: nil, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer?) -> void)?, ?extension: String?, ?tempfile_name: String?, ?headers: Hash[String, String], ?max_redirects: Integer, ?auth_on_redirect: bool, ?proxy: (String | URI::Generic)?, **untyped) -> downloaded_file
     def download(url, ...)
       options = merge_options(@options, ...)
 
@@ -68,7 +73,7 @@ module Down
           progress_proc&.call(current_size)
         },
         redirect: false,
-      }
+      } #: Hash[untyped, untyped]
 
       # Handle basic authentication in the :proxy option.
       if proxy
@@ -100,16 +105,17 @@ module Down
       open_uri_file = open_uri(uri, **open_uri_options)
 
       # Handle the fact that open-uri returns StringIOs for small files.
-      extname = extension ? ".#{extension}" : File.extname(open_uri_file.base_uri.path)
+      extname = extension ? ".#{extension}" : File.extname(open_uri_file.base_uri.path.to_s)
       tempfile = ensure_tempfile(open_uri_file, extname, tempfile_name)
       OpenURI::Meta.init tempfile, open_uri_file # add back open-uri methods
       tempfile.extend Down::NetHttp::DownloadedFile
 
-      download_result(tempfile, destination)
+      download_result(tempfile, destination) #: downloaded_file?
     end
 
     # Starts retrieving the remote file using Net::HTTP and returns an IO-like
     # object which downloads the response body on-demand.
+    #: (url url, ?rewindable: bool, ?headers: Hash[String, String], ?max_redirects: Integer, ?auth_on_redirect: bool, ?proxy: (String | URI::Generic)?, **untyped) -> ChunkedIO
     def open(url, ...)
       options = merge_options(@options, ...)
 
@@ -119,7 +125,8 @@ module Down
 
       # Create a Fiber that halts when response headers are received.
       request = Fiber.new do
-        net_http_request(uri, **options) do |response|
+        # :max_redirects comes from DEFAULT_OPTIONS
+        net_http_request(uri, **options) do |response| # steep:ignore
           Fiber.yield response
         end
       end
@@ -146,7 +153,14 @@ module Down
     private
 
     # Calls open-uri's URI::HTTP#open method. Additionally handles redirects.
+    # Receives String-keyed header kwargs alongside the options, which RBS keyword types can't express.
+    #: (?) -> ((StringIO | Tempfile) & OpenURI::Meta)
     def open_uri(uri, max_redirects:, auth_on_redirect: false, **options)
+      # @type var uri: URI::HTTP
+      # @type var max_redirects: Integer
+      # @type var auth_on_redirect: bool
+      # @type var options: Hash[Symbol | String, untyped]
+
       uri.open(options)
     rescue OpenURI::HTTPRedirect => exception
       raise Down::TooManyRedirects, "too many redirects" if max_redirects == 0
@@ -191,6 +205,7 @@ module Down
     # Converts the given IO into a Tempfile if it isn't one already (open-uri
     # returns a StringIO when there is less than 10KB of content), and gives
     # it the specified file extension.
+    #: (StringIO | Tempfile io, String extension, ?String? tempfile_name) -> Tempfile
     def ensure_tempfile(io, extension, tempfile_name = nil)
       tempfile = Tempfile.new([tempfile_name || "down-net_http", extension], binmode: true)
 
@@ -198,7 +213,7 @@ module Down
         # Windows requires file descriptors to be closed before files are moved
         io.close
         tempfile.close
-        FileUtils.mv io.path, tempfile.path
+        FileUtils.mv io.path.to_s, tempfile.path.to_s
       else
         IO.copy_stream(io, tempfile)
         io.close
@@ -209,6 +224,7 @@ module Down
     end
 
     # Makes a Net::HTTP request and follows redirects.
+    #: (URI::Generic uri, max_redirects: Integer, ?auth_on_redirect: bool, **untyped options) { (Net::HTTPResponse) -> void } -> void
     def net_http_request(uri, max_redirects:, auth_on_redirect: false, **options, &)
       http, request = create_net_http(uri, **options)
 
@@ -258,6 +274,7 @@ module Down
     end
 
     # Build a Net::HTTP object for making a request.
+    #: (URI::Generic uri, ?proxy: (String | URI::Generic)?, ?ssl_verify_mode: Integer?, ?ssl_ca_cert: untyped, ?read_timeout: Numeric?, ?open_timeout: Numeric?, ?headers: Hash[String, String], ?http_basic_authentication: [String?, String?]?, **untyped) -> [Net::HTTP, Net::HTTP::Get]
     def create_net_http(uri, proxy: nil, ssl_verify_mode: nil, ssl_ca_cert: nil, read_timeout: nil, open_timeout: nil, headers: {}, http_basic_authentication: nil, **)
       http_class = Net::HTTP
 
@@ -289,12 +306,13 @@ module Down
       get = Net::HTTP::Get.new(uri, headers.to_h)
 
       user, password = http_basic_authentication || [uri.user, uri.password]
-      get.basic_auth(user, password) if user || password
+      get.basic_auth(user.to_s, password.to_s) if user || password
 
       [http, get]
     end
 
     # Yields chunks of the response body to the block.
+    #: (Net::HTTPResponse response) { (String) -> void } -> void
     def stream_body(response, &)
       response.read_body(&)
     rescue => exception
@@ -304,6 +322,7 @@ module Down
     # Returns the Content-Length, unless a Transfer-Encoding is present or
     # Net::HTTP will decode the body, in which case it doesn't reflect the
     # number of bytes read. Decoding conditions mirror Net::HTTPResponse#inflater.
+    #: (Net::HTTPResponse response) -> Integer?
     def content_length(response)
       return if response["Transfer-Encoding"]
 
@@ -316,6 +335,8 @@ module Down
     end
 
     # Checks that the url is a valid URI and that its scheme is http or https.
+    #: (untyped url) -> URI::HTTP
+    #: (untyped url, allow_relative: bool) -> URI::Generic
     def ensure_uri(url, allow_relative: false)
       begin
         uri = URI(url)
@@ -331,6 +352,7 @@ module Down
     end
 
     # Makes sure that the URL is properly encoded.
+    #: (url url, uri_normalizer: ^(untyped) -> String) -> (URI::Generic | String)
     def normalize_uri(url, uri_normalizer:)
       URI(url)
     rescue URI::InvalidURIError
@@ -340,6 +362,7 @@ module Down
     # When open-uri raises an exception, it doesn't expose the response object.
     # Fortunately, the exception object holds response data that can be used to
     # rebuild the Net::HTTP response object.
+    #: (OpenURI::HTTPError exception) -> Net::HTTPResponse
     def rebuild_response_from_open_uri_exception(exception)
       code, message = exception.io.status
       message ||= "Unknown"
@@ -359,21 +382,23 @@ module Down
     end
 
     # Raises non-sucessful response as a Down::ResponseError.
+    #: (Net::HTTPResponse response) -> bot
     def response_error!(response)
       code    = response.code.to_i
       message = response.message.split(" ").map(&:capitalize).join(" ")
 
-      args = ["#{code} #{message}", response]
+      error_message = "#{code} #{message}"
 
       case response.code.to_i
-      when 404      then raise Down::NotFound.new(*args)
-      when 400..499 then raise Down::ClientError.new(*args)
-      when 500..599 then raise Down::ServerError.new(*args)
-      else               raise Down::ResponseError.new(*args)
+      when 404      then raise Down::NotFound.new(error_message, response)
+      when 400..499 then raise Down::ClientError.new(error_message, response)
+      when 500..599 then raise Down::ServerError.new(error_message, response)
+      else               raise Down::ResponseError.new(error_message, response)
       end
     end
 
     # Re-raise Net::HTTP exceptions as Down::Error exceptions.
+    #: (Exception exception) -> bot
     def request_error!(exception)
       case exception
       when Net::OpenTimeout
@@ -390,6 +415,7 @@ module Down
     end
 
     # Merge default and ad-hoc options, merging nested headers.
+    #: (Hash[Symbol, untyped] options, ?Hash[String, String] headers, **untyped new_options) -> Hash[Symbol, untyped]
     def merge_options(options, headers = {}, **new_options)
       # Deprecate passing headers as top-level options, taking into account
       # that Ruby 2.7+ accepts kwargs with string keys.
@@ -411,12 +437,15 @@ module Down
 
     # Defines some additional attributes for the returned Tempfile (on top of what
     # OpenURI::Meta already defines).
+    # @rbs module-self OpenURI::Meta
     module DownloadedFile
+      #: () -> String?
       def original_filename
         Utils.filename_from_content_disposition(meta["content-disposition"]) ||
-        Utils.filename_from_path(base_uri.path)
+        Utils.filename_from_path(base_uri.path.to_s)
       end
 
+      #: () -> String?
       def content_type
         super unless meta["content-type"].to_s.empty?
       end

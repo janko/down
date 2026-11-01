@@ -1,0 +1,27 @@
+# Generated from lib/down/backend.rb with RBS::Inline
+
+module Down
+  class Backend
+    def download: (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> downloaded_file?
+
+    def open: (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> ChunkedIO
+
+    # : (url, *untyped, destination: String, **untyped) ?{ (untyped) -> untyped } -> nil
+    # : (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> downloaded_file
+    def self.download: (url, *untyped, destination: String, **untyped) ?{ (untyped) -> untyped } -> nil
+                     | (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> downloaded_file
+
+    # : (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> ChunkedIO
+    def self.open: (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> ChunkedIO
+
+    private
+
+    # If destination path is defined, move tempfile to the destination,
+    # otherwise return the tempfile unchanged.
+    # : (Tempfile tempfile, String? destination) -> Tempfile?
+    def download_result: (Tempfile tempfile, String? destination) -> Tempfile?
+
+    # : [V] (Enumerable[[String, V]] response_headers) -> Hash[String, V]
+    def normalize_headers: [V] (Enumerable[[ String, V ]] response_headers) -> Hash[String, V]
+  end
+end

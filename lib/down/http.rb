@@ -12,7 +12,11 @@ require "tempfile"
 module Down
   # Provides streaming downloads implemented with HTTP.rb.
   class Http < Backend
+    # @rbs @method: HTTP::verb | String
+    # @rbs @client: HTTP::Session | HTTP::Client
+
     # Initializes the backend with common defaults.
+    #: (?method: HTTP::verb | String, **untyped options) ?{ ((HTTP::Session | HTTP::Client)) -> (HTTP::Session | HTTP::Client) } -> void
     def initialize(method: :get, **options, &block)
       @method = method
       @client = HTTP
@@ -29,13 +33,17 @@ module Down
 
     # Downlods the remote file to disk. Accepts HTTP.rb options via a hash or a
     # block, and some additional options as well.
+    #: (url url, destination: String, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer) -> void)?, ?extension: String?, ?tempfile_name: String?, **untyped) ?{ ((HTTP::Session | HTTP::Client)) -> (HTTP::Session | HTTP::Client) } -> nil
+    #: (url url, ?destination: nil, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer) -> void)?, ?extension: String?, ?tempfile_name: String?, **untyped) ?{ ((HTTP::Session | HTTP::Client)) -> (HTTP::Session | HTTP::Client) } -> downloaded_file
     def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, extension: nil, tempfile_name: nil, **, &)
       response = request(url, **, &)
 
-      content_length_proc&.call(response.content_length) if response.content_length
+      content_length = response.content_length
 
-      if max_size && response.content_length && response.content_length > max_size
-        raise Down::TooLarge, "file is too large (#{response.content_length/1024/1024}MB, max is #{max_size/1024/1024}MB)"
+      content_length_proc&.call(content_length) if content_length
+
+      if max_size && content_length && content_length > max_size
+        raise Down::TooLarge, "file is too large (#{content_length/1024/1024}MB, max is #{max_size/1024/1024}MB)"
       end
 
       extname  = extension ? ".#{extension}" : File.extname(response.uri.path)
@@ -54,11 +62,11 @@ module Down
 
       tempfile.open # flush written content
 
-      tempfile.extend Down::Http::DownloadedFile
+      tempfile = tempfile.extend(Down::Http::DownloadedFile) #: Tempfile & Down::Http::DownloadedFile
       tempfile.url     = response.uri.to_s
       tempfile.headers = normalize_headers(response.headers.to_h)
 
-      download_result(tempfile, destination)
+      download_result(tempfile, destination) #: downloaded_file?
     rescue
       tempfile&.close!
       raise
@@ -67,6 +75,7 @@ module Down
     # Starts retrieving the remote file and returns an IO-like object which
     # downloads the response body on-demand. Accepts HTTP.rb options via a hash
     # or a block.
+    #: (url url, ?rewindable: bool, **untyped) ?{ ((HTTP::Session | HTTP::Client)) -> (HTTP::Session | HTTP::Client) } -> ChunkedIO
     def open(url, rewindable: true, **, &)
       response = request(url, **, &)
 
@@ -85,17 +94,19 @@ module Down
 
     private
 
+    #: (url url, ?method: HTTP::verb | String, **untyped) ?{ ((HTTP::Session | HTTP::Client)) -> (HTTP::Session | HTTP::Client) } -> HTTP::Response
     def request(url, method: @method, **, &)
       response = send_request(method, url, **, &)
       response_error!(response) unless response.status.success?
       response
     end
 
+    #: (HTTP::verb | String method, url url, **untyped) ?{ ((HTTP::Session | HTTP::Client)) -> (HTTP::Session | HTTP::Client) } -> HTTP::Response
     def send_request(method, url, **, &block)
       uri = HTTP::URI.parse(url)
 
       client = @client
-      client = client.basic_auth(user: uri.user, pass: uri.password) if uri.user || uri.password
+      client = client.basic_auth(user: uri.user.to_s, pass: uri.password.to_s) if uri.user || uri.password
       client = block.call(client) if block
 
       client.request(method, url, **)
@@ -104,27 +115,30 @@ module Down
     end
 
     # Yields chunks of the response body to the block.
+    #: (HTTP::Response response) { (String) -> void } -> void
     def stream_body(response, &)
       response.body.each(&)
     rescue => exception
       request_error!(exception)
     ensure
-      response.connection.close unless @client.persistent?
+      response.connection&.close unless @client.persistent?
     end
 
     # Raises non-sucessful response as a Down::ResponseError.
+    #: (HTTP::Response response) -> bot
     def response_error!(response)
-      args = [response.status.to_s, response]
+      message = response.status.to_s
 
       case response.code
-      when 404      then raise Down::NotFound.new(*args)
-      when 400..499 then raise Down::ClientError.new(*args)
-      when 500..599 then raise Down::ServerError.new(*args)
-      else               raise Down::ResponseError.new(*args)
+      when 404      then raise Down::NotFound.new(message, response)
+      when 400..499 then raise Down::ClientError.new(message, response)
+      when 500..599 then raise Down::ServerError.new(message, response)
+      else               raise Down::ResponseError.new(message, response)
       end
     end
 
     # Re-raise HTTP.rb exceptions as Down::Error exceptions.
+    #: (Exception exception) -> bot
     def request_error!(exception)
       case exception
       when HTTP::Request::UnsupportedSchemeError, Addressable::URI::InvalidURIError, *invalid_url_errors
@@ -142,23 +156,28 @@ module Down
       end
     end
 
+    #: () -> Array[singleton(Exception)]
     def invalid_url_errors
       defined?(HTTP::URI::InvalidError) ? [HTTP::URI::InvalidError] : []
     end
 
     # Defines some additional attributes for the returned Tempfile.
     module DownloadedFile
-      attr_accessor :url, :headers
+      attr_accessor :url #: String
+      attr_accessor :headers #: Hash[String, untyped]
 
+      #: () -> String?
       def original_filename
         Utils.filename_from_content_disposition(headers["Content-Disposition"]) ||
         Utils.filename_from_path(HTTP::URI.parse(url).path)
       end
 
+      #: () -> String?
       def content_type
         HTTP::ContentType.parse(headers["Content-Type"]).mime_type
       end
 
+      #: () -> String?
       def charset
         HTTP::ContentType.parse(headers["Content-Type"]).charset
       end

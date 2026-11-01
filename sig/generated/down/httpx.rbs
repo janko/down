@@ -1,0 +1,65 @@
+# Generated from lib/down/httpx.rb with RBS::Inline
+
+module Down
+  # Provides streaming downloads implemented with HTTPX.
+  class Httpx < Backend
+    USER_AGENT: ::String
+
+    @method: Symbol | String
+
+    @client: untyped
+
+    BASIC_AUTH: Symbol
+
+    # Initializes the backend with common defaults.
+    # : (?method: Symbol | String, ?headers: Hash[String | Symbol, String], **untyped options) ?{ (untyped) -> untyped } -> void
+    def initialize: (?method: Symbol | String, ?headers: Hash[String | Symbol, String], **untyped options) ?{ (untyped) -> untyped } -> void
+
+    # Downloads the remote file to disk. Accepts HTTPX options via a hash or a
+    # block, and some additional options as well.
+    # : (url url, destination: String, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer) -> void)?, ?extension: String?, ?tempfile_name: String?, **untyped) ?{ (untyped) -> untyped } -> nil
+    # : (url url, ?destination: nil, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer) -> void)?, ?extension: String?, ?tempfile_name: String?, **untyped) ?{ (untyped) -> untyped } -> downloaded_file
+    def download: (url url, destination: String, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer) -> void)?, ?extension: String?, ?tempfile_name: String?, **untyped) ?{ (untyped) -> untyped } -> nil
+                | (url url, ?destination: nil, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer) -> void)?, ?extension: String?, ?tempfile_name: String?, **untyped) ?{ (untyped) -> untyped } -> downloaded_file
+
+    # Starts retrieving the remote file and returns an IO-like object which
+    # downloads the response body on-demand. Accepts HTTPX options via a hash
+    # or a block.
+    # : (url url, ?rewindable: bool, **untyped) ?{ (untyped) -> untyped } -> ChunkedIO
+    def open: (url url, ?rewindable: bool, **untyped) ?{ (untyped) -> untyped } -> ChunkedIO
+
+    private
+
+    # Yields chunks of the response body to the block.
+    # : (untyped response) { (String) -> void } -> void
+    def stream_body: (untyped response) { (String) -> void } -> void
+
+    # : (url url, ?method: Symbol | String, **untyped) ?{ (untyped) -> untyped } -> untyped
+    def request: (url url, ?method: Symbol | String, **untyped) ?{ (untyped) -> untyped } -> untyped
+
+    # : (Symbol | String method, url url, **untyped) ?{ (untyped) -> untyped } -> untyped
+    def send_request: (Symbol | String method, url url, **untyped) ?{ (untyped) -> untyped } -> untyped
+
+    # Raises non-sucessful response as a Down::ResponseError.
+    # : (untyped response) -> bot
+    def response_error!: (untyped response) -> bot
+
+    # Re-raise HTTP.rb exceptions as Down::Error exceptions.
+    # : (Exception exception) -> bot
+    def request_error!: (Exception exception) -> bot
+
+    # Defines some additional attributes for the returned Tempfile.
+    module DownloadedFile
+      attr_accessor url: String
+
+      attr_accessor headers: Hash[String, untyped]
+
+      attr_accessor charset: Encoding?
+
+      attr_accessor content_type: String?
+
+      # : () -> String?
+      def original_filename: () -> String?
+    end
+  end
+end

@@ -1,0 +1,7 @@
+dependencies:
+  - name: cgi-escape
+  - name: fileutils
+  - name: net-http
+  - name: open-uri
+  - name: tempfile
+  - name: uri

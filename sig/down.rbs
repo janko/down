@@ -1,0 +1,29 @@
+# Hand-written declarations shared across backends. Everything else is
+# generated into sig/generated/ from inline annotations in lib/.
+module Down
+  # A URL accepted by the backends.
+  type url = String | URI::Generic
+
+  # Methods added to the Tempfile returned by `download`.
+  interface _DownloadedFile
+    def original_filename: () -> String?
+    def content_type: () -> String?
+    def charset: () -> (String | Encoding)? # Down::Httpx returns an Encoding
+  end
+
+  # Tempfile returned by `download` when no `:destination` is given.
+  type downloaded_file = Tempfile & _DownloadedFile
+
+  # Callback such as ChunkedIO's `:on_close`.
+  interface _Callable
+    def call: () -> untyped
+  end
+
+  # Anything that can be assigned via `Down.backend`, typically a backend
+  # class such as `Down::NetHttp`.
+  interface _Backend
+    def download: (url, *untyped, destination: String, **untyped) ?{ (untyped) -> untyped } -> nil
+                | (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> downloaded_file
+    def open: (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> ChunkedIO
+  end
+end

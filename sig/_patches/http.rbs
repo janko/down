@@ -1,0 +1,13 @@
+# http.rb's runtime also accepts String verbs (e.g. "POST") and stdlib URI
+# objects, which its shipped signatures don't allow.
+module HTTP
+  class Client
+    def request: (verb | String verb, String | URI | ::URI::Generic uri, **untyped) -> Response
+               | ...
+  end
+
+  class Session
+    def request: (verb | String verb, String | URI | ::URI::Generic uri, **untyped) -> Response
+               | ...
+  end
+end

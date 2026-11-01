@@ -1,0 +1,7 @@
+# Missing from the addressable signatures in gem_rbs_collection.
+module Addressable
+  class URI
+    class InvalidURIError < StandardError
+    end
+  end
+end

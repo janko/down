@@ -1,0 +1,101 @@
+# Generated from lib/down/net_http.rb with RBS::Inline
+
+module Down
+  # Provides streaming downloads implemented with Net::HTTP and open-uri.
+  class NetHttp < Backend
+    @options: Hash[Symbol, untyped]
+
+    URI_NORMALIZER: ^(String) -> String
+
+    # Content encodings that Net::HTTP transparently decodes.
+    DECODED_ENCODINGS: Array[String]
+
+    DEFAULT_OPTIONS: Hash[Symbol, untyped]
+
+    # Initializes the backend with common defaults.
+    # : (**untyped options) -> void
+    def initialize: (**untyped options) -> void
+
+    # Downloads a remote file to disk using open-uri. Accepts any open-uri
+    # options, and a few more.
+    # : (url url, destination: String, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer?) -> void)?, ?extension: String?, ?tempfile_name: String?, ?headers: Hash[String, String], ?max_redirects: Integer, ?auth_on_redirect: bool, ?proxy: (String | URI::Generic)?, **untyped) -> nil
+    # : (url url, ?destination: nil, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer?) -> void)?, ?extension: String?, ?tempfile_name: String?, ?headers: Hash[String, String], ?max_redirects: Integer, ?auth_on_redirect: bool, ?proxy: (String | URI::Generic)?, **untyped) -> downloaded_file
+    def download: (url url, destination: String, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer?) -> void)?, ?extension: String?, ?tempfile_name: String?, ?headers: Hash[String, String], ?max_redirects: Integer, ?auth_on_redirect: bool, ?proxy: (String | URI::Generic)?, **untyped) -> nil
+                | (url url, ?destination: nil, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer?) -> void)?, ?extension: String?, ?tempfile_name: String?, ?headers: Hash[String, String], ?max_redirects: Integer, ?auth_on_redirect: bool, ?proxy: (String | URI::Generic)?, **untyped) -> downloaded_file
+
+    # Starts retrieving the remote file using Net::HTTP and returns an IO-like
+    # object which downloads the response body on-demand.
+    # : (url url, ?rewindable: bool, ?headers: Hash[String, String], ?max_redirects: Integer, ?auth_on_redirect: bool, ?proxy: (String | URI::Generic)?, **untyped) -> ChunkedIO
+    def open: (url url, ?rewindable: bool, ?headers: Hash[String, String], ?max_redirects: Integer, ?auth_on_redirect: bool, ?proxy: (String | URI::Generic)?, **untyped) -> ChunkedIO
+
+    private
+
+    # Calls open-uri's URI::HTTP#open method. Additionally handles redirects.
+    # Receives String-keyed header kwargs alongside the options, which RBS keyword types can't express.
+    # : (?) -> ((StringIO | Tempfile) & OpenURI::Meta)
+    def open_uri: (?) -> ((StringIO | Tempfile) & OpenURI::Meta)
+
+    # Converts the given IO into a Tempfile if it isn't one already (open-uri
+    # returns a StringIO when there is less than 10KB of content), and gives
+    # it the specified file extension.
+    # : (StringIO | Tempfile io, String extension, ?String? tempfile_name) -> Tempfile
+    def ensure_tempfile: (StringIO | Tempfile io, String extension, ?String? tempfile_name) -> Tempfile
+
+    # Makes a Net::HTTP request and follows redirects.
+    # : (URI::Generic uri, max_redirects: Integer, ?auth_on_redirect: bool, **untyped options) { (Net::HTTPResponse) -> void } -> void
+    def net_http_request: (URI::Generic uri, max_redirects: Integer, ?auth_on_redirect: bool, **untyped options) { (Net::HTTPResponse) -> void } -> void
+
+    # Build a Net::HTTP object for making a request.
+    # : (URI::Generic uri, ?proxy: (String | URI::Generic)?, ?ssl_verify_mode: Integer?, ?ssl_ca_cert: untyped, ?read_timeout: Numeric?, ?open_timeout: Numeric?, ?headers: Hash[String, String], ?http_basic_authentication: [String?, String?]?, **untyped) -> [Net::HTTP, Net::HTTP::Get]
+    def create_net_http: (URI::Generic uri, ?proxy: (String | URI::Generic)?, ?ssl_verify_mode: Integer?, ?ssl_ca_cert: untyped, ?read_timeout: Numeric?, ?open_timeout: Numeric?, ?headers: Hash[String, String], ?http_basic_authentication: [ String?, String? ]?, **untyped) -> [ Net::HTTP, Net::HTTP::Get ]
+
+    # Yields chunks of the response body to the block.
+    # : (Net::HTTPResponse response) { (String) -> void } -> void
+    def stream_body: (Net::HTTPResponse response) { (String) -> void } -> void
+
+    # Returns the Content-Length, unless a Transfer-Encoding is present or
+    # Net::HTTP will decode the body, in which case it doesn't reflect the
+    # number of bytes read. Decoding conditions mirror Net::HTTPResponse#inflater.
+    # : (Net::HTTPResponse response) -> Integer?
+    def content_length: (Net::HTTPResponse response) -> Integer?
+
+    # Checks that the url is a valid URI and that its scheme is http or https.
+    # : (untyped url) -> URI::HTTP
+    # : (untyped url, allow_relative: bool) -> URI::Generic
+    def ensure_uri: (untyped url) -> URI::HTTP
+                  | (untyped url, allow_relative: bool) -> URI::Generic
+
+    # Makes sure that the URL is properly encoded.
+    # : (url url, uri_normalizer: ^(untyped) -> String) -> (URI::Generic | String)
+    def normalize_uri: (url url, uri_normalizer: ^(untyped) -> String) -> (URI::Generic | String)
+
+    # When open-uri raises an exception, it doesn't expose the response object.
+    # Fortunately, the exception object holds response data that can be used to
+    # rebuild the Net::HTTP response object.
+    # : (OpenURI::HTTPError exception) -> Net::HTTPResponse
+    def rebuild_response_from_open_uri_exception: (OpenURI::HTTPError exception) -> Net::HTTPResponse
+
+    # Raises non-sucessful response as a Down::ResponseError.
+    # : (Net::HTTPResponse response) -> bot
+    def response_error!: (Net::HTTPResponse response) -> bot
+
+    # Re-raise Net::HTTP exceptions as Down::Error exceptions.
+    # : (Exception exception) -> bot
+    def request_error!: (Exception exception) -> bot
+
+    # Merge default and ad-hoc options, merging nested headers.
+    # : (Hash[Symbol, untyped] options, ?Hash[String, String] headers, **untyped new_options) -> Hash[Symbol, untyped]
+    def merge_options: (Hash[Symbol, untyped] options, ?Hash[String, String] headers, **untyped new_options) -> Hash[Symbol, untyped]
+
+    # Defines some additional attributes for the returned Tempfile (on top of what
+    # OpenURI::Meta already defines).
+    # @rbs module-self OpenURI::Meta
+    module DownloadedFile : OpenURI::Meta
+      # : () -> String?
+      def original_filename: () -> String?
+
+      # : () -> String?
+      def content_type: () -> String?
+    end
+  end
+end

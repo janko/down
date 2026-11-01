@@ -1,0 +1,191 @@
+# Generated from lib/down/chunked_io.rb with RBS::Inline
+
+module Down
+  # Wraps an enumerator that yields chunks of content into an IO object. It
+  # implements some essential IO methods:
+  #
+  # * IO#read
+  # * IO#readpartial
+  # * IO#gets
+  # * IO#size
+  # * IO#pos
+  # * IO#eof?
+  # * IO#rewind
+  # * IO#close
+  #
+  # By default the Down::ChunkedIO caches all read content into a tempfile,
+  # allowing it to be rewindable. If rewindability won't be used, it can be
+  # disabled by setting `:rewindable` to false, which eliminates any disk I/O.
+  #
+  # Any cleanup code (i.e. ensure block) that the given enumerator carries is
+  # guaranteed to get executed, either when all content has been retrieved or
+  # when Down::ChunkedIO is closed. One can also specify an `:on_close`
+  # callback that will also get executed in those situations.
+  class ChunkedIO
+    attr_accessor size: Integer?
+
+    attr_accessor data: Hash[Symbol, untyped]
+
+    attr_accessor encoding: Encoding
+
+    @chunks_fiber: Fiber?
+
+    @cache: Tempfile?
+
+    @closed: bool
+
+    @next_chunk: String?
+
+    @position: Integer
+
+    @buffer: String?
+
+    @rewindable: bool
+
+    @on_close: (^() -> void | (_Callable & Object))?
+
+    @chunks: _Each[String] & Object
+
+    # : (chunks: _Each[String] & Object, ?size: Integer?, ?on_close: (^() -> void | (_Callable & Object))?, ?data: Hash[Symbol, untyped], ?rewindable: bool, ?encoding: (String | Encoding)?) -> void
+    def initialize: (chunks: _Each[String] & Object, ?size: Integer?, ?on_close: (^() -> void | (_Callable & Object))?, ?data: Hash[Symbol, untyped], ?rewindable: bool, ?encoding: (String | Encoding)?) -> void
+
+    # For compatibility with multipart-post gem.
+    # : () -> Integer?
+    def length: () -> Integer?
+
+    # Yields elements of the underlying enumerator.
+    # : () { (String) -> void } -> void
+    # : () -> Enumerator[String, void]
+    def each_chunk: () { (String) -> void } -> void
+                  | () -> Enumerator[String, void]
+
+    # Implements IO#read semantics. Without arguments it retrieves and returns
+    # all content.
+    #
+    # With `length` argument returns exactly that number of bytes if they're
+    # available.
+    #
+    # With `outbuf` argument each call will return that same string object,
+    # where the value is replaced with retrieved content.
+    #
+    # If end of file is reached, returns empty string if called without
+    # arguments, or nil if called with arguments. Raises IOError if closed.
+    # : (?nil, ?string? outbuf) -> String
+    # : (?int? length, ?string? outbuf) -> String?
+    def read: (?nil, ?string? outbuf) -> String
+            | (?int? length, ?string? outbuf) -> String?
+
+    # Implements IO#gets semantics. Without arguments it retrieves lines of
+    # content separated by newlines.
+    #
+    # With `separator` argument it does the following:
+    #
+    # * if `separator` is a nonempty string returns chunks of content
+    #   surrounded with that sequence of bytes
+    # * if `separator` is an empty string returns paragraphs of content
+    #   (content delimited by two newlines)
+    # * if `separator` is nil and `limit` is nil returns all content
+    #
+    # With `limit` argument returns maximum of that amount of bytes.
+    #
+    # Returns nil if end of file is reached. Raises IOError if closed.
+    # : (?String? separator, ?Integer? limit) -> String?
+    # : (Integer limit) -> String?
+    def gets: (?String? separator, ?Integer? limit) -> String?
+            | (Integer limit) -> String?
+
+    # Implements IO#readpartial semantics. If there is any content readily
+    # available reads from it, otherwise fetches and reads from the next chunk.
+    # It writes to and reads from the cache when needed.
+    #
+    # Without arguments it either returns all content that's readily available,
+    # or the next chunk. This is useful when you don't care about the size of
+    # chunks and you want to minimize string allocations.
+    #
+    # With `maxlen` argument returns maximum of that amount of bytes (default
+    # is 16KB).
+    #
+    # With `outbuf` argument each call will return that same string object,
+    # where the value is replaced with retrieved content.
+    #
+    # Raises EOFError if end of file is reached. Raises IOError if closed.
+    # : (?Integer? maxlen, ?String? outbuf) -> String
+    def readpartial: (?Integer? maxlen, ?String? outbuf) -> String
+
+    # Implements IO#seek semantics.
+    # : (Integer amount, ?(Integer | Symbol) whence) -> Integer
+    def seek: (Integer amount, ?Integer | Symbol whence) -> Integer
+
+    # Implements IO#pos semantics. Returns the current position of the
+    # Down::ChunkedIO.
+    # : () -> Integer
+    def pos: () -> Integer
+
+    alias tell pos
+
+    # Implements IO#eof? semantics. Returns whether we've reached end of file.
+    # It returns true if cache is at the end and there is no more content to
+    # retrieve. Raises IOError if closed.
+    # : () -> bool
+    def eof?: () -> bool
+
+    alias eof eof?
+
+    # Implements IO#rewind semantics. Rewinds the Down::ChunkedIO by rewinding
+    # the cache and setting the position to the beginning of the file. Raises
+    # IOError if closed or not rewindable.
+    # : () -> Integer
+    def rewind: () -> Integer
+
+    # Implements IO#close semantics. Closes the Down::ChunkedIO by terminating
+    # chunk retrieval and deleting the cached content.
+    # : () -> void
+    def close: () -> void
+
+    # Returns whether the Down::ChunkedIO has been closed.
+    # : () -> bool
+    def closed?: () -> bool
+
+    # Returns whether the Down::ChunkedIO was specified as rewindable.
+    # : () -> bool
+    def rewindable?: () -> bool
+
+    # Returns useful information about the Down::ChunkedIO object.
+    # : () -> String
+    def inspect: () -> String
+
+    private
+
+    # If Down::ChunkedIO is specified as rewindable, returns a new Tempfile for
+    # writing read content to. This allows the Down::ChunkedIO to be rewinded.
+    # @rbs %a{pure}
+    # : () -> Tempfile?
+    %a{pure}
+    def cache: () -> Tempfile?
+
+    # Returns current chunk and retrieves the next chunk. If next chunk is nil,
+    # we know we've reached EOF.
+    # : () -> String?
+    def retrieve_chunk: () -> String?
+
+    # Returns whether there is any content left to retrieve.
+    # : () -> bool
+    def chunks_depleted?: () -> bool
+
+    # Creates a Fiber wrapper around the underlying enumerator. The advantage
+    # of using a Fiber here is that we can terminate the chunk retrieval, in a
+    # way that executes any cleanup code that the enumerator potentially
+    # carries. At the end of iteration the :on_close callback is executed.
+    # : () -> Fiber
+    def chunks_fiber: () -> Fiber
+
+    # Finds encoding by name. If the encoding couldn't be find, falls back to
+    # the generic binary encoding.
+    # : (String | Encoding encoding) -> Encoding
+    def find_encoding: (String | Encoding encoding) -> Encoding
+
+    # Returns whether the filesystem has POSIX semantics.
+    # : () -> bool
+    def posix?: () -> bool
+  end
+end

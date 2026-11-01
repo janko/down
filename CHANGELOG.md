@@ -1,3 +1,11 @@
+## HEAD
+
+* Ship RBS type signatures for `Down`, `Down::ChunkedIO`, `Down::NetHttp`, `Down::Http` and `Down::Httpx` (@janko)
+
+* Avoid `NoMethodError` in `Down::Http` when the response has no connection to close (@janko)
+
+* Make `Down::ChunkedIO#read` convert arguments via `#to_int`/`#to_str` like `IO#read` (@janko)
+
 ## 5.6.2 (2026-11-01)
 
 * Return `nil` `Down::ChunkedIO#size` from `Down::NetHttp.open` when net/http decompresses the body (@wtn)

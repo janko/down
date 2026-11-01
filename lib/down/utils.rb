@@ -9,6 +9,7 @@ module Down
     module_function
 
     # Retrieves potential filename from the "Content-Disposition" header.
+    #: (_ToS content_disposition) -> String?
     def filename_from_content_disposition(content_disposition)
       content_disposition = content_disposition.to_s
 
@@ -23,6 +24,7 @@ module Down
     end
 
     # Retrieves potential filename from the URL path.
+    #: (String path) -> String?
     def filename_from_path(path)
       filename = path.split("/").last
       CGI.unescape(filename) if filename

@@ -1,0 +1,172 @@
+---
+path: ".gem_rbs_collection"
+gems:
+- name: addressable
+  version: '2.8'
+  source:
+    type: git
+    name: ruby/gem_rbs_collection
+    revision: 904dc25dace6f10aac76ca29dd0ee6ed299a7282
+    remote: https://github.com/ruby/gem_rbs_collection.git
+    repo_dir: gems
+- name: base64
+  version: 0.3.0
+  source:
+    type: rubygems
+- name: cgi-escape
+  version: '0'
+  source:
+    type: stdlib
+- name: csv
+  version: '3.3'
+  source:
+    type: git
+    name: ruby/gem_rbs_collection
+    revision: 904dc25dace6f10aac76ca29dd0ee6ed299a7282
+    remote: https://github.com/ruby/gem_rbs_collection.git
+    repo_dir: gems
+- name: delegate
+  version: '0'
+  source:
+    type: stdlib
+- name: digest
+  version: '0'
+  source:
+    type: stdlib
+- name: ffi
+  version: 1.17.4
+  source:
+    type: rubygems
+- name: fileutils
+  version: '0'
+  source:
+    type: stdlib
+- name: forwardable
+  version: '0'
+  source:
+    type: stdlib
+- name: http
+  version: 6.0.4
+  source:
+    type: rubygems
+- name: http-2
+  version: 1.3.0
+  source:
+    type: rubygems
+- name: httpx
+  version: 1.4.3
+  source:
+    type: rubygems
+- name: json
+  version: '0'
+  source:
+    type: stdlib
+- name: llhttp-ffi
+  version: '0.5'
+  source:
+    type: git
+    name: ruby/gem_rbs_collection
+    revision: 904dc25dace6f10aac76ca29dd0ee6ed299a7282
+    remote: https://github.com/ruby/gem_rbs_collection.git
+    repo_dir: gems
+- name: logger
+  version: '1.7'
+  source:
+    type: git
+    name: ruby/gem_rbs_collection
+    revision: 904dc25dace6f10aac76ca29dd0ee6ed299a7282
+    remote: https://github.com/ruby/gem_rbs_collection.git
+    repo_dir: gems
+- name: monitor
+  version: '0'
+  source:
+    type: stdlib
+- name: net-http
+  version: '0'
+  source:
+    type: stdlib
+- name: net-protocol
+  version: '0'
+  source:
+    type: stdlib
+- name: open-uri
+  version: '0'
+  source:
+    type: stdlib
+- name: openssl
+  version: '0'
+  source:
+    type: stdlib
+- name: optparse
+  version: '0'
+  source:
+    type: stdlib
+- name: pathname
+  version: '0'
+  source:
+    type: stdlib
+- name: prism
+  version: 1.9.0
+  source:
+    type: rubygems
+- name: random-formatter
+  version: '0'
+  source:
+    type: stdlib
+- name: rbs
+  version: 4.2.0
+  source:
+    type: rubygems
+- name: rbs-inline
+  version: 0.14.0
+  source:
+    type: rubygems
+- name: rdoc
+  version: '0'
+  source:
+    type: stdlib
+- name: securerandom
+  version: '0'
+  source:
+    type: stdlib
+- name: singleton
+  version: '0'
+  source:
+    type: stdlib
+- name: socket
+  version: '0'
+  source:
+    type: stdlib
+- name: stringio
+  version: '0'
+  source:
+    type: stdlib
+- name: tempfile
+  version: '0'
+  source:
+    type: stdlib
+- name: time
+  version: '0'
+  source:
+    type: stdlib
+- name: timeout
+  version: '0'
+  source:
+    type: stdlib
+- name: tmpdir
+  version: '0'
+  source:
+    type: stdlib
+- name: tsort
+  version: '0'
+  source:
+    type: stdlib
+- name: uri
+  version: '0'
+  source:
+    type: stdlib
+- name: zlib
+  version: '0'
+  source:
+    type: stdlib
+gemfile_lock_path: Gemfile.lock

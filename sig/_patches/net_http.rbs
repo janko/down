@@ -1,0 +1,8 @@
+# Net::HTTP.Proxy also accepts a nil address (meaning no proxy), e.g. a
+# URI#hostname, which the shipped signature doesn't allow.
+module Net
+  class HTTP
+    def self.Proxy: (String? p_addr, ?Integer? p_port, ?String? p_user, ?String? p_pass) -> untyped
+                  | ...
+  end
+end

@@ -25,8 +25,21 @@ module Down
   # when Down::ChunkedIO is closed. One can also specify an `:on_close`
   # callback that will also get executed in those situations.
   class ChunkedIO
-    attr_accessor :size, :data, :encoding
+    attr_accessor :size #: Integer?
+    attr_accessor :data #: Hash[Symbol, untyped]
+    attr_accessor :encoding #: Encoding
 
+    # @rbs @chunks: _Each[String] & Object
+    # @rbs @on_close: (^() -> void | (_Callable & Object))?
+    # @rbs @rewindable: bool
+    # @rbs @buffer: String?
+    # @rbs @position: Integer
+    # @rbs @next_chunk: String?
+    # @rbs @closed: bool
+    # @rbs @cache: Tempfile?
+    # @rbs @chunks_fiber: Fiber?
+
+    #: (chunks: _Each[String] & Object, ?size: Integer?, ?on_close: (^() -> void | (_Callable & Object))?, ?data: Hash[Symbol, untyped], ?rewindable: bool, ?encoding: (String | Encoding)?) -> void
     def initialize(chunks:, size: nil, on_close: nil, data: {}, rewindable: true, encoding: nil)
       @chunks     = chunks
       @size       = size
@@ -43,17 +56,23 @@ module Down
     end
 
     # For compatibility with multipart-post gem.
+    #: () -> Integer?
     def length
       @size
     end
 
     # Yields elements of the underlying enumerator.
+    #: () { (String) -> void } -> void
+    #: () -> Enumerator[String, void]
     def each_chunk
       fail IOError, "closed stream" if closed?
 
-      return enum_for(__method__) unless block_given?
+      return enum_for(:each_chunk) unless block_given?
 
-      yield retrieve_chunk until chunks_depleted?
+      until chunks_depleted?
+        chunk = retrieve_chunk #: String
+        yield chunk
+      end
     end
 
     # Implements IO#read semantics. Without arguments it retrieves and returns
@@ -67,8 +86,14 @@ module Down
     #
     # If end of file is reached, returns empty string if called without
     # arguments, or nil if called with arguments. Raises IOError if closed.
+    #: (?nil, ?string? outbuf) -> String
+    #: (?int? length, ?string? outbuf) -> String?
     def read(length = nil, outbuf = nil)
       fail IOError, "closed stream" if closed?
+
+      # Implicit conversion, like IO#read
+      length = length.to_int if length
+      outbuf = outbuf.to_str if outbuf
 
       data   = outbuf.clear.force_encoding(Encoding::BINARY) if outbuf
       data ||= "".b
@@ -100,6 +125,8 @@ module Down
     # With `limit` argument returns maximum of that amount of bytes.
     #
     # Returns nil if end of file is reached. Raises IOError if closed.
+    #: (?String? separator, ?Integer? limit) -> String?
+    #: (Integer limit) -> String?
     def gets(separator_or_limit = $/, limit = nil)
       fail IOError, "closed stream" if closed?
 
@@ -124,7 +151,7 @@ module Down
       buffer.clear if buffer # deallocate buffer
 
       line, extra = data.split(separator, 2)
-      line << separator if data.include?(separator)
+      line << separator if line && data.include?(separator)
 
       data.clear # deallocate data
 
@@ -134,8 +161,8 @@ module Down
         if cache
           cache.pos -= extra.bytesize
         else
-          if @buffer
-            @buffer.prepend(extra)
+          if (existing_buffer = @buffer)
+            existing_buffer.prepend(extra)
           else
             @buffer = extra
           end
@@ -160,6 +187,7 @@ module Down
     # where the value is replaced with retrieved content.
     #
     # Raises EOFError if end of file is reached. Raises IOError if closed.
+    #: (?Integer? maxlen, ?String? outbuf) -> String
     def readpartial(maxlen = nil, outbuf = nil)
       fail IOError, "closed stream" if closed?
 
@@ -178,12 +206,14 @@ module Down
 
       remaining_length = maxlen - data.bytesize
 
-      unless @buffer.nil? || remaining_length == 0
-        if remaining_length < @buffer.bytesize
-          buffered_data = @buffer.byteslice(0, remaining_length)
-          @buffer       = @buffer.byteslice(remaining_length..-1)
+      buffer = @buffer
+
+      unless buffer.nil? || remaining_length == 0
+        if remaining_length < buffer.bytesize
+          buffered_data = buffer.byteslice(0, remaining_length) #: String
+          @buffer       = buffer.byteslice(remaining_length..-1)
         else
-          buffered_data = @buffer
+          buffered_data = buffer
           @buffer       = nil
         end
 
@@ -200,6 +230,7 @@ module Down
     end
 
     # Implements IO#seek semantics.
+    #: (Integer amount, ?(Integer | Symbol) whence) -> Integer
     def seek(amount, whence = IO::SEEK_SET)
       fail Errno::ESPIPE, "Illegal seek" if cache.nil?
 
@@ -231,6 +262,7 @@ module Down
 
     # Implements IO#pos semantics. Returns the current position of the
     # Down::ChunkedIO.
+    #: () -> Integer
     def pos
       @position
     end
@@ -239,6 +271,7 @@ module Down
     # Implements IO#eof? semantics. Returns whether we've reached end of file.
     # It returns true if cache is at the end and there is no more content to
     # retrieve. Raises IOError if closed.
+    #: () -> bool
     def eof?
       fail IOError, "closed stream" if closed?
 
@@ -250,6 +283,7 @@ module Down
     # Implements IO#rewind semantics. Rewinds the Down::ChunkedIO by rewinding
     # the cache and setting the position to the beginning of the file. Raises
     # IOError if closed or not rewindable.
+    #: () -> Integer
     def rewind
       fail IOError, "closed stream" if closed?
       fail IOError, "this Down::ChunkedIO is not rewindable" if cache.nil?
@@ -260,6 +294,7 @@ module Down
 
     # Implements IO#close semantics. Closes the Down::ChunkedIO by terminating
     # chunk retrieval and deleting the cached content.
+    #: () -> void
     def close
       return if @closed
 
@@ -270,16 +305,19 @@ module Down
     end
 
     # Returns whether the Down::ChunkedIO has been closed.
+    #: () -> bool
     def closed?
       !!@closed
     end
 
     # Returns whether the Down::ChunkedIO was specified as rewindable.
+    #: () -> bool
     def rewindable?
       @rewindable
     end
 
     # Returns useful information about the Down::ChunkedIO object.
+    #: () -> String
     def inspect
       string  = String.new
       string << "#<#{self.class.name}"
@@ -297,6 +335,8 @@ module Down
 
     # If Down::ChunkedIO is specified as rewindable, returns a new Tempfile for
     # writing read content to. This allows the Down::ChunkedIO to be rewinded.
+    # @rbs %a{pure}
+    #: () -> Tempfile?
     def cache
       return if !rewindable?
 
@@ -310,6 +350,7 @@ module Down
 
     # Returns current chunk and retrieves the next chunk. If next chunk is nil,
     # we know we've reached EOF.
+    #: () -> String?
     def retrieve_chunk
       chunk = @next_chunk
       @next_chunk = chunks_fiber.resume
@@ -317,6 +358,7 @@ module Down
     end
 
     # Returns whether there is any content left to retrieve.
+    #: () -> bool
     def chunks_depleted?
       !chunks_fiber.alive?
     end
@@ -325,6 +367,7 @@ module Down
     # of using a Fiber here is that we can terminate the chunk retrieval, in a
     # way that executes any cleanup code that the enumerator potentially
     # carries. At the end of iteration the :on_close callback is executed.
+    #: () -> Fiber
     def chunks_fiber
       @chunks_fiber ||= Fiber.new do
         begin
@@ -333,20 +376,22 @@ module Down
             break if action == :terminate
           end
         ensure
-          @on_close.call if @on_close
+          @on_close&.call
         end
       end
     end
 
     # Finds encoding by name. If the encoding couldn't be find, falls back to
     # the generic binary encoding.
+    #: (String | Encoding encoding) -> Encoding
     def find_encoding(encoding)
-      Encoding.find(encoding)
+      Encoding.find(encoding) #: Encoding
     rescue ArgumentError
       Encoding::BINARY
     end
 
     # Returns whether the filesystem has POSIX semantics.
+    #: () -> bool
     def posix?
       RUBY_PLATFORM !~ /(mswin|mingw|cygwin|java)/
     end

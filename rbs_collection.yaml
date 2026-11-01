@@ -1,0 +1,35 @@
+sources:
+  - type: git
+    name: ruby/gem_rbs_collection
+    remote: https://github.com/ruby/gem_rbs_collection.git
+    revision: main
+    repo_dir: gems
+
+path: .gem_rbs_collection
+
+gems:
+  - name: open-uri
+  - name: net-http
+  - name: tempfile
+  - name: fileutils
+  - name: cgi-escape
+  - name: uri
+  # Dev-only gems that don't need signatures
+  - name: steep
+    ignore: true
+  - name: minitest
+    ignore: true
+  - name: mocha
+    ignore: true
+  - name: rake
+    ignore: true
+  - name: warning
+    ignore: true
+  - name: pry
+    ignore: true
+  - name: memory_profiler
+    ignore: true
+  - name: puma
+    ignore: true
+  - name: rack
+    ignore: true

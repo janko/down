@@ -11,9 +11,16 @@ module Down
   class Httpx < Backend
     USER_AGENT = "Down/#{Down::VERSION}"
 
-    BASIC_AUTH = HTTPX::VERSION >= "1.0.0" ? :basic_auth : :basic_authentication
+    # HTTPX's plugin-composed sessions and stream responses (which delegate via
+    # method_missing) aren't expressible with its shipped RBS, so the client and
+    # response objects are left untyped here.
+    # @rbs @method: Symbol | String
+    # @rbs @client: untyped
+
+    BASIC_AUTH = HTTPX::VERSION >= "1.0.0" ? :basic_auth : :basic_authentication #: Symbol
 
     # Initializes the backend with common defaults.
+    #: (?method: Symbol | String, ?headers: Hash[String | Symbol, String], **untyped options) ?{ (untyped) -> untyped } -> void
     def initialize(method: :get, headers: {}, **options, &block)
       @method = method
       @client = HTTPX
@@ -31,6 +38,8 @@ module Down
 
     # Downloads the remote file to disk. Accepts HTTPX options via a hash or a
     # block, and some additional options as well.
+    #: (url url, destination: String, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer) -> void)?, ?extension: String?, ?tempfile_name: String?, **untyped) ?{ (untyped) -> untyped } -> nil
+    #: (url url, ?destination: nil, ?max_size: Integer?, ?progress_proc: (^(Integer) -> void)?, ?content_length_proc: (^(Integer) -> void)?, ?extension: String?, ?tempfile_name: String?, **untyped) ?{ (untyped) -> untyped } -> downloaded_file
     def download(url, max_size: nil, progress_proc: nil, content_length_proc: nil, destination: nil, extension: nil, tempfile_name: nil, **, &)
       response = request(url, **, &)
 
@@ -61,13 +70,13 @@ module Down
 
       tempfile.open # flush written content
 
-      tempfile.extend DownloadedFile
+      tempfile = tempfile.extend(DownloadedFile) #: Tempfile & DownloadedFile
       tempfile.url     = response.uri.to_s
       tempfile.headers = normalize_headers(response.headers.to_h)
       tempfile.content_type = response.content_type.mime_type
       tempfile.charset = response.body.encoding
 
-      download_result(tempfile, destination)
+      download_result(tempfile, destination) #: downloaded_file?
     rescue
       tempfile&.close!
       raise
@@ -76,6 +85,7 @@ module Down
     # Starts retrieving the remote file and returns an IO-like object which
     # downloads the response body on-demand. Accepts HTTPX options via a hash
     # or a block.
+    #: (url url, ?rewindable: bool, **untyped) ?{ (untyped) -> untyped } -> ChunkedIO
     def open(url, rewindable: true, **, &)
       response = request(url, stream: true, **, &)
 
@@ -95,6 +105,7 @@ module Down
     private
 
     # Yields chunks of the response body to the block.
+    #: (untyped response) { (String) -> void } -> void
     def stream_body(response, &block)
       response.each do |chunk|
         next if (300..399).include?(response.status)
@@ -109,6 +120,7 @@ module Down
       request_error!(exception)
     end
 
+    #: (url url, ?method: Symbol | String, **untyped) ?{ (untyped) -> untyped } -> untyped
     def request(url, method: @method, **, &)
       response = send_request(method, url, **, &)
       response.raise_for_status
@@ -120,7 +132,8 @@ module Down
       request_error!(error)
     end
 
-    def send_request(method, url, **, &block)
+    #: (Symbol | String method, url url, **untyped) ?{ (untyped) -> untyped } -> untyped
+    def send_request(method, url, **options, &block)
       uri = URI(url)
       client = @client
       if uri.user || uri.password
@@ -129,24 +142,26 @@ module Down
       end
       client = block.call(client) if block
 
-      client.request(method.to_s.upcase, uri, stream: true, **)
+      client.request(method.to_s.upcase, uri, stream: true, **options) # named splat avoids a Steep 2.1 crash
     rescue => exception
       request_error!(exception)
     end
 
     # Raises non-sucessful response as a Down::ResponseError.
+    #: (untyped response) -> bot
     def response_error!(response)
-      args = [response.status.to_s, response]
+      message = response.status.to_s
 
       case response.status
-      when 404      then raise Down::NotFound.new(*args)
-      when 400..499 then raise Down::ClientError.new(*args)
-      when 500..599 then raise Down::ServerError.new(*args)
-      else               raise Down::ResponseError.new(*args)
+      when 404      then raise Down::NotFound.new(message, response)
+      when 400..499 then raise Down::ClientError.new(message, response)
+      when 500..599 then raise Down::ServerError.new(message, response)
+      else               raise Down::ResponseError.new(message, response)
       end
     end
 
     # Re-raise HTTP.rb exceptions as Down::Error exceptions.
+    #: (Exception exception) -> bot
     def request_error!(exception)
       case exception
       when URI::Error, HTTPX::UnsupportedSchemeError
@@ -164,11 +179,15 @@ module Down
 
     # Defines some additional attributes for the returned Tempfile.
     module DownloadedFile
-      attr_accessor :url, :headers, :charset, :content_type
+      attr_accessor :url #: String
+      attr_accessor :headers #: Hash[String, untyped]
+      attr_accessor :charset #: Encoding?
+      attr_accessor :content_type #: String?
 
+      #: () -> String?
       def original_filename
         Utils.filename_from_content_disposition(headers["Content-Disposition"]) ||
-        Utils.filename_from_path(URI.parse(url).path)
+        Utils.filename_from_path(URI.parse(url).path.to_s)
       end
     end
   end

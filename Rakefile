@@ -10,3 +10,16 @@ Rake::TestTask.new do |t|
 end
 
 task :default => :test
+
+namespace :rbs do
+  desc "Generate sig/generated/ from inline RBS comments in lib/"
+  task :generate do
+    rm_rf "sig/generated"
+    sh "rbs-inline", "--opt-out", "--output=sig/generated", "lib"
+  end
+end
+
+desc "Type check lib/ with Steep"
+task :steep => "rbs:generate" do
+  sh "steep", "check"
+end

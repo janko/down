@@ -1,0 +1,21 @@
+# Generated from lib/down.rb with RBS::Inline
+
+module Down
+  self.@backend: _Backend
+
+  @backend: _Backend
+
+  # : (url, *untyped, destination: String, **untyped) ?{ (untyped) -> untyped } -> nil
+  # : (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> downloaded_file
+  def self?.download: (url, *untyped, destination: String, **untyped) ?{ (untyped) -> untyped } -> nil
+                    | (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> downloaded_file
+
+  # : (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> ChunkedIO
+  def self?.open: (url, *untyped, **untyped) ?{ (untyped) -> untyped } -> ChunkedIO
+
+  # Allows setting a backend via a symbol or a downloader object.
+  # : (Symbol | _Backend) -> _Backend
+  # : () -> _Backend
+  def self?.backend: (Symbol | _Backend) -> _Backend
+                   | () -> _Backend
+end
