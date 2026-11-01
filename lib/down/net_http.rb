@@ -415,20 +415,9 @@ module Down
     end
 
     # Merge default and ad-hoc options, merging nested headers.
-    #: (Hash[Symbol, untyped] options, ?Hash[String, String] headers, **untyped new_options) -> Hash[Symbol, untyped]
-    def merge_options(options, headers = {}, **new_options)
-      # Deprecate passing headers as top-level options, taking into account
-      # that Ruby 2.7+ accepts kwargs with string keys.
-      if headers.any?
-        warn %([Down::NetHttp] Passing headers as top-level options has been deprecated, use the :headers option instead, e.g: `Down::NetHttp.download(headers: { "Key" => "Value", ... }, ...)`)
-        new_options[:headers] = headers
-      elsif new_options.any? { |key, value| key.is_a?(String) }
-        warn %([Down::NetHttp] Passing headers as top-level options has been deprecated, use the :headers option instead, e.g: `Down::NetHttp.download(headers: { "Key" => "Value", ... }, ...)`)
-        new_options[:headers] = new_options.select { |key, value| key.is_a?(String) }
-        new_options.reject! { |key, value| key.is_a?(String) }
-      else
-        new_options[:headers] ||= {}
-      end
+    #: (Hash[Symbol, untyped] options, **untyped new_options) -> Hash[Symbol, untyped]
+    def merge_options(options, **new_options)
+      new_options[:headers] ||= {}
 
       options.merge(new_options) do |key, value1, value2|
         key == :headers ? value1.merge(value2) : value2

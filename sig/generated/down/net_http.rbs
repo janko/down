@@ -84,8 +84,8 @@ module Down
     def request_error!: (Exception exception) -> bot
 
     # Merge default and ad-hoc options, merging nested headers.
-    # : (Hash[Symbol, untyped] options, ?Hash[String, String] headers, **untyped new_options) -> Hash[Symbol, untyped]
-    def merge_options: (Hash[Symbol, untyped] options, ?Hash[String, String] headers, **untyped new_options) -> Hash[Symbol, untyped]
+    # : (Hash[Symbol, untyped] options, **untyped new_options) -> Hash[Symbol, untyped]
+    def merge_options: (Hash[Symbol, untyped] options, **untyped new_options) -> Hash[Symbol, untyped]
 
     # Defines some additional attributes for the returned Tempfile (on top of what
     # OpenURI::Meta already defines).

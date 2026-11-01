@@ -12,7 +12,6 @@ require "minitest/pride"
 MiniTest = Minitest unless defined?(MiniTest)
 require "mocha/minitest"
 
-require_relative "support/deprecated_helper"
 
 require "http"
 require "rack"

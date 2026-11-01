@@ -2,6 +2,8 @@
 
 * Remove deprecated wget backend (@janko)
 
+* Remove support for passing headers as top-level options in `Down::NetHttp`, use the `:headers` option instead (@janko)
+
 * Ship RBS type signatures for `Down`, `Down::ChunkedIO`, `Down::NetHttp`, `Down::Http` and `Down::Httpx` (@janko)
 
 * Avoid `NoMethodError` in `Down::Http` when the response has no connection to close (@janko)

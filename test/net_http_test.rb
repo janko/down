@@ -319,22 +319,6 @@ describe Down do
     it "doesn't trip up on unknown response status" do
       assert_raises(Down::ClientError) { Down::NetHttp.download("#{$httpbin}/status/444") }
     end
-
-    deprecated "accepts top-level request headers" do
-      tempfile = Down::NetHttp.download("#{$httpbin}/headers", { "Key" => "Value" })
-      assert_equal "Value", JSON.parse(tempfile.read)["headers"]["Key"]
-
-      tempfile = Down::NetHttp.download("#{$httpbin}/headers", "Key" => "Value")
-      assert_equal "Value", JSON.parse(tempfile.read)["headers"]["Key"]
-
-      net_http = Down::NetHttp.new({ "User-Agent" => "Janko" })
-      tempfile = net_http.download("#{$httpbin}/user-agent")
-      assert_equal "Janko", JSON.parse(tempfile.read)["user-agent"]
-
-      net_http = Down::NetHttp.new("User-Agent" => "Janko")
-      tempfile = net_http.download("#{$httpbin}/user-agent")
-      assert_equal "Janko", JSON.parse(tempfile.read)["user-agent"]
-    end
   end
 
   describe "#open" do
@@ -605,22 +589,6 @@ describe Down do
       end
 
       assert_raises(ArgumentError) { Down::NetHttp.open($httpbin) }
-    end
-
-    deprecated "accepts top-level request headers" do
-      io = Down::NetHttp.open("#{$httpbin}/headers", { "Key" => "Value" })
-      assert_equal "Value", JSON.parse(io.read)["headers"]["Key"]
-
-      io = Down::NetHttp.open("#{$httpbin}/headers", "Key" => "Value")
-      assert_equal "Value", JSON.parse(io.read)["headers"]["Key"]
-
-      net_http = Down::NetHttp.new({ "User-Agent" => "Janko" })
-      io = net_http.open("#{$httpbin}/user-agent")
-      assert_equal "Janko", JSON.parse(io.read)["user-agent"]
-
-      net_http = Down::NetHttp.new("User-Agent" => "Janko")
-      io = net_http.open("#{$httpbin}/user-agent")
-      assert_equal "Janko", JSON.parse(io.read)["user-agent"]
     end
   end
 end
