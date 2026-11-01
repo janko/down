@@ -60,13 +60,14 @@ module Down
                   | () -> Enumerator[String, void]
 
     # Implements IO#read semantics. Without arguments it retrieves and returns
-    # all content.
+    # all content in the external encoding.
     #
     # With `length` argument returns exactly that number of bytes if they're
-    # available.
+    # available, as a binary string.
     #
     # With `outbuf` argument each call will return that same string object,
-    # where the value is replaced with retrieved content.
+    # where the value is replaced with retrieved content. When `length` is
+    # given, the buffer keeps its encoding.
     #
     # If end of file is reached, returns empty string if called without
     # arguments, or nil if called with arguments. Raises IOError if closed.
@@ -83,16 +84,20 @@ module Down
     # * if `separator` is a nonempty string returns chunks of content
     #   surrounded with that sequence of bytes
     # * if `separator` is an empty string returns paragraphs of content
-    #   (content delimited by two newlines)
-    # * if `separator` is nil and `limit` is nil returns all content
+    #   (content delimited by two or more newlines, which are skipped)
+    # * if `separator` is nil returns all content
     #
-    # With `limit` argument returns maximum of that amount of bytes.
+    # With `limit` argument returns maximum of that amount of bytes, plus any
+    # bytes needed to complete a multibyte character. A negative limit means no
+    # limit, and a zero limit returns an empty string.
+    #
+    # With `chomp: true` removes the trailing separator from the line.
     #
     # Returns nil if end of file is reached. Raises IOError if closed.
-    # : (?String? separator, ?Integer? limit) -> String?
-    # : (Integer limit) -> String?
-    def gets: (?String? separator, ?Integer? limit) -> String?
-            | (Integer limit) -> String?
+    # : (?String? separator, ?Integer? limit, ?chomp: boolish) -> String?
+    # : (Integer limit, ?chomp: boolish) -> String?
+    def gets: (?String? separator, ?Integer? limit, ?chomp: boolish) -> String?
+            | (Integer limit, ?chomp: boolish) -> String?
 
     # Implements IO#readpartial semantics. If there is any content readily
     # available reads from it, otherwise fetches and reads from the next chunk.
@@ -106,18 +111,20 @@ module Down
     # is 16KB).
     #
     # With `outbuf` argument each call will return that same string object,
-    # where the value is replaced with retrieved content.
+    # where the value is replaced with retrieved content. The returned string
+    # has the encoding of `outbuf`, or is binary when `outbuf` isn't given.
     #
     # Raises EOFError if end of file is reached. Raises IOError if closed.
-    # : (?Integer? maxlen, ?String? outbuf) -> String
-    def readpartial: (?Integer? maxlen, ?String? outbuf) -> String
+    # : (?int? maxlen, ?string? outbuf) -> String
+    def readpartial: (?int? maxlen, ?string? outbuf) -> String
 
-    # Implements IO#seek semantics.
-    # : (Integer amount, ?(Integer | Symbol) whence) -> Integer
-    def seek: (Integer amount, ?Integer | Symbol whence) -> Integer
+    # Implements IO#seek semantics. Like IO#seek, it allows seeking beyond end
+    # of file, and returns 0.
+    # : (int amount, ?(Integer | Symbol) whence) -> Integer
+    def seek: (int amount, ?Integer | Symbol whence) -> Integer
 
     # Implements IO#pos semantics. Returns the current position of the
-    # Down::ChunkedIO.
+    # Down::ChunkedIO. Raises IOError if closed.
     # : () -> Integer
     def pos: () -> Integer
 
@@ -163,8 +170,32 @@ module Down
     %a{pure}
     def cache: () -> Tempfile?
 
-    # Returns current chunk and retrieves the next chunk. If next chunk is nil,
-    # we know we've reached EOF.
+    # Reads content up to and including the separator, or up to the limit
+    # (completing a multibyte character if the limit cuts it). Any content read
+    # beyond that is put back. Returns nil if end of file is reached.
+    # : (String? separator, Integer? limit) -> String?
+    def read_line: (String? separator, Integer? limit) -> String?
+
+    # Reads and discards consecutive newlines, used for paragraph mode.
+    # : () -> void
+    def skip_newlines: () -> void
+
+    # Puts back content that was read, so that it's returned by the next read.
+    # : (String data) -> void
+    def unread: (String data) -> void
+
+    # The maximum number of bytes needed to complete a multibyte character cut
+    # at the end of a line (characters are at most 4 bytes in common encodings).
+    MAX_CHAR_COMPLETION: ::Integer
+
+    # Returns the number of bytes after `offset` needed to complete a multibyte
+    # character that `offset` cuts in half, or 0 if it doesn't cut one. Like
+    # IO#gets, it only completes characters which are valid in the encoding.
+    # : (String data, Integer offset) -> Integer
+    def char_completion: (String data, Integer offset) -> Integer
+
+    # Returns current chunk and retrieves the next chunk, skipping empty ones.
+    # If there are no more chunks, we know we've reached EOF.
     # : () -> String?
     def retrieve_chunk: () -> String?
 

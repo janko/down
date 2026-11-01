@@ -6,6 +6,34 @@
 
 * Make `Down::ChunkedIO#read` convert arguments via `#to_int`/`#to_str` like `IO#read` (@janko)
 
+* Fix `Encoding::CompatibilityError` in `Down::ChunkedIO#readpartial` when reading cached content into a non-binary buffer (@janko)
+
+* Fix `Encoding::CompatibilityError` in `Down::ChunkedIO` when chunks are in non-binary encodings (@janko)
+
+* Return `nil` from `Down::ChunkedIO#gets(nil)` at end of file instead of an empty string (@janko)
+
+* Skip empty chunks in `Down::ChunkedIO`, so that `#readpartial` doesn't return an empty string and `#eof?` returns `true` when only empty chunks remain (@janko)
+
+* Fix `Down::ChunkedIO#gets("")` to skip newlines around paragraphs like `IO#gets` (@janko)
+
+* Complete multibyte characters cut by the limit in `Down::ChunkedIO#gets`, like `IO#gets` (@janko)
+
+* Return an empty string from `Down::ChunkedIO#gets` with zero limit, and treat negative limit as no limit (@janko)
+
+* Add `:chomp` option to `Down::ChunkedIO#gets` (@janko)
+
+* Raise `ArgumentError` on negative length in `Down::ChunkedIO#read` and `#readpartial` (@janko)
+
+* **BREAKING:** Keep the encoding of the given buffer in `Down::ChunkedIO#read(length, buffer)` and `#readpartial(length, buffer)` instead of changing it to binary, like `IO` (@janko)
+
+* **BREAKING:** Return `0` from `Down::ChunkedIO#seek` instead of the new position, like `IO#seek` (@janko)
+
+* Allow seeking beyond end of file in `Down::ChunkedIO#seek`, like `IO#seek` (@janko)
+
+* Fix `Down::ChunkedIO#seek` from end when the last chunk was partially read, and keep the position when seeking fails (@janko)
+
+* Raise `IOError` from `Down::ChunkedIO#pos` and `#seek` when closed (@janko)
+
 ## 5.6.2 (2026-11-01)
 
 * Return `nil` `Down::ChunkedIO#size` from `Down::NetHttp.open` when net/http decompresses the body (@wtn)

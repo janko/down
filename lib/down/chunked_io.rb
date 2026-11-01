@@ -76,38 +76,40 @@ module Down
     end
 
     # Implements IO#read semantics. Without arguments it retrieves and returns
-    # all content.
+    # all content in the external encoding.
     #
     # With `length` argument returns exactly that number of bytes if they're
-    # available.
+    # available, as a binary string.
     #
     # With `outbuf` argument each call will return that same string object,
-    # where the value is replaced with retrieved content.
+    # where the value is replaced with retrieved content. When `length` is
+    # given, the buffer keeps its encoding.
     #
     # If end of file is reached, returns empty string if called without
     # arguments, or nil if called with arguments. Raises IOError if closed.
     #: (?nil, ?string? outbuf) -> String
     #: (?int? length, ?string? outbuf) -> String?
     def read(length = nil, outbuf = nil)
-      fail IOError, "closed stream" if closed?
-
       # Implicit conversion, like IO#read
       length = length.to_int if length
+      fail ArgumentError, "negative length #{length} given" if length && length < 0
       outbuf = outbuf.to_str if outbuf
 
-      data   = outbuf.clear.force_encoding(Encoding::BINARY) if outbuf
-      data ||= "".b
+      fail IOError, "closed stream" if closed?
+
+      encoding = length ? (outbuf&.encoding || Encoding::BINARY) : @encoding
+      data     = outbuf ? outbuf.clear.force_encoding(Encoding::BINARY) : "".b
 
       remaining_length = length
 
       until remaining_length == 0 || eof?
-        data << readpartial(remaining_length, buffer ||= String.new)
+        data << readpartial(remaining_length, buffer ||= "".b)
         remaining_length = length - data.bytesize if length
       end
 
       buffer.clear if buffer # deallocate string
 
-      data.force_encoding(@encoding) unless length
+      data.force_encoding(encoding)
       data unless data.empty? && length && length > 0
     end
 
@@ -119,15 +121,19 @@ module Down
     # * if `separator` is a nonempty string returns chunks of content
     #   surrounded with that sequence of bytes
     # * if `separator` is an empty string returns paragraphs of content
-    #   (content delimited by two newlines)
-    # * if `separator` is nil and `limit` is nil returns all content
+    #   (content delimited by two or more newlines, which are skipped)
+    # * if `separator` is nil returns all content
     #
-    # With `limit` argument returns maximum of that amount of bytes.
+    # With `limit` argument returns maximum of that amount of bytes, plus any
+    # bytes needed to complete a multibyte character. A negative limit means no
+    # limit, and a zero limit returns an empty string.
+    #
+    # With `chomp: true` removes the trailing separator from the line.
     #
     # Returns nil if end of file is reached. Raises IOError if closed.
-    #: (?String? separator, ?Integer? limit) -> String?
-    #: (Integer limit) -> String?
-    def gets(separator_or_limit = $/, limit = nil)
+    #: (?String? separator, ?Integer? limit, ?chomp: boolish) -> String?
+    #: (Integer limit, ?chomp: boolish) -> String?
+    def gets(separator_or_limit = $/, limit = nil, chomp: false)
       fail IOError, "closed stream" if closed?
 
       if separator_or_limit.is_a?(Integer)
@@ -137,39 +143,27 @@ module Down
         separator = separator_or_limit
       end
 
-      return read(limit)&.force_encoding(@encoding) if separator.nil?
+      limit = nil if limit && limit < 0 # negative limit means no limit
 
-      separator = "\n\n" if separator.empty?
+      return String.new(encoding: @encoding) if limit == 0
 
-      data = String.new
+      paragraph = separator == ""
+      separator = paragraph ? "\n\n".b : separator&.b
 
-      until data.include?(separator) || data.bytesize == limit || eof?
-        remaining_length = limit - data.bytesize if limit
-        data << readpartial(remaining_length, buffer ||= String.new)
+      skip_newlines if paragraph
+
+      line = read_line(separator, limit)
+
+      return nil if line.nil?
+
+      skip_newlines if paragraph
+
+      if chomp && separator && line.end_with?(separator)
+        line = line.byteslice(0, line.bytesize - separator.bytesize) #: String
+        line.chomp!("\r") if separator == "\n"
       end
 
-      buffer.clear if buffer # deallocate buffer
-
-      line, extra = data.split(separator, 2)
-      line << separator if line && data.include?(separator)
-
-      data.clear # deallocate data
-
-      if extra
-        @position -= extra.bytesize
-
-        if cache
-          cache.pos -= extra.bytesize
-        else
-          if (existing_buffer = @buffer)
-            existing_buffer.prepend(extra)
-          else
-            @buffer = extra
-          end
-        end
-      end
-
-      line.force_encoding(@encoding) if line
+      line.force_encoding(@encoding)
     end
 
     # Implements IO#readpartial semantics. If there is any content readily
@@ -184,23 +178,32 @@ module Down
     # is 16KB).
     #
     # With `outbuf` argument each call will return that same string object,
-    # where the value is replaced with retrieved content.
+    # where the value is replaced with retrieved content. The returned string
+    # has the encoding of `outbuf`, or is binary when `outbuf` isn't given.
     #
     # Raises EOFError if end of file is reached. Raises IOError if closed.
-    #: (?Integer? maxlen, ?String? outbuf) -> String
+    #: (?int? maxlen, ?string? outbuf) -> String
     def readpartial(maxlen = nil, outbuf = nil)
+      # Implicit conversion, like IO#readpartial
+      maxlen = maxlen ? maxlen.to_int : 16*1024
+      fail ArgumentError, "negative length #{maxlen} given" if maxlen < 0
+      outbuf = outbuf.to_str if outbuf
+
       fail IOError, "closed stream" if closed?
 
-      maxlen ||= 16*1024
+      encoding = outbuf ? outbuf.encoding : Encoding::BINARY
+      data     = outbuf ? outbuf.clear.force_encoding(Encoding::BINARY) : "".b
 
-      data   = cache.read(maxlen, outbuf) if cache && !cache.eof?
-      data ||= outbuf.clear.force_encoding(Encoding::BINARY) if outbuf
-      data ||= "".b
+      return data.force_encoding(encoding) if maxlen == 0
 
-      return data if maxlen == 0
+      cache.read(maxlen, data) if cache && !cache.eof?
 
       if @buffer.nil? && data.empty?
-        fail EOFError, "end of file reached" if chunks_depleted?
+        if chunks_depleted?
+          data.force_encoding(encoding)
+          fail EOFError, "end of file reached"
+        end
+
         @buffer = retrieve_chunk
       end
 
@@ -226,13 +229,18 @@ module Down
 
       @position += data.bytesize
 
-      data.force_encoding(Encoding::BINARY)
+      data.force_encoding(encoding)
     end
 
-    # Implements IO#seek semantics.
-    #: (Integer amount, ?(Integer | Symbol) whence) -> Integer
+    # Implements IO#seek semantics. Like IO#seek, it allows seeking beyond end
+    # of file, and returns 0.
+    #: (int amount, ?(Integer | Symbol) whence) -> Integer
     def seek(amount, whence = IO::SEEK_SET)
-      fail Errno::ESPIPE, "Illegal seek" if cache.nil?
+      fail IOError, "closed stream" if closed?
+      fail Errno::ESPIPE if cache.nil?
+
+      amount = amount.to_int
+      original_position = @position
 
       case whence
       when IO::SEEK_SET, :SET
@@ -240,7 +248,7 @@ module Down
       when IO::SEEK_CUR, :CUR
         target_pos = @position + amount
       when IO::SEEK_END, :END
-        unless chunks_depleted?
+        unless chunks_depleted? && @buffer.nil?
           cache.seek(0, IO::SEEK_END)
           IO.copy_stream(self, File::NULL)
         end
@@ -250,20 +258,32 @@ module Down
         fail ArgumentError, "invalid whence: #{whence.inspect}"
       end
 
-      if target_pos <= cache.size
-        cache.seek(target_pos)
-      else
+      # retrieve content up to the target position, if it's not cached yet
+      if target_pos > cache.size
         cache.seek(0, IO::SEEK_END)
         IO.copy_stream(self, File::NULL, target_pos - cache.size)
       end
 
-      @position = cache.pos
+      begin
+        cache.seek(target_pos)
+      rescue SystemCallError # e.g. seeking before start of file
+        # restore position changed by retrieving content
+        cache.seek(original_position)
+        @position = original_position
+        raise
+      end
+
+      @position = target_pos
+
+      0
     end
 
     # Implements IO#pos semantics. Returns the current position of the
-    # Down::ChunkedIO.
+    # Down::ChunkedIO. Raises IOError if closed.
     #: () -> Integer
     def pos
+      fail IOError, "closed stream" if closed?
+
       @position
     end
     alias tell pos
@@ -348,12 +368,124 @@ module Down
       )
     end
 
-    # Returns current chunk and retrieves the next chunk. If next chunk is nil,
-    # we know we've reached EOF.
+    # Reads content up to and including the separator, or up to the limit
+    # (completing a multibyte character if the limit cuts it). Any content read
+    # beyond that is put back. Returns nil if end of file is reached.
+    #: (String? separator, Integer? limit) -> String?
+    def read_line(separator, limit)
+      return nil if eof?
+
+      # read a few bytes beyond the limit, in case they complete a character
+      read_limit  = limit + MAX_CHAR_COMPLETION if limit && @encoding != Encoding::BINARY
+      read_limit ||= limit
+
+      data        = "".b
+      buffer      = nil #: String?
+      search_from = 0
+      line_end    = nil #: Integer?
+
+      loop do
+        if separator && (index = data.byteindex(separator, search_from))
+          line_end = index + separator.bytesize
+          break
+        end
+
+        break if eof? || (read_limit && data.bytesize >= read_limit)
+
+        # the separator might start within the bytes we've already searched
+        search_from = [data.bytesize - (separator&.bytesize || 0) + 1, 0].max
+
+        remaining_length = read_limit - data.bytesize if read_limit
+        data << readpartial(remaining_length, buffer ||= "".b)
+      end
+
+      buffer.clear if buffer # deallocate string
+
+      line_end ||= data.bytesize
+      line_end   = limit + char_completion(data, limit) if limit && line_end > limit
+
+      line  = data.byteslice(0, line_end) #: String
+      extra = data.byteslice(line_end..) #: String
+
+      unread(extra) unless extra.empty?
+
+      data.clear # deallocate string
+
+      line
+    end
+
+    # Reads and discards consecutive newlines, used for paragraph mode.
+    #: () -> void
+    def skip_newlines
+      until eof?
+        data  = readpartial
+        index = data.index(/[^\n]/n)
+
+        if index
+          unread(data.byteslice(index..).to_s)
+          break
+        end
+      end
+    end
+
+    # Puts back content that was read, so that it's returned by the next read.
+    #: (String data) -> void
+    def unread(data)
+      @position -= data.bytesize
+
+      if cache
+        cache.pos -= data.bytesize
+      elsif (existing_buffer = @buffer)
+        existing_buffer.prepend(data)
+      else
+        @buffer = data
+      end
+    end
+
+    # The maximum number of bytes needed to complete a multibyte character cut
+    # at the end of a line (characters are at most 4 bytes in common encodings).
+    MAX_CHAR_COMPLETION = 3
+    private_constant :MAX_CHAR_COMPLETION
+
+    # Returns the number of bytes after `offset` needed to complete a multibyte
+    # character that `offset` cuts in half, or 0 if it doesn't cut one. Like
+    # IO#gets, it only completes characters which are valid in the encoding.
+    #: (String data, Integer offset) -> Integer
+    def char_completion(data, offset)
+      return 0 if @encoding == Encoding::BINARY
+
+      (1..MAX_CHAR_COMPLETION).each do |head_size|
+        break if head_size > offset
+
+        head = data.byteslice(offset - head_size, head_size).to_s.force_encoding(@encoding)
+        next if head.valid_encoding? # the bytes before offset are complete characters
+
+        (1..MAX_CHAR_COMPLETION + 1 - head_size).each do |completion_size|
+          char = data.byteslice(offset - head_size, head_size + completion_size).to_s
+          break if char.bytesize < head_size + completion_size # not enough content
+
+          char.force_encoding(@encoding)
+          return completion_size if char.valid_encoding? && char.length == 1
+        end
+      end
+
+      0
+    end
+
+    # Returns current chunk and retrieves the next chunk, skipping empty ones.
+    # If there are no more chunks, we know we've reached EOF.
     #: () -> String?
     def retrieve_chunk
       chunk = @next_chunk
-      @next_chunk = chunks_fiber.resume
+
+      loop do
+        @next_chunk = chunks_fiber.resume
+        break unless chunks_fiber.alive? && @next_chunk == ""
+      end
+
+      # work with raw bytes, as chunks in other encodings can't be combined
+      chunk = chunk.b if chunk && chunk.encoding != Encoding::BINARY
+
       chunk
     end
 
