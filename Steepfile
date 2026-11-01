@@ -9,8 +9,6 @@ target :lib do
   signature "sig"
 
   check "lib"
-  # Down::Wget is deprecated and intentionally left untyped.
-  ignore "lib/down/wget.rb"
 
   configure_code_diagnostics(D::Ruby.strict)
 end
