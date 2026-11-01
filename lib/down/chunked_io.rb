@@ -119,7 +119,6 @@ module Down
       data     = store.read(length, outbuf)
       data&.force_encoding(encoding) if encoding # StringIO < 3.1.2 changes it to binary
 
-      trim_store
       data
     end
 
@@ -154,7 +153,6 @@ module Down
         line = read_line(separator, limit, chomp)
       end
 
-      trim_store
       line
     end
 
@@ -175,14 +173,17 @@ module Down
 
       maxlen = maxlen ? maxlen.to_int : 16*1024 # implicit conversion, like IO#readpartial
 
-      fill_chunk while maxlen > 0 && store.eof? && !chunks_depleted?
+      fill_chunk while maxlen > 0 && pos >= @stored_bytes && !chunks_depleted?
+
+      # Reading only stored content allocates a string of that size, instead
+      # of maxlen bytes, which also avoids reallocating a reused buffer.
+      maxlen = [maxlen, @stored_bytes - pos].min if pos < @stored_bytes
 
       outbuf   = outbuf&.to_str
       encoding = outbuf&.encoding
       data     = outbuf ? store.readpartial(maxlen, outbuf) : store.readpartial(maxlen) # JRuby rejects nil outbuf
       data.force_encoding(encoding) if encoding # StringIO < 3.1.2 changes it to binary
 
-      trim_store
       data
     end
 
@@ -229,7 +230,7 @@ module Down
     def eof?
       fail IOError, "closed stream" if closed?
 
-      store.eof? && chunks_depleted?
+      pos >= @stored_bytes && chunks_depleted?
     end
     alias eof eof?
 
@@ -286,11 +287,6 @@ module Down
 
     private
 
-    # The minimum number of read bytes before they're discarded from the
-    # in-memory store of a non-rewindable Down::ChunkedIO.
-    TRIM_THRESHOLD = 64*1024
-    private_constant :TRIM_THRESHOLD
-
     # Returns the IO object that retrieved content is appended to and read
     # from. If Down::ChunkedIO is specified as rewindable, it's an anonymous
     # tempfile which keeps all retrieved content, otherwise it's a StringIO
@@ -343,8 +339,9 @@ module Down
         break unless line.nil? || store.eof?
         break if line_complete?(line, separator, limit, start)
 
+        store.pos = start # keeps the line start in the store when retrieving content
         fill_until(@stored_bytes + [@stored_bytes - @trimmed_bytes - start, 1].max)
-        store.pos = start
+        start = store.pos # retrieving content can discard content before it
       end
 
       store.seek(0, IO::SEEK_END) if line.nil? # skipped newlines in paragraph mode
@@ -442,10 +439,30 @@ module Down
         # unlike #write, #pwrite writes bytes as they are, without transcoding
         store.pwrite(chunk, @stored_bytes)
       when StringIO
-        # appending in binary encoding prevents encoding compatibility errors
-        string = store.string
-        string.force_encoding(Encoding::BINARY) << chunk
-        string.force_encoding(@encoding)
+        read_bytes   = store.pos
+        unread_bytes = store.string.bytesize - read_bytes
+
+        if unread_bytes == 0
+          # A copy shares the chunk's memory until either is modified, so all
+          # read content is discarded without copying the chunk.
+          string = chunk.dup
+        elsif read_bytes >= unread_bytes
+          # Strings read up to the end of the store share its memory, making
+          # appending copy the whole store. Copying only unread content instead
+          # discards read content, and copies fewer bytes than were read.
+          unread = store.string.force_encoding(Encoding::BINARY).byteslice(read_bytes, unread_bytes).to_s
+          string = String.new(capacity: unread_bytes + chunk.bytesize, encoding: Encoding::BINARY)
+          string << unread << chunk
+        else
+          # appending in binary encoding prevents encoding compatibility errors
+          store.string.force_encoding(Encoding::BINARY) << chunk
+          store.string.force_encoding(@encoding)
+        end
+
+        if string
+          @trimmed_bytes += read_bytes
+          store.string    = string.force_encoding(@encoding)
+        end
       end
 
       @stored_bytes += chunk.bytesize
@@ -464,27 +481,6 @@ module Down
     #: () -> void
     def fill_all
       fill_chunk until chunks_depleted?
-    end
-
-    # Discards content that was already read from the store of a
-    # non-rewindable Down::ChunkedIO, once it was all read or makes up at least
-    # half of the store, so that copying the remaining content stays cheap.
-    #
-    # Strings read from StringIO share its string, so appending a chunk to it
-    # would copy it first. Replacing a fully read string avoids that copy.
-    #: () -> void
-    def trim_store
-      store = @store
-      return unless store.is_a?(StringIO)
-
-      read_bytes = store.pos
-      string     = store.string
-
-      return if read_bytes == 0
-      return if read_bytes < string.bytesize && (read_bytes < TRIM_THRESHOLD || read_bytes < string.bytesize / 2)
-
-      store.string    = string.byteslice(read_bytes..).to_s
-      @trimmed_bytes += read_bytes
     end
 
     # Returns current chunk and retrieves the next chunk, skipping empty ones.

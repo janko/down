@@ -1182,10 +1182,21 @@ describe Down::ChunkedIO do
       io = chunked_io(chunks: [chunk, chunk, chunk].each, rewindable: false)
       assert_equal chunk * 2, io.read(chunk.bytesize * 2)
       assert_equal chunk.bytesize * 2, io.pos
-      assert_operator io.send(:store).string.bytesize, :<=, chunk.bytesize
       assert_equal chunk, io.gets
       assert_equal chunk.bytesize * 3, io.pos
+      assert_equal chunk.bytesize, io.send(:store).string.bytesize
       assert_equal true, io.eof?
+    end
+  end
+
+  it "doesn't modify retrieved chunks" do
+    [true, false].each do |rewindable|
+      chunks = ["ab\n".b, "cd\nef".b, "\ngh".b]
+      originals = chunks.map(&:dup)
+      io = chunked_io(chunks: chunks.each, encoding: "utf-8", rewindable: rewindable)
+      nil while io.gets
+      assert_equal originals, chunks
+      assert_equal [Encoding::BINARY] * 3, chunks.map(&:encoding)
     end
   end
 

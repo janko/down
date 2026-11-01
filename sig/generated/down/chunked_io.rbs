@@ -166,10 +166,6 @@ module Down
 
     private
 
-    # The minimum number of read bytes before they're discarded from the
-    # in-memory store of a non-rewindable Down::ChunkedIO.
-    TRIM_THRESHOLD: untyped
-
     # Returns the IO object that retrieved content is appended to and read
     # from. If Down::ChunkedIO is specified as rewindable, it's an anonymous
     # tempfile which keeps all retrieved content, otherwise it's a StringIO
@@ -227,15 +223,6 @@ module Down
     # Retrieves all remaining chunks.
     # : () -> void
     def fill_all: () -> void
-
-    # Discards content that was already read from the store of a
-    # non-rewindable Down::ChunkedIO, once it was all read or makes up at least
-    # half of the store, so that copying the remaining content stays cheap.
-    #
-    # Strings read from StringIO share its string, so appending a chunk to it
-    # would copy it first. Replacing a fully read string avoids that copy.
-    # : () -> void
-    def trim_store: () -> void
 
     # Returns current chunk and retrieves the next chunk, skipping empty ones.
     # If there are no more chunks, we know we've reached EOF.
