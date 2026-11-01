@@ -1,4 +1,4 @@
-## Unreleased
+## 5.6.2 (2026-11-01)
 
 * Return `nil` `Down::ChunkedIO#size` from `Down::NetHttp.open` when net/http decompresses the body (@wtn)
 
