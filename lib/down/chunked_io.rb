@@ -1,6 +1,7 @@
 # frozen-string-literal: true
 
 require "tempfile"
+require "stringio"
 require "fiber"
 
 module Down
@@ -12,13 +13,19 @@ module Down
   # * IO#gets
   # * IO#size
   # * IO#pos
+  # * IO#seek
   # * IO#eof?
   # * IO#rewind
   # * IO#close
   #
-  # By default the Down::ChunkedIO caches all read content into a tempfile,
-  # allowing it to be rewindable. If rewindability won't be used, it can be
-  # disabled by setting `:rewindable` to false, which eliminates any disk I/O.
+  # Retrieved chunks are appended to a backing store which the reading methods
+  # delegate to, so they behave like the corresponding native IO methods. New
+  # chunks are retrieved only when the store runs out of content.
+  #
+  # By default the store is a tempfile which keeps all read content, allowing
+  # the Down::ChunkedIO to be rewindable. If rewindability won't be used, it
+  # can be disabled by setting `:rewindable` to false, in which case the store
+  # is an in-memory buffer that discards read content, eliminating disk I/O.
   #
   # Any cleanup code (i.e. ensure block) that the given enumerator carries is
   # guaranteed to get executed, either when all content has been retrieved or
@@ -27,32 +34,40 @@ module Down
   class ChunkedIO
     attr_accessor :size #: Integer?
     attr_accessor :data #: Hash[Symbol, untyped]
-    attr_accessor :encoding #: Encoding
+    attr_reader :encoding #: Encoding
 
     # @rbs @chunks: _Each[String] & Object
     # @rbs @on_close: (^() -> void | (_Callable & Object))?
     # @rbs @rewindable: bool
-    # @rbs @buffer: String?
-    # @rbs @position: Integer
     # @rbs @next_chunk: String?
     # @rbs @closed: bool
-    # @rbs @cache: Tempfile?
+    # @rbs @store: (File | StringIO)?
+    # @rbs @stored_bytes: Integer
+    # @rbs @trimmed_bytes: Integer
     # @rbs @chunks_fiber: Fiber?
 
     #: (chunks: _Each[String] & Object, ?size: Integer?, ?on_close: (^() -> void | (_Callable & Object))?, ?data: Hash[Symbol, untyped], ?rewindable: bool, ?encoding: (String | Encoding)?) -> void
     def initialize(chunks:, size: nil, on_close: nil, data: {}, rewindable: true, encoding: nil)
-      @chunks     = chunks
-      @size       = size
-      @on_close   = on_close
-      @data       = data
-      @encoding   = find_encoding(encoding || "binary")
-      @rewindable = rewindable
-      @buffer     = nil
-      @position   = 0
-      @next_chunk = nil
-      @closed     = false
+      @chunks        = chunks
+      @size          = size
+      @on_close      = on_close
+      @data          = data
+      @encoding      = find_encoding(encoding || "binary")
+      @rewindable    = rewindable
+      @next_chunk    = nil
+      @closed        = false
+      @store         = nil
+      @stored_bytes  = 0 # number of bytes appended to the store
+      @trimmed_bytes = 0 # number of read bytes discarded from the store
 
       retrieve_chunk # fetch first chunk so that we know whether the file is empty
+    end
+
+    # Sets the encoding that read content is returned in.
+    #: (String | Encoding encoding) -> void
+    def encoding=(encoding)
+      @encoding = find_encoding(encoding)
+      @store&.set_encoding(@encoding, @encoding)
     end
 
     # For compatibility with multipart-post gem.
@@ -82,35 +97,30 @@ module Down
     # available, as a binary string.
     #
     # With `outbuf` argument each call will return that same string object,
-    # where the value is replaced with retrieved content. When `length` is
-    # given, the buffer keeps its encoding.
+    # where the value is replaced with retrieved content.
     #
     # If end of file is reached, returns empty string if called without
     # arguments, or nil if called with arguments. Raises IOError if closed.
     #: (?nil, ?string? outbuf) -> String
     #: (?int? length, ?string? outbuf) -> String?
     def read(length = nil, outbuf = nil)
-      # Implicit conversion, like IO#read
-      length = length.to_int if length
-      fail ArgumentError, "negative length #{length} given" if length && length < 0
-      outbuf = outbuf.to_str if outbuf
-
       fail IOError, "closed stream" if closed?
 
-      encoding = length ? (outbuf&.encoding || Encoding::BINARY) : @encoding
-      data     = outbuf ? outbuf.clear.force_encoding(Encoding::BINARY) : "".b
+      length = length&.to_int # implicit conversion, like IO#read
+      outbuf = outbuf&.to_str
 
-      remaining_length = length
-
-      until remaining_length == 0 || eof?
-        data << readpartial(remaining_length, buffer ||= "".b)
-        remaining_length = length - data.bytesize if length
+      if length
+        fill_until(pos + length)
+      else
+        fill_all
       end
 
-      buffer.clear if buffer # deallocate string
+      encoding = outbuf&.encoding if length
+      data     = store.read(length, outbuf)
+      data&.force_encoding(encoding) if encoding # StringIO < 3.1.2 changes it to binary
 
-      data.force_encoding(encoding)
-      data unless data.empty? && length && length > 0
+      trim_store
+      data
     end
 
     # Implements IO#gets semantics. Without arguments it retrieves lines of
@@ -125,8 +135,7 @@ module Down
     # * if `separator` is nil returns all content
     #
     # With `limit` argument returns maximum of that amount of bytes, plus any
-    # bytes needed to complete a multibyte character. A negative limit means no
-    # limit, and a zero limit returns an empty string.
+    # bytes needed to complete a multibyte character.
     #
     # With `chomp: true` removes the trailing separator from the line.
     #
@@ -136,146 +145,71 @@ module Down
     def gets(separator_or_limit = $/, limit = nil, chomp: false)
       fail IOError, "closed stream" if closed?
 
-      if separator_or_limit.is_a?(Integer)
-        separator = $/
-        limit     = separator_or_limit
+      separator = separator_or_limit.is_a?(Integer) ? $/ : separator_or_limit
+      limit     = separator_or_limit if separator_or_limit.is_a?(Integer)
+
+      if separator == "" && store.is_a?(StringIO)
+        line = read_paragraph(limit, chomp)
       else
-        separator = separator_or_limit
+        line = read_line(separator, limit, chomp)
       end
 
-      limit = nil if limit && limit < 0 # negative limit means no limit
-
-      return String.new(encoding: @encoding) if limit == 0
-
-      paragraph = separator == ""
-      separator = paragraph ? "\n\n".b : separator&.b
-
-      skip_newlines if paragraph
-
-      line = read_line(separator, limit)
-
-      return nil if line.nil?
-
-      skip_newlines if paragraph
-
-      if chomp && separator && line.end_with?(separator)
-        line = line.byteslice(0, line.bytesize - separator.bytesize) #: String
-        line.chomp!("\r") if separator == "\n"
-      end
-
-      line.force_encoding(@encoding)
+      trim_store
+      line
     end
 
     # Implements IO#readpartial semantics. If there is any content readily
-    # available reads from it, otherwise fetches and reads from the next chunk.
-    # It writes to and reads from the cache when needed.
-    #
-    # Without arguments it either returns all content that's readily available,
-    # or the next chunk. This is useful when you don't care about the size of
-    # chunks and you want to minimize string allocations.
+    # available reads from it, otherwise retrieves the next chunk and reads
+    # from it.
     #
     # With `maxlen` argument returns maximum of that amount of bytes (default
     # is 16KB).
     #
     # With `outbuf` argument each call will return that same string object,
-    # where the value is replaced with retrieved content. The returned string
-    # has the encoding of `outbuf`, or is binary when `outbuf` isn't given.
+    # where the value is replaced with retrieved content.
     #
     # Raises EOFError if end of file is reached. Raises IOError if closed.
     #: (?int? maxlen, ?string? outbuf) -> String
     def readpartial(maxlen = nil, outbuf = nil)
-      # Implicit conversion, like IO#readpartial
-      maxlen = maxlen ? maxlen.to_int : 16*1024
-      fail ArgumentError, "negative length #{maxlen} given" if maxlen < 0
-      outbuf = outbuf.to_str if outbuf
-
       fail IOError, "closed stream" if closed?
 
-      encoding = outbuf ? outbuf.encoding : Encoding::BINARY
-      data     = outbuf ? outbuf.clear.force_encoding(Encoding::BINARY) : "".b
+      maxlen = maxlen ? maxlen.to_int : 16*1024 # implicit conversion, like IO#readpartial
 
-      return data.force_encoding(encoding) if maxlen == 0
+      fill_chunk while maxlen > 0 && store.eof? && !chunks_depleted?
 
-      cache.read(maxlen, data) if cache && !cache.eof?
+      outbuf   = outbuf&.to_str
+      encoding = outbuf&.encoding
+      data     = outbuf ? store.readpartial(maxlen, outbuf) : store.readpartial(maxlen) # JRuby rejects nil outbuf
+      data.force_encoding(encoding) if encoding # StringIO < 3.1.2 changes it to binary
 
-      if @buffer.nil? && data.empty?
-        if chunks_depleted?
-          data.force_encoding(encoding)
-          fail EOFError, "end of file reached"
-        end
-
-        @buffer = retrieve_chunk
-      end
-
-      remaining_length = maxlen - data.bytesize
-
-      buffer = @buffer
-
-      unless buffer.nil? || remaining_length == 0
-        if remaining_length < buffer.bytesize
-          buffered_data = buffer.byteslice(0, remaining_length) #: String
-          @buffer       = buffer.byteslice(remaining_length..-1)
-        else
-          buffered_data = buffer
-          @buffer       = nil
-        end
-
-        data << buffered_data
-
-        cache.write(buffered_data) if cache
-
-        buffered_data.clear unless buffered_data.frozen?
-      end
-
-      @position += data.bytesize
-
-      data.force_encoding(encoding)
+      trim_store
+      data
     end
 
-    # Implements IO#seek semantics. Like IO#seek, it allows seeking beyond end
-    # of file, and returns 0.
+    # Implements IO#seek semantics. It retrieves content up to the target
+    # position. Raises Errno::ESPIPE if not rewindable.
     #: (int amount, ?(Integer | Symbol) whence) -> Integer
     def seek(amount, whence = IO::SEEK_SET)
       fail IOError, "closed stream" if closed?
-      fail Errno::ESPIPE if cache.nil?
+      fail Errno::ESPIPE unless rewindable?
 
       amount = amount.to_int
-      original_position = @position
 
       case whence
       when IO::SEEK_SET, :SET
-        target_pos = amount
+        whence = IO::SEEK_SET
+        fill_until(amount)
       when IO::SEEK_CUR, :CUR
-        target_pos = @position + amount
+        whence = IO::SEEK_CUR
+        fill_until(pos + amount)
       when IO::SEEK_END, :END
-        unless chunks_depleted? && @buffer.nil?
-          cache.seek(0, IO::SEEK_END)
-          IO.copy_stream(self, File::NULL)
-        end
-
-        target_pos = cache.size + amount
+        whence = IO::SEEK_END
+        fill_all
       else
         fail ArgumentError, "invalid whence: #{whence.inspect}"
       end
 
-      # retrieve content up to the target position, if it's not cached yet
-      if target_pos > cache.size
-        cache.seek(0, IO::SEEK_END)
-        IO.copy_stream(self, File::NULL, target_pos - cache.size)
-      end
-
-      begin
-        cache.seek(target_pos)
-      rescue SystemCallError # e.g. seeking before start of file
-        # restore position changed by retrieving content
-        cache.seek(original_position)
-        @position = original_position
-        raise
-      end
-
-      @position = target_pos
-
-      0
+      store.seek(amount, whence)
     end
 
     # Implements IO#pos semantics. Returns the current position of the
@@ -284,43 +218,42 @@ module Down
     def pos
       fail IOError, "closed stream" if closed?
 
-      @position
+      @trimmed_bytes + store.pos
     end
     alias tell pos
 
     # Implements IO#eof? semantics. Returns whether we've reached end of file.
-    # It returns true if cache is at the end and there is no more content to
-    # retrieve. Raises IOError if closed.
+    # It returns true if the store is at the end and there is no more content
+    # to retrieve. Raises IOError if closed.
     #: () -> bool
     def eof?
       fail IOError, "closed stream" if closed?
 
-      return false if cache && !cache.eof?
-      @buffer.nil? && chunks_depleted?
+      store.eof? && chunks_depleted?
     end
     alias eof eof?
 
-    # Implements IO#rewind semantics. Rewinds the Down::ChunkedIO by rewinding
-    # the cache and setting the position to the beginning of the file. Raises
-    # IOError if closed or not rewindable.
+    # Implements IO#rewind semantics. Rewinds the Down::ChunkedIO by setting
+    # the position to the beginning of the file. Raises IOError if closed or
+    # not rewindable.
     #: () -> Integer
     def rewind
       fail IOError, "closed stream" if closed?
-      fail IOError, "this Down::ChunkedIO is not rewindable" if cache.nil?
+      fail IOError, "this Down::ChunkedIO is not rewindable" unless rewindable?
 
-      cache.rewind
-      @position = 0
+      store.rewind
     end
 
     # Implements IO#close semantics. Closes the Down::ChunkedIO by terminating
-    # chunk retrieval and deleting the cached content.
+    # chunk retrieval and deleting the retrieved content.
     #: () -> void
     def close
       return if @closed
 
       chunks_fiber.resume(:terminate) if chunks_fiber.alive?
-      cache.close! if cache
-      @buffer = nil
+
+      @store&.close
+      @store  = nil
       @closed = true
     end
 
@@ -353,123 +286,205 @@ module Down
 
     private
 
-    # If Down::ChunkedIO is specified as rewindable, returns a new Tempfile for
-    # writing read content to. This allows the Down::ChunkedIO to be rewinded.
-    # @rbs %a{pure}
-    #: () -> Tempfile?
-    def cache
-      return if !rewindable?
+    # The minimum number of read bytes before they're discarded from the
+    # in-memory store of a non-rewindable Down::ChunkedIO.
+    TRIM_THRESHOLD = 64*1024
+    private_constant :TRIM_THRESHOLD
 
-      @cache ||= (
-        tempfile = Tempfile.new("down-chunked_io", binmode: true)
-        tempfile.chmod(0000)      # make sure nobody else can read or write to it
-        tempfile.unlink if posix? # remove entry from filesystem if it's POSIX
-        tempfile
+    # Returns the IO object that retrieved content is appended to and read
+    # from. If Down::ChunkedIO is specified as rewindable, it's an anonymous
+    # tempfile which keeps all retrieved content, otherwise it's a StringIO
+    # from which read content gets discarded.
+    # @rbs %a{pure}
+    #: () -> (File | StringIO)
+    def store
+      @store ||= (
+        if rewindable?
+          # the file is already deleted (or never named on Linux), so it gets
+          # cleaned up once closed, and no other process can open it
+          store = Tempfile.create("down-chunked_io", anonymous: true)
+          store.binmode # anonymous tempfiles ignore the :binmode option
+        else
+          store = StringIO.new(String.new(encoding: Encoding::BINARY))
+        end
+
+        # passing the same internal encoding disables Encoding.default_internal
+        store.set_encoding(@encoding, @encoding)
+        store
       )
     end
 
-    # Reads content up to and including the separator, or up to the limit
-    # (completing a multibyte character if the limit cuts it). Any content read
-    # beyond that is put back. Returns nil if end of file is reached.
-    #: (String? separator, Integer? limit) -> String?
-    def read_line(separator, limit)
-      return nil if eof?
-
-      # read a few bytes beyond the limit, in case they complete a character
-      read_limit  = limit + MAX_CHAR_COMPLETION if limit && @encoding != Encoding::BINARY
-      read_limit ||= limit
-
-      data        = "".b
-      buffer      = nil #: String?
-      search_from = 0
-      line_end    = nil #: Integer?
+    # Reads a line from the store, retrieving more content if the line might
+    # continue in content that wasn't retrieved yet.
+    #: (String? separator, Integer? limit, boolish chomp) -> String?
+    def read_line(separator, limit, chomp)
+      start = store.pos
+      line  = nil #: String?
 
       loop do
-        if separator && (index = data.byteindex(separator, search_from))
-          line_end = index + separator.bytesize
-          break
+        line = store.gets(separator, limit, chomp:)
+
+        # JRuby's StringIO returns a truncated line and moves to a wrong
+        # position when the limit cuts a multibyte character that's incomplete
+        # at the end of the store. Like IO, we return the remaining content at
+        # the end of file, otherwise we retry with more content.
+        if RUBY_ENGINE == "jruby" && line && truncated_line?(separator, limit, start)
+          store.pos = start
+          line      = chunks_depleted? ? store.read : nil
         end
 
-        break if eof? || (read_limit && data.bytesize >= read_limit)
+        # If the store ran out of content, the line might continue in content
+        # that wasn't retrieved yet. In that case we retrieve more content and
+        # read the line again, at least doubling the content after the line
+        # start, so that lines spanning many chunks aren't re-read many times.
+        # StringIO doesn't move to the end when only newlines are left in
+        # paragraph mode, so we also retrieve more content when there's no line.
+        break if chunks_depleted?
+        break unless line.nil? || store.eof?
+        break if line_complete?(line, separator, limit, start)
 
-        # the separator might start within the bytes we've already searched
-        search_from = [data.bytesize - (separator&.bytesize || 0) + 1, 0].max
-
-        remaining_length = read_limit - data.bytesize if read_limit
-        data << readpartial(remaining_length, buffer ||= "".b)
+        fill_until(@stored_bytes + [@stored_bytes - @trimmed_bytes - start, 1].max)
+        store.pos = start
       end
 
-      buffer.clear if buffer # deallocate string
-
-      line_end ||= data.bytesize
-      line_end   = limit + char_completion(data, limit) if limit && line_end > limit
-
-      line  = data.byteslice(0, line_end) #: String
-      extra = data.byteslice(line_end..) #: String
-
-      unread(extra) unless extra.empty?
-
-      data.clear # deallocate string
+      store.seek(0, IO::SEEK_END) if line.nil? # skipped newlines in paragraph mode
 
       line
     end
 
-    # Reads and discards consecutive newlines, used for paragraph mode.
+    # Reads a paragraph from a StringIO store. StringIO's paragraph mode
+    # differs from IO's in how it applies the limit and chomps lines, so we
+    # implement it on top of the double-newline separator, like IO does.
+    #: (Integer? limit, boolish chomp) -> String?
+    def read_paragraph(limit, chomp)
+      skip_newlines
+
+      line = read_line("\n\n", limit, chomp)
+
+      skip_newlines if line # IO skips them even when the limit cut the line
+
+      line
+    end
+
+    # Moves the store position past any consecutive newlines, retrieving more
+    # content as needed.
     #: () -> void
     def skip_newlines
-      until eof?
-        data  = readpartial
-        index = data.index(/[^\n]/n)
+      loop do
+        fill_chunk while store.eof? && !chunks_depleted?
 
-        if index
-          unread(data.byteslice(index..).to_s)
-          break
-        end
+        byte = store.getbyte
+        next if byte == 10 # newline
+
+        store.pos -= 1 if byte
+        break
       end
     end
 
-    # Puts back content that was read, so that it's returned by the next read.
-    #: (String data) -> void
-    def unread(data)
-      @position -= data.bytesize
+    # Returns whether the line just read from the given start position of a
+    # StringIO store was truncated. A line read with a positive limit that
+    # stops before the end of the store must reach the limit or end with the
+    # separator, which JRuby's StringIO violates when the limit cuts a
+    # multibyte character that's incomplete at the end of the store.
+    #: (String? separator, Integer? limit, Integer start) -> bool
+    def truncated_line?(separator, limit, start)
+      return false unless store.is_a?(StringIO) && limit && limit > 0
 
-      if cache
-        cache.pos -= data.bytesize
-      elsif (existing_buffer = @buffer)
-        existing_buffer.prepend(data)
-      else
-        @buffer = data
+      line_bytes = store.pos - start
+
+      return false if line_bytes >= limit || store.eof?
+
+      if separator.is_a?(String) && !separator.empty? && line_bytes >= separator.bytesize
+        return false if store_bytes(store.pos - separator.bytesize, separator.bytesize) == separator.b
+      end
+
+      true
+    end
+
+    # Returns whether the line read from the given start position of the store
+    # can't continue in content that wasn't retrieved yet, which is when it
+    # ends with the separator or reaches the limit with a complete character.
+    # In paragraph mode it's never complete, as newlines after it are skipped.
+    #: (String? line, String? separator, Integer? limit, Integer start) -> bool
+    def line_complete?(line, separator, limit, start)
+      return false if line.nil? || separator == ""
+
+      line_bytes = store.pos - start
+
+      if separator.is_a?(String) && !separator.empty? && line_bytes >= separator.bytesize
+        return true if store_bytes(store.pos - separator.bytesize, separator.bytesize) == separator.b
+      end
+
+      return true if limit && limit >= 0 && line_bytes >= limit && line.valid_encoding?
+
+      false
+    end
+
+    # Returns the given number of bytes stored at the given store position.
+    #: (Integer position, Integer length) -> String
+    def store_bytes(position, length)
+      case store
+      when File     then store.pread(length, position)
+      when StringIO then store.string.byteslice(position, length).to_s.b
       end
     end
 
-    # The maximum number of bytes needed to complete a multibyte character cut
-    # at the end of a line (characters are at most 4 bytes in common encodings).
-    MAX_CHAR_COMPLETION = 3
-    private_constant :MAX_CHAR_COMPLETION
+    # Retrieves the next chunk and appends it to the store, without changing
+    # the store position. Returns false if there are no more chunks.
+    #: () -> bool
+    def fill_chunk
+      return false if chunks_depleted?
 
-    # Returns the number of bytes after `offset` needed to complete a multibyte
-    # character that `offset` cuts in half, or 0 if it doesn't cut one. Like
-    # IO#gets, it only completes characters which are valid in the encoding.
-    #: (String data, Integer offset) -> Integer
-    def char_completion(data, offset)
-      return 0 if @encoding == Encoding::BINARY
+      chunk = retrieve_chunk #: String
 
-      (1..MAX_CHAR_COMPLETION).each do |head_size|
-        break if head_size > offset
-
-        head = data.byteslice(offset - head_size, head_size).to_s.force_encoding(@encoding)
-        next if head.valid_encoding? # the bytes before offset are complete characters
-
-        (1..MAX_CHAR_COMPLETION + 1 - head_size).each do |completion_size|
-          char = data.byteslice(offset - head_size, head_size + completion_size).to_s
-          break if char.bytesize < head_size + completion_size # not enough content
-
-          char.force_encoding(@encoding)
-          return completion_size if char.valid_encoding? && char.length == 1
-        end
+      case store
+      when File
+        # unlike #write, #pwrite writes bytes as they are, without transcoding
+        store.pwrite(chunk, @stored_bytes)
+      when StringIO
+        # appending in binary encoding prevents encoding compatibility errors
+        string = store.string
+        string.force_encoding(Encoding::BINARY) << chunk
+        string.force_encoding(@encoding)
       end
 
-      0
+      @stored_bytes += chunk.bytesize
+
+      true
+    end
+
+    # Retrieves chunks until the store holds content up to the given
+    # position, or until there are no more chunks.
+    #: (Integer position) -> void
+    def fill_until(position)
+      fill_chunk while @stored_bytes < position && !chunks_depleted?
+    end
+
+    # Retrieves all remaining chunks.
+    #: () -> void
+    def fill_all
+      fill_chunk until chunks_depleted?
+    end
+
+    # Discards content that was already read from the store of a
+    # non-rewindable Down::ChunkedIO, once it was all read or makes up at least
+    # half of the store, so that copying the remaining content stays cheap.
+    #
+    # Strings read from StringIO share its string, so appending a chunk to it
+    # would copy it first. Replacing a fully read string avoids that copy.
+    #: () -> void
+    def trim_store
+      store = @store
+      return unless store.is_a?(StringIO)
+
+      read_bytes = store.pos
+      string     = store.string
+
+      return if read_bytes == 0
+      return if read_bytes < string.bytesize && (read_bytes < TRIM_THRESHOLD || read_bytes < string.bytesize / 2)
+
+      store.string    = string.byteslice(read_bytes..).to_s
+      @trimmed_bytes += read_bytes
     end
 
     # Returns current chunk and retrieves the next chunk, skipping empty ones.
@@ -520,12 +535,6 @@ module Down
       Encoding.find(encoding) #: Encoding
     rescue ArgumentError
       Encoding::BINARY
-    end
-
-    # Returns whether the filesystem has POSIX semantics.
-    #: () -> bool
-    def posix?
-      RUBY_PLATFORM !~ /(mswin|mingw|cygwin|java)/
     end
   end
 end

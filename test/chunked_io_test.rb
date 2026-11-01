@@ -1064,4 +1064,171 @@ describe Down::ChunkedIO do
     assert_equal Hash["h1"=>"d", "h2"=>"e", "h3"=>"f"], rows[1].to_h
     assert_equal Hash["h1"=>"g", "h2"=>"h", "h3"=>"i"], rows[2].to_h
   end
+
+  describe "parity with IO" do
+    CONTENT = "\n\nhéllo\r\nwörld--€\n\n\n\npara two\nline--x--y€z\r\n\nend\n"
+
+    # Returns a native IO with the given content as the reference.
+    def native_io(content, encoding)
+      file = Tempfile.new("down-chunked_io-test", binmode: true)
+      file.write(content.b)
+      file.rewind
+      file.set_encoding(encoding, encoding)
+      file
+    end
+
+    def assert_same_string(expected, actual, message)
+      if expected.nil?
+        assert_nil actual, message
+      else
+        assert_equal expected, actual, message
+        assert_equal expected.encoding, actual.encoding, message
+      end
+    end
+
+    def sliced_io(content, slice_size, **options)
+      chunks = content.b.each_char.each_slice(slice_size).map(&:join)
+      chunked_io(chunks: chunks.each, **options)
+    end
+
+    [true, false].each do |rewindable|
+      describe rewindable ? "when rewindable" : "when not rewindable" do
+        [[], ["\n"], ["--"], ["\r\n"], [""], [nil], [1], [3], [-1], ["\n", 4],
+         ["--", 2], ["", 5], [nil, 2]].each do |args|
+          [false, true].each do |chomp|
+            it "returns the same lines from #gets(#{args.map(&:inspect).join(", ")}, chomp: #{chomp})" do
+              [Encoding::UTF_8, Encoding::BINARY].each do |encoding|
+                [1, 2, 3, 7, 100].each do |slice_size|
+                  native = native_io(CONTENT, encoding)
+                  io     = sliced_io(CONTENT, slice_size, encoding: encoding, rewindable: rewindable)
+
+                  loop do
+                    expected = native.gets(*args, chomp: chomp)
+                    actual   = io.gets(*args, chomp: chomp)
+                    message  = "encoding=#{encoding}, slice_size=#{slice_size}"
+
+                    assert_same_string expected, actual, message
+                    assert_equal native.pos, io.pos, message
+                    assert_equal native.eof?, io.eof?, message
+
+                    break if expected.nil?
+                  end
+                end
+              end
+            end
+          end
+        end
+
+        [[1], [2], [5], [nil], [3, "".dup], [4, "".b], [nil, "".dup]].each do |args|
+          it "returns the same content from #read(#{args.map(&:inspect).join(", ")})" do
+            [Encoding::UTF_8, Encoding::BINARY].each do |encoding|
+              [1, 3, 100].each do |slice_size|
+                native = native_io(CONTENT, encoding)
+                io     = sliced_io(CONTENT, slice_size, encoding: encoding, rewindable: rewindable)
+
+                loop do
+                  expected = native.read(*args.map { |arg| arg.dup })
+                  actual   = io.read(*args.map { |arg| arg.dup })
+                  message  = "encoding=#{encoding}, slice_size=#{slice_size}"
+
+                  assert_same_string expected, actual, message
+                  assert_equal native.pos, io.pos, message
+
+                  break if expected.nil? || expected.empty?
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  describe "content retrieval" do
+    it "doesn't retrieve more chunks when a line ends at a chunk boundary" do
+      chunks = Enumerator.new do |y|
+        y << "a\n"
+        y << "b\n"
+        raise "never reached"
+      end
+      io = chunked_io(chunks: chunks)
+      assert_equal "a\n", io.gets
+    end
+
+    it "retrieves more chunks when a line limit cuts a multibyte character" do
+      io = chunked_io(chunks: ["a\xC3".b, "\xA9b".b].each, encoding: "utf-8")
+      assert_equal "aé", io.gets(2)
+      assert_equal "b",  io.gets
+    end
+
+    it "returns an incomplete multibyte character cut by the limit at end of file" do
+      [true, false].each do |rewindable|
+        io = chunked_io(chunks: ["-\xE2".b, "\x82".b].each, encoding: "utf-8", rewindable: rewindable)
+        assert_equal "-\xE2\x82".b, io.gets(nil, 2).b
+        assert_nil io.gets
+      end
+    end
+
+    it "reads lines spanning many chunks" do
+      io = chunked_io(chunks: (["a"] * 10_000 + ["\nb"]).each)
+      assert_equal "a" * 10_000 + "\n", io.gets
+      assert_equal "b", io.gets
+    end
+  end
+
+  describe "when not rewindable" do
+    it "discards read content while keeping the position" do
+      chunk = "a" * 50_000 + "\n"
+      io = chunked_io(chunks: [chunk, chunk, chunk].each, rewindable: false)
+      assert_equal chunk * 2, io.read(chunk.bytesize * 2)
+      assert_equal chunk.bytesize * 2, io.pos
+      assert_operator io.send(:store).string.bytesize, :<=, chunk.bytesize
+      assert_equal chunk, io.gets
+      assert_equal chunk.bytesize * 3, io.pos
+      assert_equal true, io.eof?
+    end
+  end
+
+  describe "#encoding=" do
+    it "changes the encoding of read content" do
+      io = chunked_io(chunks: ["ab\n", "cd"].each)
+      assert_equal Encoding::BINARY, io.gets.encoding
+      io.encoding = "utf-8"
+      assert_equal Encoding::UTF_8, io.encoding
+      assert_equal Encoding::UTF_8, io.read.encoding
+    end
+
+    it "falls back to binary encoding" do
+      io = chunked_io(chunks: ["ab"].each, encoding: "utf-8")
+      io.encoding = "unknown"
+      assert_equal Encoding::BINARY, io.encoding
+      assert_equal Encoding::BINARY, io.read.encoding
+    end
+  end
+
+  it "doesn't transcode to the default internal encoding" do
+    [true, false].each do |rewindable|
+      io = chunked_io(chunks: ["é\n".b].each, encoding: "utf-8", rewindable: rewindable)
+      original_internal, original_verbose = Encoding.default_internal, $VERBOSE
+      begin
+        $VERBOSE = nil # silence warning about setting default internal encoding
+        Encoding.default_internal = Encoding::ISO_8859_1
+        assert_equal "é\n", io.gets
+      ensure
+        Encoding.default_internal = original_internal
+        $VERBOSE = original_verbose
+      end
+    end
+  end
+
+  it "caches content into an anonymous tempfile" do
+    io = chunked_io(chunks: ["ab"].each)
+    io.read
+    tempfile = io.send(:store)
+    assert_kind_of File, tempfile
+    assert_equal false, File.file?(tempfile.path)
+    assert_equal true, tempfile.binmode?
+    io.close
+    assert_equal true, tempfile.closed?
+  end
 end

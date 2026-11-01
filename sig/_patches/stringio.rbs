@@ -1,0 +1,7 @@
+# StringIO#gets also accepts a nil separator (reading all remaining content)
+# and a nil limit (no limit), like IO#gets, which the stdlib signature
+# (rbs 4.2) doesn't allow.
+class StringIO
+  def gets: (String? sep, ?Integer? limit, ?chomp: boolish) -> String?
+          | ...
+end

@@ -1,0 +1,6 @@
+# IO#gets also accepts a nil limit (no limit) after a separator, which the core
+# signature (rbs 4.2) doesn't allow.
+class IO
+  def gets: (string? sep, ?int? limit, ?chomp: boolish) -> String?
+          | ...
+end

@@ -34,6 +34,10 @@
 
 * Raise `IOError` from `Down::ChunkedIO#pos` and `#seek` when closed (@janko)
 
+* Make `Down::ChunkedIO` delegate `#read`, `#gets`, `#readpartial` and `#seek` to its `Tempfile` (or an in-memory buffer when not rewindable), so that they behave like the native `IO` methods (@janko)
+
+* Cache `Down::ChunkedIO` content into an anonymous tempfile, which is never visible on the filesystem, and add `tempfile >= 0.3.1` as a dependency (@janko)
+
 ## 5.6.2 (2026-11-01)
 
 * Return `nil` `Down::ChunkedIO#size` from `Down::NetHttp.open` when net/http decompresses the body (@wtn)

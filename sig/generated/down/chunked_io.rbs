@@ -9,13 +9,19 @@ module Down
   # * IO#gets
   # * IO#size
   # * IO#pos
+  # * IO#seek
   # * IO#eof?
   # * IO#rewind
   # * IO#close
   #
-  # By default the Down::ChunkedIO caches all read content into a tempfile,
-  # allowing it to be rewindable. If rewindability won't be used, it can be
-  # disabled by setting `:rewindable` to false, which eliminates any disk I/O.
+  # Retrieved chunks are appended to a backing store which the reading methods
+  # delegate to, so they behave like the corresponding native IO methods. New
+  # chunks are retrieved only when the store runs out of content.
+  #
+  # By default the store is a tempfile which keeps all read content, allowing
+  # the Down::ChunkedIO to be rewindable. If rewindability won't be used, it
+  # can be disabled by setting `:rewindable` to false, in which case the store
+  # is an in-memory buffer that discards read content, eliminating disk I/O.
   #
   # Any cleanup code (i.e. ensure block) that the given enumerator carries is
   # guaranteed to get executed, either when all content has been retrieved or
@@ -26,19 +32,19 @@ module Down
 
     attr_accessor data: Hash[Symbol, untyped]
 
-    attr_accessor encoding: Encoding
+    attr_reader encoding: Encoding
 
     @chunks_fiber: Fiber?
 
-    @cache: Tempfile?
+    @trimmed_bytes: Integer
+
+    @stored_bytes: Integer
+
+    @store: (File | StringIO)?
 
     @closed: bool
 
     @next_chunk: String?
-
-    @position: Integer
-
-    @buffer: String?
 
     @rewindable: bool
 
@@ -48,6 +54,10 @@ module Down
 
     # : (chunks: _Each[String] & Object, ?size: Integer?, ?on_close: (^() -> void | (_Callable & Object))?, ?data: Hash[Symbol, untyped], ?rewindable: bool, ?encoding: (String | Encoding)?) -> void
     def initialize: (chunks: _Each[String] & Object, ?size: Integer?, ?on_close: (^() -> void | (_Callable & Object))?, ?data: Hash[Symbol, untyped], ?rewindable: bool, ?encoding: (String | Encoding)?) -> void
+
+    # Sets the encoding that read content is returned in.
+    # : (String | Encoding encoding) -> void
+    def encoding=: (String | Encoding encoding) -> void
 
     # For compatibility with multipart-post gem.
     # : () -> Integer?
@@ -66,8 +76,7 @@ module Down
     # available, as a binary string.
     #
     # With `outbuf` argument each call will return that same string object,
-    # where the value is replaced with retrieved content. When `length` is
-    # given, the buffer keeps its encoding.
+    # where the value is replaced with retrieved content.
     #
     # If end of file is reached, returns empty string if called without
     # arguments, or nil if called with arguments. Raises IOError if closed.
@@ -88,8 +97,7 @@ module Down
     # * if `separator` is nil returns all content
     #
     # With `limit` argument returns maximum of that amount of bytes, plus any
-    # bytes needed to complete a multibyte character. A negative limit means no
-    # limit, and a zero limit returns an empty string.
+    # bytes needed to complete a multibyte character.
     #
     # With `chomp: true` removes the trailing separator from the line.
     #
@@ -100,26 +108,21 @@ module Down
             | (Integer limit, ?chomp: boolish) -> String?
 
     # Implements IO#readpartial semantics. If there is any content readily
-    # available reads from it, otherwise fetches and reads from the next chunk.
-    # It writes to and reads from the cache when needed.
-    #
-    # Without arguments it either returns all content that's readily available,
-    # or the next chunk. This is useful when you don't care about the size of
-    # chunks and you want to minimize string allocations.
+    # available reads from it, otherwise retrieves the next chunk and reads
+    # from it.
     #
     # With `maxlen` argument returns maximum of that amount of bytes (default
     # is 16KB).
     #
     # With `outbuf` argument each call will return that same string object,
-    # where the value is replaced with retrieved content. The returned string
-    # has the encoding of `outbuf`, or is binary when `outbuf` isn't given.
+    # where the value is replaced with retrieved content.
     #
     # Raises EOFError if end of file is reached. Raises IOError if closed.
     # : (?int? maxlen, ?string? outbuf) -> String
     def readpartial: (?int? maxlen, ?string? outbuf) -> String
 
-    # Implements IO#seek semantics. Like IO#seek, it allows seeking beyond end
-    # of file, and returns 0.
+    # Implements IO#seek semantics. It retrieves content up to the target
+    # position. Raises Errno::ESPIPE if not rewindable.
     # : (int amount, ?(Integer | Symbol) whence) -> Integer
     def seek: (int amount, ?Integer | Symbol whence) -> Integer
 
@@ -131,21 +134,21 @@ module Down
     alias tell pos
 
     # Implements IO#eof? semantics. Returns whether we've reached end of file.
-    # It returns true if cache is at the end and there is no more content to
-    # retrieve. Raises IOError if closed.
+    # It returns true if the store is at the end and there is no more content
+    # to retrieve. Raises IOError if closed.
     # : () -> bool
     def eof?: () -> bool
 
     alias eof eof?
 
-    # Implements IO#rewind semantics. Rewinds the Down::ChunkedIO by rewinding
-    # the cache and setting the position to the beginning of the file. Raises
-    # IOError if closed or not rewindable.
+    # Implements IO#rewind semantics. Rewinds the Down::ChunkedIO by setting
+    # the position to the beginning of the file. Raises IOError if closed or
+    # not rewindable.
     # : () -> Integer
     def rewind: () -> Integer
 
     # Implements IO#close semantics. Closes the Down::ChunkedIO by terminating
-    # chunk retrieval and deleting the cached content.
+    # chunk retrieval and deleting the retrieved content.
     # : () -> void
     def close: () -> void
 
@@ -163,36 +166,76 @@ module Down
 
     private
 
-    # If Down::ChunkedIO is specified as rewindable, returns a new Tempfile for
-    # writing read content to. This allows the Down::ChunkedIO to be rewinded.
+    # The minimum number of read bytes before they're discarded from the
+    # in-memory store of a non-rewindable Down::ChunkedIO.
+    TRIM_THRESHOLD: untyped
+
+    # Returns the IO object that retrieved content is appended to and read
+    # from. If Down::ChunkedIO is specified as rewindable, it's an anonymous
+    # tempfile which keeps all retrieved content, otherwise it's a StringIO
+    # from which read content gets discarded.
     # @rbs %a{pure}
-    # : () -> Tempfile?
+    # : () -> (File | StringIO)
     %a{pure}
-    def cache: () -> Tempfile?
+    def store: () -> (File | StringIO)
 
-    # Reads content up to and including the separator, or up to the limit
-    # (completing a multibyte character if the limit cuts it). Any content read
-    # beyond that is put back. Returns nil if end of file is reached.
-    # : (String? separator, Integer? limit) -> String?
-    def read_line: (String? separator, Integer? limit) -> String?
+    # Reads a line from the store, retrieving more content if the line might
+    # continue in content that wasn't retrieved yet.
+    # : (String? separator, Integer? limit, boolish chomp) -> String?
+    def read_line: (String? separator, Integer? limit, boolish chomp) -> String?
 
-    # Reads and discards consecutive newlines, used for paragraph mode.
+    # Reads a paragraph from a StringIO store. StringIO's paragraph mode
+    # differs from IO's in how it applies the limit and chomps lines, so we
+    # implement it on top of the double-newline separator, like IO does.
+    # : (Integer? limit, boolish chomp) -> String?
+    def read_paragraph: (Integer? limit, boolish chomp) -> String?
+
+    # Moves the store position past any consecutive newlines, retrieving more
+    # content as needed.
     # : () -> void
     def skip_newlines: () -> void
 
-    # Puts back content that was read, so that it's returned by the next read.
-    # : (String data) -> void
-    def unread: (String data) -> void
+    # Returns whether the line just read from the given start position of a
+    # StringIO store was truncated. A line read with a positive limit that
+    # stops before the end of the store must reach the limit or end with the
+    # separator, which JRuby's StringIO violates when the limit cuts a
+    # multibyte character that's incomplete at the end of the store.
+    # : (String? separator, Integer? limit, Integer start) -> bool
+    def truncated_line?: (String? separator, Integer? limit, Integer start) -> bool
 
-    # The maximum number of bytes needed to complete a multibyte character cut
-    # at the end of a line (characters are at most 4 bytes in common encodings).
-    MAX_CHAR_COMPLETION: ::Integer
+    # Returns whether the line read from the given start position of the store
+    # can't continue in content that wasn't retrieved yet, which is when it
+    # ends with the separator or reaches the limit with a complete character.
+    # In paragraph mode it's never complete, as newlines after it are skipped.
+    # : (String? line, String? separator, Integer? limit, Integer start) -> bool
+    def line_complete?: (String? line, String? separator, Integer? limit, Integer start) -> bool
 
-    # Returns the number of bytes after `offset` needed to complete a multibyte
-    # character that `offset` cuts in half, or 0 if it doesn't cut one. Like
-    # IO#gets, it only completes characters which are valid in the encoding.
-    # : (String data, Integer offset) -> Integer
-    def char_completion: (String data, Integer offset) -> Integer
+    # Returns the given number of bytes stored at the given store position.
+    # : (Integer position, Integer length) -> String
+    def store_bytes: (Integer position, Integer length) -> String
+
+    # Retrieves the next chunk and appends it to the store, without changing
+    # the store position. Returns false if there are no more chunks.
+    # : () -> bool
+    def fill_chunk: () -> bool
+
+    # Retrieves chunks until the store holds content up to the given
+    # position, or until there are no more chunks.
+    # : (Integer position) -> void
+    def fill_until: (Integer position) -> void
+
+    # Retrieves all remaining chunks.
+    # : () -> void
+    def fill_all: () -> void
+
+    # Discards content that was already read from the store of a
+    # non-rewindable Down::ChunkedIO, once it was all read or makes up at least
+    # half of the store, so that copying the remaining content stays cheap.
+    #
+    # Strings read from StringIO share its string, so appending a chunk to it
+    # would copy it first. Replacing a fully read string avoids that copy.
+    # : () -> void
+    def trim_store: () -> void
 
     # Returns current chunk and retrieves the next chunk, skipping empty ones.
     # If there are no more chunks, we know we've reached EOF.
@@ -214,9 +257,5 @@ module Down
     # the generic binary encoding.
     # : (String | Encoding encoding) -> Encoding
     def find_encoding: (String | Encoding encoding) -> Encoding
-
-    # Returns whether the filesystem has POSIX semantics.
-    # : () -> bool
-    def posix?: () -> bool
   end
 end
