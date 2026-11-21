@@ -1,3 +1,7 @@
+## HEAD
+
+* Prevent cookie injection via redirects in `Down::NetHttp`: only forward name/value pairs from `Set-Cookie` headers on same-origin redirects, and drop the `Cookie` header on cross-origin redirects unless `:auth_on_redirect` is set (reported by @JR0ch17) (@janko)
+
 ## 5.6.2 (2026-11-01)
 
 * Return `nil` `Down::ChunkedIO#size` from `Down::NetHttp.open` when net/http decompresses the body (@wtn)

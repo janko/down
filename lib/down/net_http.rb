@@ -147,45 +147,101 @@ module Down
 
     # Calls open-uri's URI::HTTP#open method. Additionally handles redirects.
     def open_uri(uri, max_redirects:, auth_on_redirect: false, **options)
-      uri.open(options)
-    rescue OpenURI::HTTPRedirect => exception
-      raise Down::TooManyRedirects, "too many redirects" if max_redirects == 0
+      # remember cookies provided by the caller, so that we can tell them apart
+      # from cookies collected from redirect responses
+      user_cookie = cookie_header(options)
 
-      # fail if redirect URI scheme is not http or https
       begin
-        uri = ensure_uri(exception.uri)
-      rescue Down::InvalidUrl
+        uri.open(options)
+      rescue OpenURI::HTTPRedirect => exception
+        raise Down::TooManyRedirects, "too many redirects" if max_redirects == 0
+
+        # fail if redirect URI scheme is not http or https
+        begin
+          redirect_uri = ensure_uri(exception.uri)
+        rescue Down::InvalidUrl
+          response = rebuild_response_from_open_uri_exception(exception)
+
+          raise ResponseError.new("Invalid Redirect URI: #{exception.uri}", response)
+        end
+
+        # do not leak credentials on redirect
+        options.delete("Authorization") unless auth_on_redirect
+        options.delete(:http_basic_authentication) unless auth_on_redirect
+
+        if same_origin?(uri, redirect_uri)
+          # forward cookies set by the redirect response
+          forward_cookies(options, exception.io.metas["set-cookie"])
+        else
+          # cookies set by the redirect response are scoped to its origin, so
+          # we never send them to another origin, and caller's cookies are
+          # treated as credentials
+          set_cookie_header(options, auth_on_redirect ? user_cookie : nil)
+        end
+
+        uri = redirect_uri
+        max_redirects -= 1
+        retry
+      rescue OpenURI::HTTPError => exception
         response = rebuild_response_from_open_uri_exception(exception)
 
-        raise ResponseError.new("Invalid Redirect URI: #{exception.uri}", response)
+        # open-uri attempts to parse the redirect URI, so we re-raise that exception
+        if exception.message.include?("(Invalid Location URI)")
+          raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response)
+        end
+
+        response_error!(response)
+      rescue => exception
+        request_error!(exception)
+      end
+    end
+
+    # Adds name/value pairs from the given Set-Cookie header values to the
+    # Cookie request header, ignoring any cookie attributes.
+    def forward_cookies(headers, set_cookies)
+      return if set_cookies.nil? || set_cookies.empty?
+
+      cookies = parse_cookie_header(cookie_header(headers))
+
+      set_cookies.each do |set_cookie|
+        name, value = set_cookie.split(";", 2).first.to_s.split("=", 2).map(&:strip)
+        next if value.nil? || name.empty?
+
+        cookies[name] = value
       end
 
-      # do not leak credentials on redirect
-      options.delete("Authorization") unless auth_on_redirect
-      options.delete(:http_basic_authentication) unless auth_on_redirect
+      set_cookie_header(headers, cookies.map { |name, value| value ? "#{name}=#{value}" : name }.join("; "))
+    end
 
-      # forward cookies on the redirect
-      if !exception.io.meta["set-cookie"].to_s.empty?
-        options["Cookie"] ||= ''
-        # Add new cookies avoiding duplication
-        new_cookies = exception.io.meta["set-cookie"].to_s.split(';').map(&:strip)
-        old_cookies = options["Cookie"].split(';')
-        options["Cookie"] = (old_cookies | new_cookies).join(';')
+    # Parses the Cookie request header value into a hash.
+    def parse_cookie_header(value)
+      value.to_s.split(";").each_with_object({}) do |pair, cookies|
+        name, value = pair.split("=", 2).map(&:strip)
+        cookies[name] = value unless name.nil? || name.empty?
       end
+    end
 
-      max_redirects -= 1
-      retry
-    rescue OpenURI::HTTPError => exception
-      response = rebuild_response_from_open_uri_exception(exception)
+    # Returns the Cookie request header value from the given headers.
+    def cookie_header(headers)
+      headers.find { |name, _| cookie_header?(name) }&.last
+    end
 
-      # open-uri attempts to parse the redirect URI, so we re-raise that exception
-      if exception.message.include?("(Invalid Location URI)")
-        raise ResponseError.new("Invalid Redirect URI: #{response["Location"]}", response)
-      end
+    # Sets the Cookie request header value in the given headers, removing it
+    # if the value is nil or empty.
+    def set_cookie_header(headers, value)
+      headers.delete_if { |name, _| cookie_header?(name) }
+      headers["Cookie"] = value unless value.nil? || value.empty?
+    end
 
-      response_error!(response)
-    rescue => exception
-      request_error!(exception)
+    def cookie_header?(name)
+      name.is_a?(String) && name.casecmp?("Cookie")
+    end
+
+    # Returns whether the given URIs have the same scheme, host and port.
+    def same_origin?(uri, other_uri)
+      uri.scheme.casecmp?(other_uri.scheme) &&
+        uri.host.to_s.casecmp?(other_uri.host.to_s) &&
+        uri.port == other_uri.port
     end
 
     # Converts the given IO into a Tempfile if it isn't one already (open-uri
@@ -251,6 +307,11 @@ module Down
         elsif auth_on_redirect && (uri.user || uri.password)
           # for absolute redirects, carry over URI credentials since the new location won't have them
           options[:http_basic_authentication] ||= [uri.user, uri.password]
+        end
+
+        # do not leak cookies to other origins on redirect
+        unless auth_on_redirect || same_origin?(uri, location)
+          options[:headers] = options[:headers].reject { |name, _| cookie_header?(name) }
         end
 
         net_http_request(location, **options, max_redirects: max_redirects - 1, auth_on_redirect:, &)
