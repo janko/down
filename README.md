@@ -6,8 +6,8 @@ HTTP library.
 
 ## Installation
 
-```rb
-gem "down", "~> 5.0"
+```sh
+bundle add down
 ```
 
 ## Downloading

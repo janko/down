@@ -15,6 +15,26 @@ require "mocha/minitest"
 
 require "http"
 require "rack"
+
+# On JRuby, http.rb parses responses with llhttp-ffi, whose callbacks can get
+# garbage collected while the parser still calls them, which intermittently
+# fails requests with "couldn't read response headers". Keep the callbacks
+# referenced until it's fixed upstream (https://github.com/bryanp/llhttp/issues/42).
+if RUBY_ENGINE == "jruby"
+  require "llhttp"
+
+  LLHttp::Callbacks.prepend(Module.new do
+    def []=(name, value)
+      if value.is_a?(Proc)
+        signature = LLHttp::Parser::CALLBACKS.include?(name) ? [:int, []] : [:void, [:pointer, :size_t]]
+        value = FFI::Function.new(*signature, &value)
+        (@functions ||= []) << value
+      end
+
+      super
+    end
+  end)
+end
 require_relative "support/httpbin"
 
 # Pick a random available port
