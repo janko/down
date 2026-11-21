@@ -1,4 +1,4 @@
-## HEAD
+## 5.6.3 (2026-11-21)
 
 * Prevent cookie injection via redirects in `Down::NetHttp`: only forward name/value pairs from `Set-Cookie` headers on same-origin redirects, and drop the `Cookie` header on cross-origin redirects unless `:auth_on_redirect` is set (reported by @JR0ch17) (@janko)
 
