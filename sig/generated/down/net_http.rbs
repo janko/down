@@ -35,6 +35,32 @@ module Down
     # : (?) -> ((StringIO | Tempfile) & OpenURI::Meta)
     def open_uri: (?) -> ((StringIO | Tempfile) & OpenURI::Meta)
 
+    # Adds name/value pairs from the given Set-Cookie header values to the
+    # Cookie request header, ignoring any cookie attributes.
+    # : (Hash[Symbol | String, untyped] headers, Array[String]? set_cookies) -> void
+    def forward_cookies: (Hash[Symbol | String, untyped] headers, Array[String]? set_cookies) -> void
+
+    # Parses the Cookie request header value into a hash.
+    # : (String? value) -> Hash[String, String?]
+    def parse_cookie_header: (String? value) -> Hash[String, String?]
+
+    # Returns the Cookie request header value from the given headers.
+    # : (Hash[untyped, untyped] headers) -> String?
+    def cookie_header: (Hash[untyped, untyped] headers) -> String?
+
+    # Sets the Cookie request header value in the given headers, removing it
+    # if the value is nil or empty.
+    # : (Hash[Symbol | String, untyped] headers, String? value) -> void
+    def set_cookie_header: (Hash[Symbol | String, untyped] headers, String? value) -> void
+
+    # Returns whether the given header name is the Cookie header.
+    # : (untyped name) -> bool
+    def cookie_header?: (untyped name) -> bool
+
+    # Returns whether the given URIs have the same scheme, host and port.
+    # : (URI::Generic uri, URI::Generic other_uri) -> bool
+    def same_origin?: (URI::Generic uri, URI::Generic other_uri) -> bool
+
     # Converts the given IO into a Tempfile if it isn't one already (open-uri
     # returns a StringIO when there is less than 10KB of content), and gives
     # it the specified file extension.

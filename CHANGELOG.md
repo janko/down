@@ -44,6 +44,11 @@
 
 * Reduce memory allocations in `Down::ChunkedIO`, so that `IO.copy_stream` allocates no more than with any other non-IO source, and avoid quadratic copying when reading in small chunks without rewindability (@janko)
 
+||||||| parent of c6c421f (Prevent cookie injection via redirects in Down::NetHttp)
+## 5.6.3 (2026-11-21)
+
+* Prevent cookie injection via redirects in `Down::NetHttp`: only forward name/value pairs from `Set-Cookie` headers on same-origin redirects, and drop the `Cookie` header on cross-origin redirects unless `:auth_on_redirect` is set (reported by @JR0ch17) (@janko)
+
 ## 5.6.2 (2026-11-01)
 
 * Return `nil` `Down::ChunkedIO#size` from `Down::NetHttp.open` when net/http decompresses the body (@wtn)

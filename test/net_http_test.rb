@@ -25,6 +25,11 @@ describe Down do
     server&.close
   end
 
+  # Same server as $httpbin, but a different origin (host differs).
+  def cross_origin_url
+    "#{$httpbin.sub("localhost", "127.0.0.1")}/get"
+  end
+
   describe "#download" do
     it "downloads content from url" do
       tempfile = Down::NetHttp.download("#{$httpbin}/bytes/#{20*1024}?seed=0")
@@ -147,9 +152,32 @@ describe Down do
       tempfile = Down::NetHttp.download("#{$httpbin}/relative-redirect/1")
       assert_equal "#{$httpbin}/get", JSON.parse(tempfile.read)["url"]
 
-      # We also want to test that cookies are being forwarded on redirects, but
-      # httpbin doesn't have an endpoint which can both redirect and return a
-      # "Set-Cookie" header.
+    end
+
+    it "forwards cookies on same-origin redirects without attributes" do
+      tempfile = Down::NetHttp.download("#{$httpbin}/cookies/set?foo=bar&baz=quux", headers: { "Cookie" => "user=value; foo=old" })
+      assert_equal "user=value; foo=bar; baz=quux", JSON.parse(tempfile.read)["headers"]["Cookie"]
+    end
+
+    it "doesn't forward cookies on cross-origin redirects" do
+      tempfile = Down::NetHttp.download("#{$httpbin}/cookies/set?session=injected&admin=true&url=#{CGI.escape(cross_origin_url)}")
+      assert_nil JSON.parse(tempfile.read)["headers"]["Cookie"]
+    end
+
+    it "doesn't forward cookies collected on same-origin redirects to other origins" do
+      target = "#{$httpbin}/redirect-to?url=#{CGI.escape(cross_origin_url)}"
+      tempfile = Down::NetHttp.download("#{$httpbin}/cookies/set?session=injected&url=#{CGI.escape(target)}", headers: { "Cookie" => "user=value" }, auth_on_redirect: true)
+      assert_equal "user=value", JSON.parse(tempfile.read)["headers"]["Cookie"]
+    end
+
+    it "removes Cookie header on cross-origin redirects" do
+      tempfile = Down::NetHttp.download("#{$httpbin}/redirect-to?url=#{CGI.escape(cross_origin_url)}", headers: { "cookie" => "user=value" })
+      assert_nil JSON.parse(tempfile.read)["headers"]["Cookie"]
+    end
+
+    it "preserves Cookie header on cross-origin redirects, when asked" do
+      tempfile = Down::NetHttp.download("#{$httpbin}/redirect-to?url=#{CGI.escape(cross_origin_url)}", headers: { "Cookie" => "user=value" }, auth_on_redirect: true)
+      assert_equal "user=value", JSON.parse(tempfile.read)["headers"]["Cookie"]
     end
 
     it "removes Authorization header on  redirects" do
@@ -369,6 +397,26 @@ describe Down do
     it "preserves Basic Auth credentials header on relative redirects" do
       io = Down::NetHttp.open("#{$httpbin.sub("http://", '\0user:password@')}/relative-redirect/1", )
       assert_equal "Basic dXNlcjpwYXNzd29yZA==", JSON.parse(io.read)["headers"]["Authorization"]
+    end
+
+    it "preserves Cookie header on same-origin redirects" do
+      io = Down::NetHttp.open("#{$httpbin}/redirect/1", headers: { "Cookie" => "user=value" })
+      assert_equal "user=value", JSON.parse(io.read)["headers"]["Cookie"]
+    end
+
+    it "doesn't forward cookies set by redirect responses" do
+      io = Down::NetHttp.open("#{$httpbin}/cookies/set?session=injected")
+      assert_nil JSON.parse(io.read)["headers"]["Cookie"]
+    end
+
+    it "removes Cookie header on cross-origin redirects" do
+      io = Down::NetHttp.open("#{$httpbin}/redirect-to?url=#{CGI.escape(cross_origin_url)}", headers: { "Cookie" => "user=value" })
+      assert_nil JSON.parse(io.read)["headers"]["Cookie"]
+    end
+
+    it "preserves Cookie header on cross-origin redirects, when asked" do
+      io = Down::NetHttp.open("#{$httpbin}/redirect-to?url=#{CGI.escape(cross_origin_url)}", headers: { "Cookie" => "user=value" }, auth_on_redirect: true)
+      assert_equal "user=value", JSON.parse(io.read)["headers"]["Cookie"]
     end
 
     it "preserves Authorization header on redirect, when asked" do

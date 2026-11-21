@@ -83,6 +83,12 @@ class Httpbin
       url = req.GET["url"].to_s
       [302, { "Location" => url }, []]
 
+    when "/cookies/set"
+      params = req.GET.dup
+      url = params.delete("url") || "/get"
+      cookies = params.map { |name, value| "#{name}=#{value}; Path=/; HttpOnly" }
+      [302, { "Location" => url, "Set-Cookie" => cookies }, []]
+
     when %r{\A/redirect/(\d+)\z}
       n = $1.to_i
       target = n <= 1 ? "#{req.base_url}/get" : "#{req.base_url}/redirect/#{n - 1}"
