@@ -305,7 +305,9 @@ describe Down::Httpx do
     end
 
     it "re-raises SSL errors" do
-      assert_raises(Down::SSLError) { Down::Httpx.open("https://expired.badssl.com/") }
+      HTTPX::TCP.any_instance.expects(:connect).raises(OpenSSL::SSL::SSLError)
+
+      assert_raises(Down::SSLError) { Down::Httpx.open($httpbin) }
     end
 
     it "re-raises other exceptions" do
