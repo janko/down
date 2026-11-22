@@ -1,4 +1,4 @@
-## HEAD
+## 6.0.0 (2026-11-22)
 
 * Remove deprecated wget backend (@janko)
 
