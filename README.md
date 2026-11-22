@@ -138,9 +138,24 @@ The following IO methods are implemented:
 * `#gets`
 * `#seek`
 * `#pos` & `#tell`
-* `#eof?`
+* `#eof?` & `#eof`
 * `#rewind`
-* `#close`
+* `#close` & `#closed?`
+* `#size` & `#length`
+
+Additionally, `#rewindable?` tells you whether the IO can be rewound (see
+[Caching](#caching)), and `#encoding=` changes the encoding that content is
+returned in.
+
+Since `Down::ChunkedIO` behaves like an IO, you can pass it to anything that
+accepts one. For example, you can stream the remote file into another IO
+without fully loading it into memory:
+
+```rb
+remote_file = Down.open("http://example.com/movie.mp4", rewindable: false)
+File.open("movie.mp4", "wb") { |file| IO.copy_stream(remote_file, file) }
+remote_file.close
+```
 
 ### Caching
 
@@ -243,8 +258,23 @@ the `Down::Error` subclasses. This is Down's exception hierarchy:
       * `Down::NotFound`
     * `Down::ServerError`
   * `Down::ConnectionError`
-  * `Down::TimeoutError`
+    * `Down::TimeoutError`
   * `Down::SSLError`
+
+`Down::ResponseError` and its subclasses expose the backend's response object,
+so you can inspect the status, headers or body of the failed response:
+
+```rb
+begin
+  Down.download("http://example.com/image.jpg")
+rescue Down::ResponseError => exception
+  exception.response # Net::HTTPResponse, HTTP::Response or HTTPX::Response
+end
+```
+
+`Down::NotModified` is raised by `Down::NetHttp.open` when the server returns a
+`304 Not Modified` response, which happens when you send conditional request
+headers such as `If-None-Match` or `If-Modified-Since`.
 
 ## Backends
 
@@ -274,13 +304,20 @@ Down.download("...")
 Down.open("...")
 ```
 
+You can also set the backend to an instance, which is useful for applying
+default options to all downloads:
+
+```rb
+Down.backend Down::Http.new(headers: { "User-Agent" => "MyApp/1.0" })
+```
+
 ### Down::NetHttp
 
 The `Down::NetHttp` backend implements downloads using [open-uri] and
 [Net::HTTP] standard libraries.
 
 ```rb
-gem "down", "~> 5.0"
+gem "down", "~> 6.0"
 ```
 ```rb
 require "down/net_http"
@@ -319,6 +356,25 @@ Down::NetHttp.download("http://example.com/image.jpg", max_redirects: 0) # 0 red
 Down::NetHttp.open("http://example.com/image.jpg")                       # 2 redirects allowed
 Down::NetHttp.open("http://example.com/image.jpg", max_redirects: 5)     # 5 redirects allowed
 Down::NetHttp.open("http://example.com/image.jpg", max_redirects: 0)     # 0 redirects allowed
+```
+
+To avoid leaking credentials, `Down::NetHttp` doesn't send them to redirect
+targets by default:
+
+* the `Authorization` header and basic authentication credentials (from the URL
+  or `:http_basic_authentication`) are removed on any redirect
+* the `Cookie` header is removed on redirects to a different origin (scheme,
+  host and port)
+
+Cookies set by a redirect response are forwarded only when the redirect stays
+on the same origin.
+
+If you trust the redirect targets and want credentials to be sent to them, you
+can pass `auth_on_redirect: true`:
+
+```rb
+Down::NetHttp.download("http://user:password@example.com/image.jpg", auth_on_redirect: true)
+Down::NetHttp.open("http://example.com/image.jpg", headers: { "Authorization" => "Bearer ..." }, auth_on_redirect: true)
 ```
 
 #### Proxy
@@ -396,8 +452,8 @@ net_http.open("http://example.com/image.jpg")
 The `Down::Http` backend implements downloads using the [http.rb] gem.
 
 ```rb
-gem "down", "~> 5.0"
-gem "http", "~> 5.0"
+gem "down", "~> 6.0"
+gem "http", "~> 6.0"
 ```
 ```rb
 require "down/http"
@@ -466,7 +522,7 @@ The `Down::Httpx` backend implements downloads using the [HTTPX] gem, which
 supports the HTTP/2 protocol, in addition to many other features.
 
 ```rb
-gem "down", "~> 5.0"
+gem "down", "~> 6.0"
 gem "httpx", "~> 1.0"
 ```
 ```rb
@@ -484,18 +540,21 @@ its docs for ways to pass additional options.
 
 ## Development
 
-Then you can run tests:
+Install the dependencies and run the tests:
 
 ```
+$ bundle install
 $ bundle exec rake test
 ```
+
+The tests run against a local httpbin app, so no network access is needed.
 
 ## License
 
 [MIT](LICENSE.txt)
 
-[open-uri]: http://ruby-doc.org/stdlib-2.3.0/libdoc/open-uri/rdoc/OpenURI.html
-[Net::HTTP]: https://ruby-doc.org/stdlib-2.4.1/libdoc/net/http/rdoc/Net/HTTP.html
+[open-uri]: https://docs.ruby-lang.org/en/master/OpenURI.html
+[Net::HTTP]: https://docs.ruby-lang.org/en/master/Net/HTTP.html
 [http.rb]: https://github.com/httprb/http
 [HTTPX]: https://github.com/HoneyryderChuck/httpx
 [Addressable::URI]: https://github.com/sporkmonger/addressable
